@@ -1,0 +1,220 @@
+{
+  "$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+  "name": "SolidCraft",
+  "scopeName": "source.solidcraft",
+  "fileTypes": ["sc"],
+  "patterns": [
+    { "include": "#comment" },
+    { "include": "#design" },
+    { "include": "#param" },
+    { "include": "#sketch-header" },
+    { "include": "#sketch-block" },
+    { "include": "#feature" },
+    { "include": "#common" }
+  ],
+  "repository": {
+    "comment": {
+      "match": "(//).*$",
+      "name": "comment.line.double-slash.solidcraft",
+      "captures": {
+        "1": { "name": "punctuation.definition.comment.solidcraft" }
+      }
+    },
+    "string": {
+      "match": "\"[^\"]*\"",
+      "name": "string.quoted.double.solidcraft"
+    },
+
+    "design": {
+      "match": "^\\s*(design)\\s+([A-Za-z_][A-Za-z0-9_]*)(?:\\s+(units)\\s+(mm|cm|m|in|ft|deg|rad)\\b)?",
+      "captures": {
+        "1": { "name": "keyword.control.design.solidcraft" },
+        "2": { "name": "entity.name.type.design.solidcraft" },
+        "3": { "name": "support.type.property-name.key.solidcraft" },
+        "4": { "name": "keyword.other.unit.solidcraft" }
+      }
+    },
+    "param": {
+      "match": "^\\s*(param)\\s+([A-Za-z_][A-Za-z0-9_]*)\\s*(=)",
+      "captures": {
+        "1": { "name": "keyword.control.param.solidcraft" },
+        "2": { "name": "variable.other.constant.param.solidcraft" },
+        "3": { "name": "keyword.operator.assignment.solidcraft" }
+      }
+    },
+    "sketch-header": {
+      "comment": "sketch NAME on XY …; the name may be a quoted string when it is not an identifier",
+      "match": "^\\s*(sketch)\\s+(?:([A-Za-z_][A-Za-z0-9_]*)|(\"[^\"]*\"))(?:\\s+(on)\\s+(?:(XY|XZ|YZ)\\b|(face)\\b|([A-Za-z_][A-Za-z0-9_]*)))?",
+      "captures": {
+        "1": { "name": "keyword.control.sketch.solidcraft" },
+        "2": { "name": "entity.name.type.sketch.solidcraft" },
+        "3": { "name": "entity.name.type.sketch.solidcraft" },
+        "4": { "name": "support.type.property-name.key.solidcraft" },
+        "5": { "name": "constant.language.plane.solidcraft" },
+        "6": { "name": "support.type.property-name.key.solidcraft" },
+        "7": { "name": "variable.other.reference.solidcraft" }
+      }
+    },
+    "sketch-block": {
+      "begin": "\\{",
+      "end": "\\}",
+      "name": "meta.block.sketch.solidcraft",
+      "beginCaptures": {
+        "0": { "name": "punctuation.section.block.begin.solidcraft" }
+      },
+      "endCaptures": {
+        "0": { "name": "punctuation.section.block.end.solidcraft" }
+      },
+      "patterns": [
+        { "include": "#comment" },
+        { "include": "#sketch-entity" },
+        { "include": "#sketch-dim" },
+        { "include": "#sketch-constraint" },
+        { "include": "#sketch-fillet" },
+        { "include": "#common" }
+      ]
+    },
+    "sketch-entity": {
+      "comment": "line NAME = …, polyline closed infer NAME = …, rect center NAME = …, construction circle NAME = …",
+      "match": "^\\s*(?:(construction)\\s+)?(line|polyline|rect|circle|arc|point|polygon|slot|spline)\\b((?:\\s+(?:closed|infer|center|rounded|periodic|inscribed|circumscribed|centers|ends)\\b)*)\\s+([A-Za-z_][A-Za-z0-9_]*)\\s*(=)",
+      "captures": {
+        "1": { "name": "storage.modifier.construction.solidcraft" },
+        "2": { "name": "support.function.entity.solidcraft" },
+        "3": {
+          "patterns": [
+            { "match": "[A-Za-z_]+", "name": "storage.modifier.solidcraft" }
+          ]
+        },
+        "4": { "name": "entity.name.function.entity.solidcraft" },
+        "5": { "name": "keyword.operator.assignment.solidcraft" }
+      }
+    },
+    "sketch-dim": {
+      "match": "^\\s*(dim)\\b(?:\\s+(auto|distance|horizontal|vertical|length|radius|diameter|angle)\\b)?",
+      "captures": {
+        "1": { "name": "support.function.dim.solidcraft" },
+        "2": { "name": "storage.modifier.dim.solidcraft" }
+      }
+    },
+    "sketch-constraint": {
+      "match": "^\\s*(horizontal|vertical|coincident|tangent|equal|parallel|perpendicular|concentric|collinear|curvature|midpoint|symmetric|fix)\\b",
+      "captures": {
+        "1": { "name": "support.function.constraint.solidcraft" }
+      }
+    },
+    "sketch-fillet": {
+      "match": "^\\s*(fillet)\\b",
+      "captures": {
+        "1": { "name": "support.function.fillet.solidcraft" }
+      }
+    },
+
+    "feature": {
+      "match": "^\\s*(extrude|revolve|hole|box|cylinder|sphere|torus|fillet|chamfer|shell|mirror|pattern|combine|move|remove|sweep|loft)\\b(?:\\s+(circular)\\b)?\\s+(?:([A-Za-z_][A-Za-z0-9_]*)\\b|(\"[^\"]*\"))",
+      "captures": {
+        "1": { "name": "storage.type.feature.solidcraft" },
+        "2": { "name": "storage.modifier.solidcraft" },
+        "3": { "name": "entity.name.function.feature.solidcraft" },
+        "4": { "name": "entity.name.function.feature.solidcraft" }
+      }
+    },
+
+    "common": {
+      "patterns": [
+        { "include": "#comment" },
+        { "include": "#string" },
+        { "include": "#body-definition" },
+        { "include": "#arrow" },
+        { "include": "#reference" },
+        { "include": "#origin-key" },
+        { "include": "#key" },
+        { "include": "#modifier" },
+        { "include": "#plane" },
+        { "include": "#axis" },
+        { "include": "#origin" },
+        { "include": "#number" },
+        { "include": "#identifier" },
+        { "include": "#operator" },
+        { "include": "#punctuation" }
+      ]
+    },
+    "body-definition": {
+      "match": "(->)\\s*(body)\\s+([A-Za-z_][A-Za-z0-9_]*)",
+      "captures": {
+        "1": { "name": "keyword.operator.arrow.solidcraft" },
+        "2": { "name": "support.type.property-name.key.solidcraft" },
+        "3": { "name": "entity.name.type.body.solidcraft" }
+      }
+    },
+    "arrow": {
+      "match": "->",
+      "name": "keyword.operator.arrow.solidcraft"
+    },
+    "reference": {
+      "comment": "outline.3.end, NAME.bottom_left, Sketch.line1 …",
+      "match": "\\b([A-Za-z_][A-Za-z0-9_]*)((?:\\.(?:[A-Za-z_][A-Za-z0-9_]*|[0-9]+))+)\\b",
+      "name": "variable.other.reference.solidcraft",
+      "captures": {
+        "1": { "name": "variable.other.object.solidcraft" },
+        "2": {
+          "patterns": [
+            { "match": "\\.", "name": "punctuation.accessor.solidcraft" },
+            { "match": "[A-Za-z_0-9]+", "name": "variable.other.member.solidcraft" }
+          ]
+        }
+      }
+    },
+    "origin-key": {
+      "comment": "`origin (x,y,z)` in mirror / pattern circular is an option key, not the sketch origin",
+      "match": "\\b(origin)(?=\\s*\\()",
+      "captures": {
+        "1": { "name": "support.type.property-name.key.solidcraft" }
+      }
+    },
+    "key": {
+      "match": "\\b(from|distance|distance2|radius|diameter|at|edges|faces|profiles|targets|body|plane|axis|count|count2|spacing|spacing2|dir|dir2|offset|units|on|about|taper|angle|clearance|thread|depth|height|width|length|major|minor|thickness|fit|sides|size|corner|center|base|normal|to|position|counterbore|countersink|features|bodies|tools|points|target|sketch|type|direction|alignment|alignment2|face|start|through|end)\\b",
+      "name": "support.type.property-name.key.solidcraft"
+    },
+    "modifier": {
+      "match": "\\b(closed|infer|construction|rounded|periodic|inscribed|circumscribed|centers|ends|symmetric|negative|positive|through_all|join|cut|intersect|new|auto|inside|outside|both|drilled|simple|reversed|reversed2|identical|copy|keep_tools|flip|explicit|chain|circular)\\b",
+      "name": "storage.modifier.solidcraft"
+    },
+    "plane": {
+      "match": "\\b(XY|XZ|YZ)\\b",
+      "name": "constant.language.plane.solidcraft"
+    },
+    "axis": {
+      "match": "\\b(X|Y|Z|x|y)\\b",
+      "name": "constant.language.axis.solidcraft"
+    },
+    "origin": {
+      "match": "\\borigin\\b",
+      "name": "constant.language.origin.solidcraft"
+    },
+    "number": {
+      "comment": "a number with an optional unit; a leading minus is part of the number only when nothing operand-like precedes it (as in the lexer)",
+      "match": "(?<![A-Za-z0-9_.)])(-?(?:[0-9]+(?:\\.[0-9]+)?|\\.[0-9]+)(?:[eE][-+]?[0-9]+)?)(?:\\s*(mm|cm|m|in|ft|deg|rad)\\b)?",
+      "captures": {
+        "1": { "name": "constant.numeric.solidcraft" },
+        "2": { "name": "keyword.other.unit.solidcraft" }
+      }
+    },
+    "identifier": {
+      "match": "\\b[A-Za-z_][A-Za-z0-9_]*\\b",
+      "name": "variable.other.solidcraft"
+    },
+    "operator": {
+      "patterns": [
+        { "match": "=", "name": "keyword.operator.assignment.solidcraft" },
+        { "match": "[-+*/]", "name": "keyword.operator.arithmetic.solidcraft" }
+      ]
+    },
+    "punctuation": {
+      "patterns": [
+        { "match": ",", "name": "punctuation.separator.comma.solidcraft" },
+        { "match": "\\(", "name": "punctuation.parenthesis.begin.solidcraft" },
+        { "match": "\\)", "name": "punctuation.parenthesis.end.solidcraft" }
+      ]
+    }
+  }
+}

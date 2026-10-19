@@ -1,0 +1,36 @@
+{
+  "name": "solidcraft-dsl",
+  "displayName": "SolidCraft DSL",
+  "description": "Syntax highlighting for SolidCraft .sc design files.",
+  "version": "0.1.0",
+  "publisher": "solidcraft",
+  "license": "MIT OR Apache-2.0",
+  "engines": {
+    "vscode": "^1.70.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "contributes": {
+    "languages": [
+      {
+        "id": "solidcraft",
+        "aliases": [
+          "SolidCraft",
+          "solidcraft"
+        ],
+        "extensions": [
+          ".sc"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "solidcraft",
+        "scopeName": "source.solidcraft",
+        "path": "./syntaxes/solidcraft.tmLanguage.json"
+      }
+    ]
+  }
+}

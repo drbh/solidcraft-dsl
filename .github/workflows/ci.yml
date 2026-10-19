@@ -1,0 +1,49 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+  schedule:
+    # Weekly: notice when a new SolidCraft release changes what the compiler predicts.
+    - cron: "17 6 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  # Against the SolidCraft release pinned in flake.nix: the one the compiler was measured on.
+  pinned:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: DeterminateSystems/nix-installer-action@v16
+      - uses: DeterminateSystems/magic-nix-cache-action@v8
+      - run: nix develop --command cargo fmt --check
+      - run: nix develop --command cargo clippy --all-targets --locked -- -D warnings
+      - run: nix develop --command cargo test --locked
+      - run: nix build
+
+  # Against the newest SolidCraft release: fails when the engine drifted from what the
+  # compiler predicts, without blocking the pinned job.
+  latest:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Install the latest solidcraft-cli
+        run: ci/install-solidcraft-cli.sh latest "$RUNNER_TEMP/solidcraft"
+      - run: cargo test --locked
+        env:
+          SOLIDCRAFT_CLI: ${{ runner.temp }}/solidcraft/solidcraft-cli
