@@ -82,6 +82,9 @@ impl Session {
     /// Compile the file and rebuild the design in the app.
     fn apply(&mut self) -> Result<(), String> {
         let src = std::fs::read_to_string(&self.opts.path).map_err(|e| format!("{}: {e}", self.opts.path))?;
+        if crate::native::is_source(&src) {
+            return Err("native source preserves the complete document; use `pack` and open it in SolidCraft, or `evaluate` for headless review. The command-replay watch mode supports concise source only.".into());
+        }
         let design = crate::parse(&src)?;
         crate::check(&design)?;
         let c = crate::compile(&design)?;

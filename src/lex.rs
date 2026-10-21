@@ -108,7 +108,7 @@ pub fn tokenize_line(no: usize, text: &str) -> Result<Vec<Tok>, String> {
             }
             toks.push(Tok::Str(chars[start..i].iter().collect()));
             i += 1;
-        } else if "(),={}.*:-+/".contains(c) {
+        } else if "(),={}.*:-+/^%;°".contains(c) {
             toks.push(Tok::Punct(c));
             i += 1;
         } else {

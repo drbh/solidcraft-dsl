@@ -53,7 +53,7 @@ enum Named {
 }
 
 struct Checker {
-    params: HashMap<String, Class>,
+    params: HashMap<String, solidcraft_expr::Value>,
     names: HashMap<String, Named>,
     bodies: Vec<String>,
 }
@@ -77,9 +77,9 @@ impl Checker {
         Ok(())
     }
 
-    fn positive(line: usize, what: &str, expr: &str) -> R<()> {
-        if let Some(n) = literal(expr)
-            && !(n > 0.0 && n.is_finite())
+    fn positive(&self, line: usize, what: &str, expr: &str) -> R<()> {
+        if let Ok(v) = crate::units::evaluate(expr, &self.params)
+            && !(v.v > 0.0 && v.v.is_finite())
         {
             return Err(err(line, format!("{what} must be positive, not {expr}")));
         }
@@ -104,7 +104,7 @@ impl Checker {
             let line = st.line;
             let len = |what: &str, e: &str| -> R<()> {
                 self.expect(line, what, e, &Class::Length)?;
-                Self::positive(line, what, e)
+                self.positive(line, what, e)
             };
             match &st.kind {
                 SketchKind::Circle { size, .. } => match size {
@@ -123,7 +123,7 @@ impl Checker {
                         let k = kind.as_deref().unwrap_or("distance");
                         self.expect(line, &format!("a {k} dimension"), value, &Class::Length)?;
                         if matches!(k, "radius" | "diameter" | "length") {
-                            Self::positive(line, &format!("a {k} dimension"), value)?;
+                            self.positive(line, &format!("a {k} dimension"), value)?;
                         }
                     }
                     _ => self.expect_measure(line, "a dimension", value)?,
@@ -174,7 +174,7 @@ impl Checker {
                     if LENGTH_KEYS.contains(&key) {
                         self.expect(line, &format!("`{key}`"), e, &Class::Length)?;
                         if POSITIVE_KEYS.contains(&key) {
-                            Self::positive(line, &format!("`{key}`"), e)?;
+                            self.positive(line, &format!("`{key}`"), e)?;
                         }
                     } else if ANGLE_KEYS.contains(&key) {
                         self.expect(line, &format!("`{key}`"), e, &Class::Angle)?;
@@ -199,13 +199,13 @@ impl Checker {
                     "size" => {
                         for e in items {
                             self.expect(line, "`size`", e, &Class::Length)?;
-                            Self::positive(line, "`size`", e)?;
+                            self.positive(line, "`size`", e)?;
                         }
                     }
                     "counterbore" | "countersink" => {
                         if let Some(d) = items.first() {
                             self.expect(line, &format!("`{k}` diameter"), d, &Class::Length)?;
-                            Self::positive(line, &format!("`{k}` diameter"), d)?;
+                            self.positive(line, &format!("`{k}` diameter"), d)?;
                         }
                         if let Some(second) = items.get(1) {
                             if k == "counterbore" {
@@ -222,7 +222,12 @@ impl Checker {
                         for c in t {
                             if let Comp::Expr(e) = c {
                                 // Positions are lengths; directions are plain numbers, and both fit.
-                                self.expect(line, &format!("`{k}`"), e, &Class::Length)?;
+                                self.expect(
+                                    line,
+                                    &format!("`{k}`"),
+                                    e,
+                                    if matches!(k.as_str(), "dir" | "dir2" | "normal" | "axis") { &Class::Number } else { &Class::Length },
+                                )?;
                             }
                         }
                     }
@@ -266,10 +271,10 @@ fn is_default_body(name: &str) -> bool {
 /// Check a parsed design. Duplicate names are left to the compiler, which reports them with
 /// both lines.
 pub fn check(d: &Design) -> R<()> {
-    let mut c = Checker { params: HashMap::new(), names: HashMap::new(), bodies: Vec::new() };
+    let env = crate::expressions::Environment::new(d)?;
+    crate::expressions::lower(d)?;
+    let mut c = Checker { params: env.values.into_iter().collect(), names: HashMap::new(), bodies: Vec::new() };
     for p in &d.params {
-        let class = classify(&p.expr, &c.params).map_err(|e| err(p.line, format!("parameter `{}`: {e}", p.name)))?;
-        c.params.insert(p.name.clone(), class);
         c.names.insert(p.name.clone(), Named::Param);
     }
     for item in &d.items {
@@ -313,9 +318,9 @@ mod tests {
         let e = fails("param L = 10 mm\nsketch S on XY {\ncircle c = (0,0) radius 5\n}\nextrude E from S distance 10 taper L");
         assert!(e.contains("`taper` needs an angle"), "{e}");
         let e = fails("param L = 10 mm\nsketch S on XY {\ncircle c = (0,0) radius (L*L)\n}");
-        assert!(e.contains("`radius` needs a length") && e.contains("is an area"), "{e}");
+        assert!(e.contains("expected a length") && e.contains("length^2"), "{e}");
         let e = fails("param L = 10 mm\nparam A = 2 deg\nparam B = L + A");
-        assert!(e.contains("parameter `B`: `+` adds a length to an angle"), "{e}");
+        assert!(e.contains("parameter `B`") && e.contains("cannot add"), "{e}");
         let e = fails("sketch S on XY {\n circle c = (0,0) radius 5\n dim angle c -> c = 5 mm\n}");
         assert!(e.contains("line 3") && e.contains("an angle dimension needs an angle"), "{e}");
         ok(
@@ -333,7 +338,7 @@ mod tests {
     fn ranges() {
         let e =
             fails("sketch S on XY {\ncircle c = (0,0) radius 5\n}\nextrude E from S distance 5\npattern P features E dir (1,0,0) count 0 spacing 5");
-        assert!(e.contains("`count` must be a whole number of at least 1"), "{e}");
+        assert!(e.contains("count") && e.contains("must be a whole number of at least 1"), "{e}");
         let e = fails("cylinder C radius (-3) height 5");
         assert!(e.contains("`radius` must be positive"), "{e}");
     }

@@ -1,0 +1,10 @@
+[package]
+name = "solidcraft-expr"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.85"
+license = "MIT OR Apache-2.0"
+description = "SolidCraft scalar expressions, units and parameter dependencies without CAD dependencies"
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }

@@ -67,12 +67,12 @@ fn decompile_round_trips() {
     };
     for (what, src) in [("bracket", include_str!("../examples/bracket.sc")), ("plate", include_str!("../examples/plate.sc"))] {
         let (v1, f1, dof1, design) = build(&cli, src);
-        let sc = solidcraft_dsl::decompile(&design).unwrap();
+        let sc = solidcraft_dsl::decompile_readable(&design).unwrap();
         let (v2, f2, dof2, design2) = build(&cli, &sc);
         assert!((v1 - v2).abs() < 1e-6, "{what}: volume {v1} vs {v2} after round trip:\n{sc}");
         assert_eq!(f1, f2, "{what}: faces after round trip:\n{sc}");
         assert_eq!(dof1, dof2, "{what}: sketch dof after round trip:\n{sc}");
-        let sc2 = solidcraft_dsl::decompile(&design2).unwrap();
+        let sc2 = solidcraft_dsl::decompile_readable(&design2).unwrap();
         assert_eq!(sc, sc2, "{what}: decompiled text is not a fixed point");
     }
 }

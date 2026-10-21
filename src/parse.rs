@@ -146,43 +146,38 @@ impl<'a> Cur<'a> {
             other => Err(err(self.no, format!("expected {what}, found {}", other.map(Tok::describe).unwrap_or_else(|| "end of line".into())))),
         }
     }
-    fn number(&mut self, what: &str) -> R<f64> {
-        match self.next() {
-            Some(Tok::Num(v, _)) => Ok(*v),
-            other => {
-                Err(err(self.no, format!("expected {what} (a number), found {}", other.map(Tok::describe).unwrap_or_else(|| "end of line".into()))))
-            }
-        }
-    }
     /// `(x, y)` or a reference to an existing point.
     fn pt(&mut self) -> R<Pt> {
         if self.peek() == Some(&Tok::Punct('(')) { Ok(Pt::Xy(self.point2()?)) } else { Ok(Pt::Ref(self.reference()?)) }
     }
-    /// `(x, y)` of plain numbers.
-    fn point2(&mut self) -> R<[f64; 2]> {
-        self.expect_punct('(')?;
-        let x = self.number("x")?;
-        self.expect_punct(',')?;
-        let y = self.number("y")?;
-        self.expect_punct(')')?;
-        Ok([x, y])
+    /// Coordinate expressions are delimited by commas at tuple depth zero. Nested calls
+    /// such as min(L/2, W/2) are kept as one component.
+    fn point2(&mut self) -> R<[Comp; 2]> {
+        self.tuple()?.try_into().map_err(|_| err(self.no, "expected exactly two coordinates"))
     }
-    /// `(a, b, c…)` of numbers or expressions (bare words, strings).
     fn tuple(&mut self) -> R<Vec<Comp>> {
         self.expect_punct('(')?;
         let mut out = Vec::new();
         loop {
-            match self.next() {
-                Some(Tok::Num(v, s)) => out.push(Comp::Num(*v, s.clone())),
-                Some(Tok::Ident(s)) => out.push(Comp::Expr(s.clone())),
-                Some(Tok::Str(s)) => out.push(Comp::Expr(s.clone())),
-                other => {
-                    return Err(err(
-                        self.no,
-                        format!("expected a coordinate, found {}", other.map(Tok::describe).unwrap_or_else(|| "end of line".into())),
-                    ));
+            let start = self.i;
+            let mut depth = 0usize;
+            loop {
+                match self.peek() {
+                    Some(Tok::Punct(',' | ')')) if depth == 0 => break,
+                    Some(Tok::Punct('(')) => depth += 1,
+                    Some(Tok::Punct(')')) => depth -= 1,
+                    None => return Err(err(self.no, "unterminated coordinate tuple")),
+                    _ => {}
                 }
+                self.i += 1;
             }
+            let tokens = &self.toks[start..self.i];
+            let component = match tokens {
+                [] => return Err(err(self.no, "empty coordinate expression")),
+                [Tok::Num(n, text)] => Comp::Num(*n, text.clone()),
+                _ => Comp::Expr(tokens.iter().map(tok_text).collect::<Vec<_>>().join(" ")),
+            };
+            out.push(component);
             if self.eat_punct(')') {
                 return Ok(out);
             }
@@ -294,10 +289,10 @@ pub fn parse(src: &str) -> R<Design> {
                 }
                 c.end()?;
             }
-            "param" => {
+            "param" | "let" => {
                 let name = c.ident("the parameter name")?;
                 let expr = c.rest_after_eq()?;
-                d.params.push(Param { name, expr, comment: None, line: l.no });
+                d.params.push(Param { name, expr, comment: None, line: l.no, local: head == "let" });
             }
             "sketch" => {
                 let s = parse_sketch_head(&mut c, l.no)?;
@@ -370,7 +365,7 @@ fn parse_sketch_stmt(c: &mut Cur) -> R<SketchStmt> {
         let w = c.ident("a sketch statement")?;
         match w.as_str() {
             "construction" => construction = true,
-            "closed" | "infer" | "center" | "rounded" | "periodic" | "inscribed" | "circumscribed" | "centers" | "ends" => flags.push(w),
+            "bind" | "closed" | "infer" | "center" | "rounded" | "periodic" | "inscribed" | "circumscribed" | "centers" | "ends" => flags.push(w),
             _ => break w,
         }
     };
@@ -391,6 +386,9 @@ fn parse_sketch_stmt(c: &mut Cur) -> R<SketchStmt> {
         }
     }
     let has = |f: &str| flags.iter().any(|x| x == f);
+    if has("bind") && head != "point" {
+        return Err(err(line, "bind creates a point; use bound points as references in curves"));
+    }
     let kind = match head.as_str() {
         "line" => {
             let name = c.ident("the line name")?;
@@ -470,7 +468,7 @@ fn parse_sketch_stmt(c: &mut Cur) -> R<SketchStmt> {
         "point" => {
             let name = c.ident("the point name")?;
             c.expect_punct('=')?;
-            SketchKind::Point { name, p: c.point2()? }
+            SketchKind::Point { name, p: c.point2()?, bound: has("bind") }
         }
         "polygon" => {
             let name = c.ident("the polygon name")?;
@@ -483,10 +481,7 @@ fn parse_sketch_stmt(c: &mut Cur) -> R<SketchStmt> {
             if !c.eat_ident("sides") {
                 return Err(err(line, "expected `sides <n>`"));
             }
-            let sides = c.number("the side count")? as usize;
-            if !(3..=64).contains(&sides) {
-                return Err(err(line, "sides must be 3 to 64"));
-            }
+            let sides = c.expr1("the side count")?;
             let circumscribed = has("circumscribed") || c.eat_ident("circumscribed");
             c.eat_ident("inscribed");
             SketchKind::Polygon { name, center, radius, sides, circumscribed }
@@ -533,6 +528,13 @@ fn parse_sketch_stmt(c: &mut Cur) -> R<SketchStmt> {
             let value = c.rest_after_eq()?;
             SketchKind::Dim { kind, refs, value }
         }
+        "fix" => {
+            let mut refs = vec![c.reference()?];
+            while !c.done() {
+                refs.push(c.reference()?);
+            }
+            SketchKind::Fix { refs }
+        }
         "fillet" => {
             let point = c.reference()?;
             if !c.eat_ident("radius") {
@@ -541,7 +543,7 @@ fn parse_sketch_stmt(c: &mut Cur) -> R<SketchStmt> {
             SketchKind::Fillet { point, radius: c.expr1("the radius")? }
         }
         k @ ("horizontal" | "vertical" | "coincident" | "tangent" | "equal" | "parallel" | "perpendicular" | "concentric" | "collinear"
-        | "midpoint" | "fix" | "symmetric" | "curvature") => {
+        | "midpoint" | "symmetric" | "curvature") => {
             let mut refs = Vec::new();
             let mut about = None;
             while !c.done() {

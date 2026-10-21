@@ -8,9 +8,19 @@ repository = "https://github.com/drbh/solidcraft-dsl"
 rust-version = "1.85"
 
 [workspace]
+members = ["crates/solidcraft-expr"]
 
 [dependencies]
-serde_json = "1"
+base64 = "0.22"
+zip = { version = "=2.4.2", default-features = false, features = ["deflate"] }
+solidcraft-expr = { path = "crates/solidcraft-expr", version = "0.1.0" }
+font8x8 = "0.3"
+image = { version = "=0.25.6", default-features = false, features = ["png"] }
+lexopt = "0.3"
+schemars = "0.8"
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1", features = ["arbitrary_precision", "raw_value", "unbounded_depth"] }
+sha2 = "0.10"
 
 [lints.clippy]
 unwrap_used = "deny"

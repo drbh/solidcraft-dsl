@@ -171,24 +171,37 @@ fn sketch(f: &Value, dims: &HashMap<String, String>) -> R<String> {
 
     // Standalone points first (each kind's counter is independent of the others).
     let mut fixed_points: Vec<String> = Vec::new();
-    let mut standalone: BTreeMap<usize, (String, String)> = BTreeMap::new();
+    let mut standalone: BTreeMap<usize, (String, String, bool)> = BTreeMap::new();
     for (i, p) in points.iter().enumerate() {
         let id = pid(i)?;
-        if p.get("fixed").and_then(Value::as_bool).unwrap_or(false) && id != "origin" {
+        let bound = p.get("exprs").is_some_and(|e| e.is_object());
+        if bound && !id.starts_with('p') {
+            return Err(format!("expression-bound curve point `{id}` needs standalone point reconstruction; refusing to discard its expressions"));
+        }
+        if p.get("fixed").and_then(Value::as_bool).unwrap_or(false) && id != "origin" && !bound {
             fixed_points.push(id.clone());
         }
         if let ("p", n) = split_id(&id).as_tuple()
             && n > 0
         {
-            standalone.insert(n, (id, pos(i)?));
+            let position = if bound {
+                let raw = p.get("pos").and_then(Value::as_array).ok_or("bound point without position")?;
+                let x = p["exprs"]["x"].as_str().map(str::to_string).unwrap_or_else(|| raw.first().map(num).unwrap_or_default());
+                let y = p["exprs"]["y"].as_str().map(str::to_string).unwrap_or_else(|| raw.get(1).map(num).unwrap_or_default());
+                format!("({x}, {y})")
+            } else {
+                pos(i)?
+            };
+            standalone.insert(n, (id, position, bound));
         }
     }
     let expected: Vec<usize> = (1..=standalone.len()).collect();
     if standalone.keys().copied().collect::<Vec<_>>() != expected {
         return Err("the sketch's `p` points are not numbered 1..n (points were deleted); not supported yet".into());
     }
-    for (id, p) in standalone.values() {
-        let _ = writeln!(out, "  point {id} = {p}");
+    for (id, p, bound) in standalone.values() {
+        let prefix = if *bound { "bind " } else { "" };
+        let _ = writeln!(out, "  {prefix}point {id} = {p}");
     }
 
     // Curves: in id order within each kind; a curve that uses another curve's point must come

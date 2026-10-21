@@ -25,8 +25,8 @@ jobs:
       - uses: DeterminateSystems/nix-installer-action@v16
       - uses: DeterminateSystems/magic-nix-cache-action@v8
       - run: nix develop --command cargo fmt --check
-      - run: nix develop --command cargo clippy --all-targets --locked -- -D warnings
-      - run: nix develop --command cargo test --locked
+      - run: nix develop --command cargo clippy --workspace --all-targets --locked -- -D warnings
+      - run: nix develop --command cargo test --workspace --locked
       - run: nix build
 
   # Against the newest SolidCraft release: fails when the engine drifted from what the
@@ -44,6 +44,6 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - name: Install the latest solidcraft-cli
         run: ci/install-solidcraft-cli.sh latest "$RUNNER_TEMP/solidcraft"
-      - run: cargo test --locked
+      - run: cargo test --workspace --locked
         env:
           SOLIDCRAFT_CLI: ${{ runner.temp }}/solidcraft/solidcraft-cli

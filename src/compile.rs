@@ -304,14 +304,14 @@ fn dimension_fits(kind: Option<&str>, k: &[Kind]) -> Result<(), &'static str> {
     })
 }
 
-fn pt(p: [f64; 2]) -> Value {
-    json!([p[0], p[1]])
+fn pt(p: &[Comp; 2]) -> Value {
+    comps(p)
 }
 
 /// A sketch point: coordinates as given, or the id of the point it refers to.
 fn ptv(t: &mut SketchTable, line: usize, p: &Pt) -> R<Value> {
     match p {
-        Pt::Xy(xy) => Ok(pt(*xy)),
+        Pt::Xy(xy) => Ok(pt(xy)),
         Pt::Ref(r) => Ok(json!(t.resolve(line, r)?)),
     }
 }
@@ -345,9 +345,13 @@ fn expr(s: &str) -> Value {
 
 #[derive(Debug)]
 pub struct Compiled {
+    /// Native documents bypass command replay and retain their exact identities.
+    pub native: Option<crate::native::Native>,
     pub script: Value,
     pub sketches: usize,
     pub features: usize,
+    /// Values, dependencies and lowering roles of authored expressions.
+    pub expressions: Value,
     /// The source line each command in `script.commands` came from (the source map).
     pub lines: Vec<usize>,
     /// The source line of each dimension-creating statement, in the order the engine numbers
@@ -357,6 +361,9 @@ pub struct Compiled {
 }
 
 pub fn compile(d: &Design) -> R<Compiled> {
+    let lowered = crate::expressions::lower(d)?;
+    let d = &lowered.design;
+    let environment = crate::expressions::Environment::new(d)?;
     let mut out: Vec<Value> = Vec::new();
     let mut lines: Vec<usize> = Vec::new();
     let mut dims: Vec<Option<usize>> = Vec::new();
@@ -367,7 +374,12 @@ pub fn compile(d: &Design) -> R<Compiled> {
         if names.insert(p.name.clone(), p.line).is_some() {
             return Err(err(p.line, format!("parameter `{}` is defined twice", p.name)));
         }
-        let mut m = json!({"name": p.name, "expression": p.expr});
+        let value = environment.values.get(&p.name).ok_or_else(|| err(p.line, "missing evaluated parameter"))?;
+        let unit = match value.kind() {
+            Some(solidcraft_expr::Kind::Angle) => "deg",
+            _ => crate::expressions::unit(value),
+        };
+        let mut m = json!({"name": p.name, "expression": p.expr, "unit":unit});
         if let Some(c) = &p.comment {
             m["comment"] = json!(c);
         }
@@ -393,7 +405,7 @@ pub fn compile(d: &Design) -> R<Compiled> {
             }
         }
     }
-    Ok(Compiled { script: json!({"commands": out}), sketches: sketches.len(), features, lines, dims })
+    Ok(Compiled { native: None, script: json!({"commands": out}), sketches: sketches.len(), features, lines, dims, expressions: lowered.explanation })
 }
 
 fn compile_sketch(s: &Sketch, out: &mut Vec<Value>, lines: &mut Vec<usize>, dims: &mut Vec<Option<usize>>) -> R<SketchTable> {
@@ -459,7 +471,7 @@ fn compile_sketch(s: &Sketch, out: &mut Vec<Value>, lines: &mut Vec<usize>, dims
                 let (command, params, center, arcs, corners) = match kind {
                     RectKind::TwoPoint => {
                         let corners = [t.counters.p(), t.counters.p(), t.counters.p(), t.counters.p()];
-                        ("sketch.rectangle.two_point", json!({"p0": pt(*p0), "p1": pt(*p1)}), None, None, corners)
+                        ("sketch.rectangle.two_point", json!({"p0": pt(p0), "p1": pt(p1)}), None, None, corners)
                     }
                     RectKind::Center => {
                         // Two construction diagonals, then the four corners and the centre.
@@ -467,7 +479,7 @@ fn compile_sketch(s: &Sketch, out: &mut Vec<Value>, lines: &mut Vec<usize>, dims
                         t.counters.l();
                         let corners = [t.counters.p(), t.counters.p(), t.counters.p(), t.counters.p()];
                         let center = t.counters.p();
-                        ("sketch.rectangle.center", json!({"center": pt(*p0), "corner": pt(*p1)}), Some(center), None, corners)
+                        ("sketch.rectangle.center", json!({"center": pt(p0), "corner": pt(p1)}), Some(center), None, corners)
                     }
                     RectKind::Rounded(r) => {
                         // 4 arcs, each with 2 end points; no sharp corners.
@@ -476,7 +488,7 @@ fn compile_sketch(s: &Sketch, out: &mut Vec<Value>, lines: &mut Vec<usize>, dims
                             t.counters.p();
                         }
                         let none = [String::new(), String::new(), String::new(), String::new()];
-                        ("sketch.rectangle.rounded", json!({"p0": pt(*p0), "p1": pt(*p1), "radius": expr(r)}), None, Some(arcs), none)
+                        ("sketch.rectangle.rounded", json!({"p0": pt(p0), "p1": pt(p1), "radius": expr(r)}), None, Some(arcs), none)
                     }
                 };
                 let mut params = params;
@@ -509,18 +521,27 @@ fn compile_sketch(s: &Sketch, out: &mut Vec<Value>, lines: &mut Vec<usize>, dims
                 t.define(line, name, Entity::Arc(id))?;
                 out.push(cmd("sketch.arc.three_point", json!({"start": start, "through": through, "end": end})));
             }
-            SketchKind::Point { name, p } => {
+            SketchKind::Point { name, p, bound } => {
                 let id = t.counters.p();
-                t.define(line, name, Entity::Point(id))?;
-                out.push(cmd("sketch.point", json!({"point": pt(*p)})));
+                t.define(line, name, Entity::Point(id.clone()))?;
+                let point = if *bound { Value::Array(p.iter().map(|c| json!(crate::expressions::text(c))).collect()) } else { pt(p) };
+                let mut params = json!({"point":point});
+                if *bound {
+                    params["connect"] = json!(false);
+                }
+                out.push(cmd("sketch.point", params));
+                if *bound && p.iter().all(|c| solidcraft_expr::references(crate::expressions::text(c)).is_empty()) {
+                    out.push(cmd("sketch.constraint.fix", json!({"entities":[id],"fixed":true})));
+                }
             }
             SketchKind::Polygon { name, center, radius, sides, circumscribed } => {
-                let lines: Vec<String> = (0..*sides).map(|_| t.counters.l()).collect();
-                let points: Vec<String> = (0..*sides).map(|_| t.counters.p()).collect();
+                let sides: usize = sides.parse().map_err(|_| err(line, "invalid polygon sides after expression lowering"))?;
+                let lines: Vec<String> = (0..sides).map(|_| t.counters.l()).collect();
+                let points: Vec<String> = (0..sides).map(|_| t.counters.p()).collect();
                 let circle = t.counters.c();
                 t.define(line, name, Entity::Polygon { lines, points, circle })?;
                 let id = if *circumscribed { "sketch.polygon.circumscribed" } else { "sketch.polygon.inscribed" };
-                out.push(cmd(id, json!({"center": pt(*center), "radius": expr(radius), "sides": sides})));
+                out.push(cmd(id, json!({"center": pt(center), "radius": expr(radius), "sides": sides})));
             }
             SketchKind::Slot { name, centers, p0, p1, width } => {
                 let l1 = t.counters.l();
@@ -530,7 +551,7 @@ fn compile_sketch(s: &Sketch, out: &mut Vec<Value>, lines: &mut Vec<usize>, dims
                 let points = [t.counters.p(), t.counters.p(), t.counters.p(), t.counters.p()];
                 t.define(line, name, Entity::Slot { lines: [l1, l2], arcs: [a1, a2], points })?;
                 let id = if *centers { "sketch.slot.center_to_center" } else { "sketch.slot.overall" };
-                out.push(cmd(id, json!({"p0": pt(*p0), "p1": pt(*p1), "width": expr(width)})));
+                out.push(cmd(id, json!({"p0": pt(p0), "p1": pt(p1), "width": expr(width)})));
             }
             SketchKind::Spline { name, pts, periodic } => {
                 t.counters.s += 1;

@@ -1,0 +1,38 @@
+{
+  "version": 1,
+  "defaults": true,
+  "requests": [
+    {
+      "id": "hole-detail",
+      "kind": "snapshot",
+      "options": {
+        "camera": {"target": [45, 10, 6], "yaw": 0.7, "pitch": 0.9, "distance": 28},
+        "width": 800,
+        "height": 800
+      }
+    },
+    {
+      "id": "sections",
+      "kind": "sheet",
+      "columns": 2,
+      "views": [
+        {"view": "top", "width": 600, "height": 480, "label": "Top"},
+        {
+          "view": "iso", "width": 600, "height": 480, "label": "Cut at Y=10 mm",
+          "commands": [{"command": "inspect.section", "params": {"plane": "XZ", "at": 10}}]
+        }
+      ]
+    },
+    {"id": "mesh", "kind": "export", "format": "glb"},
+    {"id": "cad", "kind": "export", "format": "step"},
+    {
+      "id": "topology",
+      "kind": "commands",
+      "commands": [
+        {"command": "model.faces", "params": {"body": "Bracket"}},
+        {"command": "model.edges", "params": {"body": "Bracket"}},
+        {"command": "view.apply", "params": {"view": "iso"}}
+      ]
+    }
+  ]
+}

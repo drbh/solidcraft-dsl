@@ -21,7 +21,7 @@ impl Ref {
 /// A sketch point: coordinates, or a reference to an existing point (`p1`, `l2.end`, `c1.center`).
 #[derive(Debug, Clone, PartialEq)]
 pub enum Pt {
-    Xy([f64; 2]),
+    Xy([Comp; 2]),
     Ref(Ref),
 }
 
@@ -34,6 +34,8 @@ pub enum Comp {
 
 #[derive(Debug, Clone)]
 pub struct Param {
+    /// Pure helper, expanded symbolically into native expressions rather than a UI parameter.
+    pub local: bool,
     pub name: String,
     pub expr: String,
     pub comment: Option<String>,
@@ -98,8 +100,8 @@ pub enum SketchKind {
     Rect {
         name: String,
         kind: RectKind,
-        p0: [f64; 2],
-        p1: [f64; 2],
+        p0: [Comp; 2],
+        p1: [Comp; 2],
         construction: bool,
     },
     Circle {
@@ -121,20 +123,22 @@ pub enum SketchKind {
     },
     Point {
         name: String,
-        p: [f64; 2],
+        p: [Comp; 2],
+        /// Explicit persistent placement; ordinary coordinates are only solver seeds.
+        bound: bool,
     },
     Polygon {
         name: String,
-        center: [f64; 2],
+        center: [Comp; 2],
         radius: String,
-        sides: usize,
+        sides: String,
         circumscribed: bool,
     },
     Slot {
         name: String,
         centers: bool,
-        p0: [f64; 2],
-        p1: [f64; 2],
+        p0: [Comp; 2],
+        p1: [Comp; 2],
         width: String,
     },
     Spline {

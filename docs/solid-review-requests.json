@@ -1,0 +1,186 @@
+{
+  "version": 1,
+  "defaults": true,
+  "requests": [
+    {
+      "id": "iso",
+      "kind": "snapshot",
+      "options": {
+        "view": "iso",
+        "commands": [
+          {
+            "command": "browser.visibility",
+            "params": {
+              "folder": "sketches",
+              "visible": false
+            }
+          },
+          {
+            "command": "browser.visibility",
+            "params": {
+              "folder": "construction",
+              "visible": false
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "front",
+      "kind": "snapshot",
+      "options": {
+        "view": "front",
+        "commands": [
+          {
+            "command": "browser.visibility",
+            "params": {
+              "folder": "sketches",
+              "visible": false
+            }
+          },
+          {
+            "command": "browser.visibility",
+            "params": {
+              "folder": "construction",
+              "visible": false
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "top",
+      "kind": "snapshot",
+      "options": {
+        "view": "top",
+        "commands": [
+          {
+            "command": "browser.visibility",
+            "params": {
+              "folder": "sketches",
+              "visible": false
+            }
+          },
+          {
+            "command": "browser.visibility",
+            "params": {
+              "folder": "construction",
+              "visible": false
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "right",
+      "kind": "snapshot",
+      "options": {
+        "view": "right",
+        "commands": [
+          {
+            "command": "browser.visibility",
+            "params": {
+              "folder": "sketches",
+              "visible": false
+            }
+          },
+          {
+            "command": "browser.visibility",
+            "params": {
+              "folder": "construction",
+              "visible": false
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "overview",
+      "kind": "sheet",
+      "columns": 2,
+      "views": [
+        {
+          "view": "iso",
+          "commands": [
+            {
+              "command": "browser.visibility",
+              "params": {
+                "folder": "sketches",
+                "visible": false
+              }
+            },
+            {
+              "command": "browser.visibility",
+              "params": {
+                "folder": "construction",
+                "visible": false
+              }
+            }
+          ]
+        },
+        {
+          "view": "front",
+          "commands": [
+            {
+              "command": "browser.visibility",
+              "params": {
+                "folder": "sketches",
+                "visible": false
+              }
+            },
+            {
+              "command": "browser.visibility",
+              "params": {
+                "folder": "construction",
+                "visible": false
+              }
+            }
+          ]
+        },
+        {
+          "view": "top",
+          "commands": [
+            {
+              "command": "browser.visibility",
+              "params": {
+                "folder": "sketches",
+                "visible": false
+              }
+            },
+            {
+              "command": "browser.visibility",
+              "params": {
+                "folder": "construction",
+                "visible": false
+              }
+            }
+          ]
+        },
+        {
+          "view": "right",
+          "commands": [
+            {
+              "command": "browser.visibility",
+              "params": {
+                "folder": "sketches",
+                "visible": false
+              }
+            },
+            {
+              "command": "browser.visibility",
+              "params": {
+                "folder": "construction",
+                "visible": false
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "mesh",
+      "kind": "export",
+      "format": "glb"
+    }
+  ]
+}

@@ -7,19 +7,24 @@ param W = 50 mm
 param T = 6 mm
 param inset = 8 mm
 
+let half_L = L/2
+let half_W = W/2
+let hole_x = half_L - inset
+let hole_y = half_W - inset
+
 sketch PlateSketch on XY {
-  rect center outline = (0,0) (40,25)
+  rect center outline = (0,0) (half_L, half_W)
   dim outline.bottom = L
   dim outline.left = W
 }
 
 extrude Plate from PlateSketch distance T
-fillet Corners edges (40,25,3) (-40,25,3) (40,-25,3) (-40,-25,3) radius 5
+fillet Corners edges (half_L, half_W, T/2) (-half_L, half_W, T/2) (half_L, -half_W, T/2) (-half_L, -half_W, T/2) radius 5
 
 sketch HolePts on XY offset T {
-  point h = (32, 17)
-  dim horizontal origin -> h = L/2 - inset
-  dim vertical   origin -> h = W/2 - inset
+  point h = (hole_x, hole_y)
+  dim horizontal origin -> h = hole_x
+  dim vertical   origin -> h = hole_y
 }
 
 hole Hole at HolePts diameter 3.4 counterbore 6.5 3.3

@@ -9,23 +9,35 @@
 /// still finds. (`.sc` is shared with Scala and SuperCollider; expect it to change.)
 pub const FILE_EXTENSION: &str = "sc";
 
+pub mod artifacts;
 pub mod ast;
 pub mod check;
 pub mod compile;
 pub mod control;
 pub mod decompile;
+pub mod evaluate;
+pub mod expressions;
+mod glb;
 pub mod lex;
+pub mod native;
 pub mod parse;
 pub mod units;
 pub mod watch;
 
 pub use check::check;
 pub use compile::{Compiled, compile};
-pub use decompile::decompile;
+pub use decompile::decompile as decompile_readable;
+/// Lossless source for a resolved native JSON document. For packaged assets use `native::Native::read`.
+pub fn decompile(design: &serde_json::Value) -> Result<String, String> {
+    native::Native::from_document(design.clone())?.to_source()
+}
 pub use parse::parse;
 
 /// Parse, check and compile a `.sc` source.
 pub fn build(src: &str) -> Result<Compiled, String> {
+    if native::is_source(src) {
+        return native::Native::from_source(src).map(native::Native::compiled);
+    }
     let d = parse(src)?;
     check(&d)?;
     compile(&d)
