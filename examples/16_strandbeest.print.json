@@ -1,0 +1,2209 @@
+{
+ "version": 1,
+ "defaults": false,
+ "requests": [
+  {
+   "id": "front-3mf",
+   "kind": "export",
+   "format": "3mf",
+   "commands": [
+    {
+     "command": "solid.remove",
+     "params": {
+      "bodies": [
+       "FrameBack",
+       "CrankBack",
+       "BLc",
+       "BLT1",
+       "BLT2",
+       "BLk",
+       "BLf",
+       "BLj",
+       "BRc",
+       "BRT1",
+       "BRT2",
+       "BRk",
+       "BRf",
+       "BRj"
+      ]
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "FLT2"
+      ],
+      "translate": [
+       -64.9243,
+       -29.2091,
+       -10.2
+      ]
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "FRk"
+      ],
+      "translate": [
+       -82.9578,
+       -74.1448,
+       -20.4
+      ]
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "FLk"
+      ],
+      "translate": [
+       -15.9087,
+       -78.048,
+       -13.6
+      ]
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "FRT1"
+      ],
+      "translate": [
+       -30.3023,
+       -97.1215,
+       -17.0
+      ]
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "FLT1"
+      ],
+      "translate": [
+       134.986,
+       -113.2,
+       -10.2
+      ]
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "FRT2"
+      ],
+      "translate": [
+       -127.0172,
+       36.8982,
+       -17.0
+      ]
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "FRc"
+      ],
+      "translate": [
+       -80.8083,
+       -3.586,
+       -13.6
+      ]
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "FRf"
+      ],
+      "translate": [
+       -96.6397,
+       12.0361,
+       -20.4
+      ]
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "FLc"
+      ],
+      "translate": [
+       29.0954,
+       -7.489,
+       -6.8
+      ]
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "FLf"
+      ],
+      "translate": [
+       99.2215,
+       -16.2092,
+       -13.6
+      ]
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "FLj"
+      ],
+      "translate": [
+       89.9939,
+       -61.0477,
+       -17.0
+      ]
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "FrameFront"
+      ],
+      "translate": [
+       -78.0,
+       15.8427,
+       0.0
+      ]
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "FRj"
+      ],
+      "translate": [
+       -32.6067,
+       -7.5641,
+       -23.8
+      ]
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "CrankFront"
+      ],
+      "translate": [
+       39.472,
+       5.0426,
+       -3.4
+      ]
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "CrankAxle"
+      ],
+      "axis": [
+       0,
+       1,
+       0
+      ],
+      "angle": "90 deg"
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "CrankAxle"
+      ],
+      "translate": [
+       65.4786,
+       3.0427,
+       3.2
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": "back-3mf",
+   "kind": "export",
+   "format": "3mf",
+   "commands": [
+    {
+     "command": "solid.remove",
+     "params": {
+      "bodies": [
+       "FrameFront",
+       "CrankFront",
+       "CrankAxle",
+       "FLc",
+       "FLT1",
+       "FLT2",
+       "FLk",
+       "FLf",
+       "FLj",
+       "FRc",
+       "FRT1",
+       "FRT2",
+       "FRk",
+       "FRf",
+       "FRj"
+      ]
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "BRT2"
+      ],
+      "axis": [
+       1,
+       0,
+       0
+      ],
+      "angle": "180 deg"
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "BRT2"
+      ],
+      "translate": [
+       -160.4105,
+       -147.9162,
+       -17.0
+      ]
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "BLT2"
+      ],
+      "axis": [
+       1,
+       0,
+       0
+      ],
+      "angle": "180 deg"
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "BLT2"
+      ],
+      "translate": [
+       27.7031,
+       -150.7369,
+       -10.2
+      ]
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "BLj"
+      ],
+      "axis": [
+       1,
+       0,
+       0
+      ],
+      "angle": "180 deg"
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "BLj"
+      ],
+      "translate": [
+       10.2635,
+       -87.4816,
+       -17.0
+      ]
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "BLT1"
+      ],
+      "axis": [
+       1,
+       0,
+       0
+      ],
+      "angle": "180 deg"
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "BLT1"
+      ],
+      "translate": [
+       90.2527,
+       -87.4816,
+       -10.2
+      ]
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "BRj"
+      ],
+      "axis": [
+       1,
+       0,
+       0
+      ],
+      "angle": "180 deg"
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "BRj"
+      ],
+      "translate": [
+       79.7371,
+       -91.6659,
+       -23.8
+      ]
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "BRf"
+      ],
+      "axis": [
+       1,
+       0,
+       0
+      ],
+      "angle": "180 deg"
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "BRf"
+      ],
+      "translate": [
+       42.1306,
+       -108.5996,
+       -20.4
+      ]
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "BRc"
+      ],
+      "axis": [
+       1,
+       0,
+       0
+      ],
+      "angle": "180 deg"
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "BRc"
+      ],
+      "translate": [
+       -159.0,
+       -50.9552,
+       -13.6
+      ]
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "BRT1"
+      ],
+      "axis": [
+       1,
+       0,
+       0
+      ],
+      "angle": "180 deg"
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "BRT1"
+      ],
+      "translate": [
+       -126.0617,
+       -13.8209,
+       -17.0
+      ]
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "BRk"
+      ],
+      "axis": [
+       1,
+       0,
+       0
+      ],
+      "angle": "180 deg"
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "BRk"
+      ],
+      "translate": [
+       -29.8149,
+       -53.762,
+       -20.4
+      ]
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "BLf"
+      ],
+      "axis": [
+       1,
+       0,
+       0
+      ],
+      "angle": "180 deg"
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "BLf"
+      ],
+      "translate": [
+       127.6307,
+       -44.6177,
+       -13.6
+      ]
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "BLc"
+      ],
+      "axis": [
+       1,
+       0,
+       0
+      ],
+      "angle": "180 deg"
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "BLc"
+      ],
+      "translate": [
+       131.4855,
+       -50.9553,
+       -6.8
+      ]
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "BLk"
+      ],
+      "axis": [
+       1,
+       0,
+       0
+      ],
+      "angle": "180 deg"
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "BLk"
+      ],
+      "translate": [
+       -52.5493,
+       -1.4871,
+       -13.6
+      ]
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "FrameBack"
+      ],
+      "axis": [
+       1,
+       0,
+       0
+      ],
+      "angle": "180 deg"
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "FrameBack"
+      ],
+      "translate": [
+       -7.156,
+       17.1194,
+       0.0
+      ]
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "CrankBack"
+      ],
+      "axis": [
+       1,
+       0,
+       0
+      ],
+      "angle": "180 deg"
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "CrankBack"
+      ],
+      "translate": [
+       59.4506,
+       11.1194,
+       -3.4
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": "layout-glb",
+   "kind": "export",
+   "format": "glb",
+   "commands": [
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "FLT2"
+      ],
+      "translate": [
+       -64.9243,
+       -29.2091,
+       -10.2
+      ]
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "FRk"
+      ],
+      "translate": [
+       -82.9578,
+       -74.1448,
+       -20.4
+      ]
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "FLk"
+      ],
+      "translate": [
+       -15.9087,
+       -78.048,
+       -13.6
+      ]
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "FRT1"
+      ],
+      "translate": [
+       -30.3023,
+       -97.1215,
+       -17.0
+      ]
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "FLT1"
+      ],
+      "translate": [
+       134.986,
+       -113.2,
+       -10.2
+      ]
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "FRT2"
+      ],
+      "translate": [
+       -127.0172,
+       36.8982,
+       -17.0
+      ]
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "FRc"
+      ],
+      "translate": [
+       -80.8083,
+       -3.586,
+       -13.6
+      ]
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "FRf"
+      ],
+      "translate": [
+       -96.6397,
+       12.0361,
+       -20.4
+      ]
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "FLc"
+      ],
+      "translate": [
+       29.0954,
+       -7.489,
+       -6.8
+      ]
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "FLf"
+      ],
+      "translate": [
+       99.2215,
+       -16.2092,
+       -13.6
+      ]
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "FLj"
+      ],
+      "translate": [
+       89.9939,
+       -61.0477,
+       -17.0
+      ]
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "FrameFront"
+      ],
+      "translate": [
+       -78.0,
+       15.8427,
+       0.0
+      ]
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "FRj"
+      ],
+      "translate": [
+       -32.6067,
+       -7.5641,
+       -23.8
+      ]
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "CrankFront"
+      ],
+      "translate": [
+       39.472,
+       5.0426,
+       -3.4
+      ]
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "CrankAxle"
+      ],
+      "axis": [
+       0,
+       1,
+       0
+      ],
+      "angle": "90 deg"
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "CrankAxle"
+      ],
+      "translate": [
+       65.4786,
+       3.0427,
+       3.2
+      ]
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "BRT2"
+      ],
+      "axis": [
+       1,
+       0,
+       0
+      ],
+      "angle": "180 deg"
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "BRT2"
+      ],
+      "translate": [
+       -160.4105,
+       -147.9162,
+       -17.0
+      ]
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "BLT2"
+      ],
+      "axis": [
+       1,
+       0,
+       0
+      ],
+      "angle": "180 deg"
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "BLT2"
+      ],
+      "translate": [
+       27.7031,
+       -150.7369,
+       -10.2
+      ]
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "BLj"
+      ],
+      "axis": [
+       1,
+       0,
+       0
+      ],
+      "angle": "180 deg"
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "BLj"
+      ],
+      "translate": [
+       10.2635,
+       -87.4816,
+       -17.0
+      ]
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "BLT1"
+      ],
+      "axis": [
+       1,
+       0,
+       0
+      ],
+      "angle": "180 deg"
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "BLT1"
+      ],
+      "translate": [
+       90.2527,
+       -87.4816,
+       -10.2
+      ]
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "BRj"
+      ],
+      "axis": [
+       1,
+       0,
+       0
+      ],
+      "angle": "180 deg"
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "BRj"
+      ],
+      "translate": [
+       79.7371,
+       -91.6659,
+       -23.8
+      ]
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "BRf"
+      ],
+      "axis": [
+       1,
+       0,
+       0
+      ],
+      "angle": "180 deg"
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "BRf"
+      ],
+      "translate": [
+       42.1306,
+       -108.5996,
+       -20.4
+      ]
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "BRc"
+      ],
+      "axis": [
+       1,
+       0,
+       0
+      ],
+      "angle": "180 deg"
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "BRc"
+      ],
+      "translate": [
+       -159.0,
+       -50.9552,
+       -13.6
+      ]
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "BRT1"
+      ],
+      "axis": [
+       1,
+       0,
+       0
+      ],
+      "angle": "180 deg"
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "BRT1"
+      ],
+      "translate": [
+       -126.0617,
+       -13.8209,
+       -17.0
+      ]
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "BRk"
+      ],
+      "axis": [
+       1,
+       0,
+       0
+      ],
+      "angle": "180 deg"
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "BRk"
+      ],
+      "translate": [
+       -29.8149,
+       -53.762,
+       -20.4
+      ]
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "BLf"
+      ],
+      "axis": [
+       1,
+       0,
+       0
+      ],
+      "angle": "180 deg"
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "BLf"
+      ],
+      "translate": [
+       127.6307,
+       -44.6177,
+       -13.6
+      ]
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "BLc"
+      ],
+      "axis": [
+       1,
+       0,
+       0
+      ],
+      "angle": "180 deg"
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "BLc"
+      ],
+      "translate": [
+       131.4855,
+       -50.9553,
+       -6.8
+      ]
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "BLk"
+      ],
+      "axis": [
+       1,
+       0,
+       0
+      ],
+      "angle": "180 deg"
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "BLk"
+      ],
+      "translate": [
+       -52.5493,
+       -1.4871,
+       -13.6
+      ]
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "FrameBack"
+      ],
+      "axis": [
+       1,
+       0,
+       0
+      ],
+      "angle": "180 deg"
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "FrameBack"
+      ],
+      "translate": [
+       -7.156,
+       17.1194,
+       0.0
+      ]
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "CrankBack"
+      ],
+      "axis": [
+       1,
+       0,
+       0
+      ],
+      "angle": "180 deg"
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "CrankBack"
+      ],
+      "translate": [
+       59.4506,
+       11.1194,
+       -3.4
+      ]
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "FrameBack"
+      ],
+      "translate": [
+       0,
+       270,
+       0
+      ]
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "CrankBack"
+      ],
+      "translate": [
+       0,
+       270,
+       0
+      ]
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "BLc"
+      ],
+      "translate": [
+       0,
+       270,
+       0
+      ]
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "BLT1"
+      ],
+      "translate": [
+       0,
+       270,
+       0
+      ]
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "BLT2"
+      ],
+      "translate": [
+       0,
+       270,
+       0
+      ]
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "BLk"
+      ],
+      "translate": [
+       0,
+       270,
+       0
+      ]
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "BLf"
+      ],
+      "translate": [
+       0,
+       270,
+       0
+      ]
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "BLj"
+      ],
+      "translate": [
+       0,
+       270,
+       0
+      ]
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "BRc"
+      ],
+      "translate": [
+       0,
+       270,
+       0
+      ]
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "BRT1"
+      ],
+      "translate": [
+       0,
+       270,
+       0
+      ]
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "BRT2"
+      ],
+      "translate": [
+       0,
+       270,
+       0
+      ]
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "BRk"
+      ],
+      "translate": [
+       0,
+       270,
+       0
+      ]
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "BRf"
+      ],
+      "translate": [
+       0,
+       270,
+       0
+      ]
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "BRj"
+      ],
+      "translate": [
+       0,
+       270,
+       0
+      ]
+     }
+    }
+   ]
+  },
+  {
+   "id": "check",
+   "kind": "commands",
+   "commands": [
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "FLT2"
+      ],
+      "translate": [
+       -64.9243,
+       -29.2091,
+       -10.2
+      ]
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "FRk"
+      ],
+      "translate": [
+       -82.9578,
+       -74.1448,
+       -20.4
+      ]
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "FLk"
+      ],
+      "translate": [
+       -15.9087,
+       -78.048,
+       -13.6
+      ]
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "FRT1"
+      ],
+      "translate": [
+       -30.3023,
+       -97.1215,
+       -17.0
+      ]
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "FLT1"
+      ],
+      "translate": [
+       134.986,
+       -113.2,
+       -10.2
+      ]
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "FRT2"
+      ],
+      "translate": [
+       -127.0172,
+       36.8982,
+       -17.0
+      ]
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "FRc"
+      ],
+      "translate": [
+       -80.8083,
+       -3.586,
+       -13.6
+      ]
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "FRf"
+      ],
+      "translate": [
+       -96.6397,
+       12.0361,
+       -20.4
+      ]
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "FLc"
+      ],
+      "translate": [
+       29.0954,
+       -7.489,
+       -6.8
+      ]
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "FLf"
+      ],
+      "translate": [
+       99.2215,
+       -16.2092,
+       -13.6
+      ]
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "FLj"
+      ],
+      "translate": [
+       89.9939,
+       -61.0477,
+       -17.0
+      ]
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "FrameFront"
+      ],
+      "translate": [
+       -78.0,
+       15.8427,
+       0.0
+      ]
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "FRj"
+      ],
+      "translate": [
+       -32.6067,
+       -7.5641,
+       -23.8
+      ]
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "CrankFront"
+      ],
+      "translate": [
+       39.472,
+       5.0426,
+       -3.4
+      ]
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "CrankAxle"
+      ],
+      "axis": [
+       0,
+       1,
+       0
+      ],
+      "angle": "90 deg"
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "CrankAxle"
+      ],
+      "translate": [
+       65.4786,
+       3.0427,
+       3.2
+      ]
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "BRT2"
+      ],
+      "axis": [
+       1,
+       0,
+       0
+      ],
+      "angle": "180 deg"
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "BRT2"
+      ],
+      "translate": [
+       -160.4105,
+       -147.9162,
+       -17.0
+      ]
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "BLT2"
+      ],
+      "axis": [
+       1,
+       0,
+       0
+      ],
+      "angle": "180 deg"
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "BLT2"
+      ],
+      "translate": [
+       27.7031,
+       -150.7369,
+       -10.2
+      ]
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "BLj"
+      ],
+      "axis": [
+       1,
+       0,
+       0
+      ],
+      "angle": "180 deg"
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "BLj"
+      ],
+      "translate": [
+       10.2635,
+       -87.4816,
+       -17.0
+      ]
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "BLT1"
+      ],
+      "axis": [
+       1,
+       0,
+       0
+      ],
+      "angle": "180 deg"
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "BLT1"
+      ],
+      "translate": [
+       90.2527,
+       -87.4816,
+       -10.2
+      ]
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "BRj"
+      ],
+      "axis": [
+       1,
+       0,
+       0
+      ],
+      "angle": "180 deg"
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "BRj"
+      ],
+      "translate": [
+       79.7371,
+       -91.6659,
+       -23.8
+      ]
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "BRf"
+      ],
+      "axis": [
+       1,
+       0,
+       0
+      ],
+      "angle": "180 deg"
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "BRf"
+      ],
+      "translate": [
+       42.1306,
+       -108.5996,
+       -20.4
+      ]
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "BRc"
+      ],
+      "axis": [
+       1,
+       0,
+       0
+      ],
+      "angle": "180 deg"
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "BRc"
+      ],
+      "translate": [
+       -159.0,
+       -50.9552,
+       -13.6
+      ]
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "BRT1"
+      ],
+      "axis": [
+       1,
+       0,
+       0
+      ],
+      "angle": "180 deg"
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "BRT1"
+      ],
+      "translate": [
+       -126.0617,
+       -13.8209,
+       -17.0
+      ]
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "BRk"
+      ],
+      "axis": [
+       1,
+       0,
+       0
+      ],
+      "angle": "180 deg"
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "BRk"
+      ],
+      "translate": [
+       -29.8149,
+       -53.762,
+       -20.4
+      ]
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "BLf"
+      ],
+      "axis": [
+       1,
+       0,
+       0
+      ],
+      "angle": "180 deg"
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "BLf"
+      ],
+      "translate": [
+       127.6307,
+       -44.6177,
+       -13.6
+      ]
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "BLc"
+      ],
+      "axis": [
+       1,
+       0,
+       0
+      ],
+      "angle": "180 deg"
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "BLc"
+      ],
+      "translate": [
+       131.4855,
+       -50.9553,
+       -6.8
+      ]
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "BLk"
+      ],
+      "axis": [
+       1,
+       0,
+       0
+      ],
+      "angle": "180 deg"
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "BLk"
+      ],
+      "translate": [
+       -52.5493,
+       -1.4871,
+       -13.6
+      ]
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "FrameBack"
+      ],
+      "axis": [
+       1,
+       0,
+       0
+      ],
+      "angle": "180 deg"
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "FrameBack"
+      ],
+      "translate": [
+       -7.156,
+       17.1194,
+       0.0
+      ]
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "CrankBack"
+      ],
+      "axis": [
+       1,
+       0,
+       0
+      ],
+      "angle": "180 deg"
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "CrankBack"
+      ],
+      "translate": [
+       59.4506,
+       11.1194,
+       -3.4
+      ]
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "FrameBack"
+      ],
+      "translate": [
+       0,
+       270,
+       0
+      ]
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "CrankBack"
+      ],
+      "translate": [
+       0,
+       270,
+       0
+      ]
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "BLc"
+      ],
+      "translate": [
+       0,
+       270,
+       0
+      ]
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "BLT1"
+      ],
+      "translate": [
+       0,
+       270,
+       0
+      ]
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "BLT2"
+      ],
+      "translate": [
+       0,
+       270,
+       0
+      ]
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "BLk"
+      ],
+      "translate": [
+       0,
+       270,
+       0
+      ]
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "BLf"
+      ],
+      "translate": [
+       0,
+       270,
+       0
+      ]
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "BLj"
+      ],
+      "translate": [
+       0,
+       270,
+       0
+      ]
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "BRc"
+      ],
+      "translate": [
+       0,
+       270,
+       0
+      ]
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "BRT1"
+      ],
+      "translate": [
+       0,
+       270,
+       0
+      ]
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "BRT2"
+      ],
+      "translate": [
+       0,
+       270,
+       0
+      ]
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "BRk"
+      ],
+      "translate": [
+       0,
+       270,
+       0
+      ]
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "BRf"
+      ],
+      "translate": [
+       0,
+       270,
+       0
+      ]
+     }
+    },
+    {
+     "command": "solid.move",
+     "params": {
+      "bodies": [
+       "BRj"
+      ],
+      "translate": [
+       0,
+       270,
+       0
+      ]
+     }
+    },
+    {
+     "command": "inspect.interference",
+     "params": {}
+    },
+    {
+     "command": "inspect.measure",
+     "params": {}
+    }
+   ]
+  }
+ ]
+}
