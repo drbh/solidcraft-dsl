@@ -47,3 +47,45 @@ jobs:
       - run: cargo test --workspace --locked
         env:
           SOLIDCRAFT_CLI: ${{ runner.temp }}/solidcraft/solidcraft-cli
+
+  # All features, including the two assembly APIs not yet in the stock release.
+  # Keep the upstream revision and the small, reviewed patch reproducible.
+  full-engine:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          repository: tangency-labs/solidcraft
+          ref: 3d3dd27439995f37eaed1feaa1c53a0e42d2fe39
+          path: build/engine
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            . -> target
+            build/engine -> target
+      - name: Build the current engine with DSL assembly APIs
+        working-directory: build/engine
+        run: |
+          git apply ../../ci/solidcraft-assembly.patch
+          cargo build --locked -p solidcraft-cli --bin solidcraft-cli
+          cargo test --locked -p solidcraft-engine --lib cmd::component::properties::tests
+          cargo test --locked -p solidcraft-engine authored_occurrence_names
+      - name: Verify every DSL capability and run the complete suite
+        run: ci/check-compatibility.sh
+        env:
+          SOLIDCRAFT_CLI: ${{ github.workspace }}/build/engine/target/debug/solidcraft-cli
+      - name: Build every example and print recipe
+        run: ci/check-examples.sh
+        env:
+          SOLIDCRAFT_CLI: ${{ github.workspace }}/build/engine/target/debug/solidcraft-cli
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: compatibility-reports-${{ matrix.os }}
+          path: build/example-compatibility

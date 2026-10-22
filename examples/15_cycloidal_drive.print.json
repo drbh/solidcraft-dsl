@@ -1,1545 +1,542 @@
 {
- "version": 1,
- "defaults": false,
- "requests": [
-  {
-   "id": "plate1-3mf",
-   "kind": "export",
-   "format": "3mf",
-   "commands": [
+  "version": 1,
+  "defaults": false,
+  "requests": [
     {
-     "command": "solid.remove",
-     "params": {
-      "bodies": [
-       "DiscA",
-       "DiscB",
-       "CamA",
-       "CamB",
-       "InputShaft",
-       "OutputBase",
-       "OutputTop"
-      ]
-     }
+      "id": "plate1-3mf",
+      "kind": "export",
+      "format": "3mf",
+      "layout": "plate_1"
     },
     {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "Housing"
-      ],
-      "translate": [
-       -66.0,
-       -0.0,
-       0.0
-      ]
-     }
+      "id": "plate2-3mf",
+      "kind": "export",
+      "format": "3mf",
+      "layout": "plate_2"
     },
     {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "Cover"
-      ],
-      "translate": [
-       66.0,
-       -20.0,
-       -31.5
-      ]
-     }
+      "id": "layout-glb",
+      "kind": "export",
+      "format": "glb",
+      "layout": "plate_3"
     },
     {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "Roller"
+      "id": "check",
+      "kind": "commands",
+      "commands": [
+        {
+          "command": "inspect.measure",
+          "params": {}
+        },
+        {
+          "command": "model.faces",
+          "params": {
+            "body": "InputShaft"
+          }
+        }
       ],
-      "translate": [
-       -16.0,
-       48.0,
-       -6.5
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "Roller (2)"
-      ],
-      "translate": [
-       -2.0423,
-       35.6393,
-       -6.5
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "Roller (3)"
-      ],
-      "translate": [
-       15.6393,
-       24.4886,
-       -6.5
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "Roller (4)"
-      ],
-      "translate": [
-       36.4886,
-       15.6393,
-       -6.5
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "Roller (5)"
-      ],
-      "translate": [
-       59.6393,
-       9.9577,
-       -6.5
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "Roller (6)"
-      ],
-      "translate": [
-       84.0,
-       8.0,
-       -6.5
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "Roller (7)"
-      ],
-      "translate": [
-       108.3607,
-       9.9577,
-       -6.5
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "Roller (8)"
-      ],
-      "translate": [
-       131.5114,
-       15.6393,
-       -6.5
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "Roller (9)"
-      ],
-      "translate": [
-       152.3607,
-       24.4886,
-       -6.5
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "Roller (10)"
-      ],
-      "translate": [
-       170.0423,
-       35.6393,
-       -6.5
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "Roller (11)"
-      ],
-      "translate": [
-       64.0,
-       60.0,
-       -6.5
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "Roller (12)"
-      ],
-      "translate": [
-       74.0423,
-       72.3607,
-       -6.5
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "Roller (13)"
-      ],
-      "translate": [
-       80.3607,
-       83.5114,
-       -6.5
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "Roller (14)"
-      ],
-      "translate": [
-       83.5114,
-       92.3607,
-       -6.5
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "Roller (15)"
-      ],
-      "translate": [
-       84.3607,
-       98.0423,
-       -6.5
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "Roller (16)"
-      ],
-      "translate": [
-       84.0,
-       100.0,
-       -6.5
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "Roller (17)"
-      ],
-      "translate": [
-       83.6393,
-       98.0423,
-       -6.5
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "Roller (18)"
-      ],
-      "translate": [
-       84.4886,
-       92.3607,
-       -6.5
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "Roller (19)"
-      ],
-      "translate": [
-       87.6393,
-       83.5114,
-       -6.5
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "Roller (20)"
-      ],
-      "translate": [
-       93.9577,
-       72.3607,
-       -6.5
-      ]
-     }
+      "layout": "plate_3"
     }
-   ]
-  },
-  {
-   "id": "plate2-3mf",
-   "kind": "export",
-   "format": "3mf",
-   "commands": [
-    {
-     "command": "solid.remove",
-     "params": {
-      "bodies": [
-       "Housing",
-       "Cover",
-       "Roller",
-       "Roller (2)",
-       "Roller (3)",
-       "Roller (4)",
-       "Roller (5)",
-       "Roller (6)",
-       "Roller (7)",
-       "Roller (8)",
-       "Roller (9)",
-       "Roller (10)",
-       "Roller (11)",
-       "Roller (12)",
-       "Roller (13)",
-       "Roller (14)",
-       "Roller (15)",
-       "Roller (16)",
-       "Roller (17)",
-       "Roller (18)",
-       "Roller (19)",
-       "Roller (20)"
+  ],
+  "layouts": {
+    "plate_1": {
+      "spacing": "5 mm",
+      "parts": [
+        {
+          "id": "Housing_8",
+          "select": {
+            "bodies": [
+              "Housing"
+            ]
+          }
+        },
+        {
+          "id": "Cover_9",
+          "select": {
+            "bodies": [
+              "Cover"
+            ]
+          }
+        },
+        {
+          "id": "Roller_10",
+          "select": {
+            "bodies": [
+              "Roller"
+            ]
+          }
+        },
+        {
+          "id": "Roller_2_11",
+          "select": {
+            "bodies": [
+              "Roller (2)"
+            ]
+          }
+        },
+        {
+          "id": "Roller_3_12",
+          "select": {
+            "bodies": [
+              "Roller (3)"
+            ]
+          }
+        },
+        {
+          "id": "Roller_4_13",
+          "select": {
+            "bodies": [
+              "Roller (4)"
+            ]
+          }
+        },
+        {
+          "id": "Roller_5_14",
+          "select": {
+            "bodies": [
+              "Roller (5)"
+            ]
+          }
+        },
+        {
+          "id": "Roller_6_15",
+          "select": {
+            "bodies": [
+              "Roller (6)"
+            ]
+          }
+        },
+        {
+          "id": "Roller_7_16",
+          "select": {
+            "bodies": [
+              "Roller (7)"
+            ]
+          }
+        },
+        {
+          "id": "Roller_8_17",
+          "select": {
+            "bodies": [
+              "Roller (8)"
+            ]
+          }
+        },
+        {
+          "id": "Roller_9_18",
+          "select": {
+            "bodies": [
+              "Roller (9)"
+            ]
+          }
+        },
+        {
+          "id": "Roller_10_19",
+          "select": {
+            "bodies": [
+              "Roller (10)"
+            ]
+          }
+        },
+        {
+          "id": "Roller_11_20",
+          "select": {
+            "bodies": [
+              "Roller (11)"
+            ]
+          }
+        },
+        {
+          "id": "Roller_12_21",
+          "select": {
+            "bodies": [
+              "Roller (12)"
+            ]
+          }
+        },
+        {
+          "id": "Roller_13_22",
+          "select": {
+            "bodies": [
+              "Roller (13)"
+            ]
+          }
+        },
+        {
+          "id": "Roller_14_23",
+          "select": {
+            "bodies": [
+              "Roller (14)"
+            ]
+          }
+        },
+        {
+          "id": "Roller_15_24",
+          "select": {
+            "bodies": [
+              "Roller (15)"
+            ]
+          }
+        },
+        {
+          "id": "Roller_16_25",
+          "select": {
+            "bodies": [
+              "Roller (16)"
+            ]
+          }
+        },
+        {
+          "id": "Roller_17_26",
+          "select": {
+            "bodies": [
+              "Roller (17)"
+            ]
+          }
+        },
+        {
+          "id": "Roller_18_27",
+          "select": {
+            "bodies": [
+              "Roller (18)"
+            ]
+          }
+        },
+        {
+          "id": "Roller_19_28",
+          "select": {
+            "bodies": [
+              "Roller (19)"
+            ]
+          }
+        },
+        {
+          "id": "Roller_20_29",
+          "select": {
+            "bodies": [
+              "Roller (20)"
+            ]
+          }
+        }
       ]
-     }
     },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "DiscA"
-      ],
-      "translate": [
-       -81.2689,
-       62.0,
-       -11.0
+    "plate_2": {
+      "spacing": "5 mm",
+      "parts": [
+        {
+          "id": "DiscA_1",
+          "select": {
+            "bodies": [
+              "DiscA"
+            ]
+          }
+        },
+        {
+          "id": "DiscB_2",
+          "select": {
+            "bodies": [
+              "DiscB"
+            ]
+          }
+        },
+        {
+          "id": "CamA_3",
+          "select": {
+            "bodies": [
+              "CamA"
+            ]
+          }
+        },
+        {
+          "id": "CamB_4",
+          "select": {
+            "bodies": [
+              "CamB"
+            ]
+          }
+        },
+        {
+          "id": "InputShaft_5",
+          "select": {
+            "bodies": [
+              "InputShaft"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                0,
+                1,
+                0
+              ],
+              "angle": "90 deg"
+            }
+          ]
+        },
+        {
+          "id": "OutputBase_6",
+          "select": {
+            "bodies": [
+              "OutputBase"
+            ]
+          }
+        },
+        {
+          "id": "OutputTop_7",
+          "select": {
+            "bodies": [
+              "OutputTop"
+            ]
+          }
+        }
       ]
-     }
     },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "DiscB"
-      ],
-      "translate": [
-       5.2689,
-       62.0,
-       -18.5
+    "plate_3": {
+      "spacing": "5 mm",
+      "parts": [
+        {
+          "id": "DiscA_1",
+          "select": {
+            "bodies": [
+              "DiscA"
+            ]
+          }
+        },
+        {
+          "id": "DiscB_2",
+          "select": {
+            "bodies": [
+              "DiscB"
+            ]
+          }
+        },
+        {
+          "id": "CamA_3",
+          "select": {
+            "bodies": [
+              "CamA"
+            ]
+          }
+        },
+        {
+          "id": "CamB_4",
+          "select": {
+            "bodies": [
+              "CamB"
+            ]
+          }
+        },
+        {
+          "id": "InputShaft_5",
+          "select": {
+            "bodies": [
+              "InputShaft"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                0,
+                1,
+                0
+              ],
+              "angle": "90 deg"
+            }
+          ]
+        },
+        {
+          "id": "OutputBase_6",
+          "select": {
+            "bodies": [
+              "OutputBase"
+            ]
+          }
+        },
+        {
+          "id": "OutputTop_7",
+          "select": {
+            "bodies": [
+              "OutputTop"
+            ]
+          }
+        },
+        {
+          "id": "Housing_8",
+          "select": {
+            "bodies": [
+              "Housing"
+            ]
+          }
+        },
+        {
+          "id": "Cover_9",
+          "select": {
+            "bodies": [
+              "Cover"
+            ]
+          }
+        },
+        {
+          "id": "Roller_10",
+          "select": {
+            "bodies": [
+              "Roller"
+            ]
+          }
+        },
+        {
+          "id": "Roller_2_11",
+          "select": {
+            "bodies": [
+              "Roller (2)"
+            ]
+          }
+        },
+        {
+          "id": "Roller_3_12",
+          "select": {
+            "bodies": [
+              "Roller (3)"
+            ]
+          }
+        },
+        {
+          "id": "Roller_4_13",
+          "select": {
+            "bodies": [
+              "Roller (4)"
+            ]
+          }
+        },
+        {
+          "id": "Roller_5_14",
+          "select": {
+            "bodies": [
+              "Roller (5)"
+            ]
+          }
+        },
+        {
+          "id": "Roller_6_15",
+          "select": {
+            "bodies": [
+              "Roller (6)"
+            ]
+          }
+        },
+        {
+          "id": "Roller_7_16",
+          "select": {
+            "bodies": [
+              "Roller (7)"
+            ]
+          }
+        },
+        {
+          "id": "Roller_8_17",
+          "select": {
+            "bodies": [
+              "Roller (8)"
+            ]
+          }
+        },
+        {
+          "id": "Roller_9_18",
+          "select": {
+            "bodies": [
+              "Roller (9)"
+            ]
+          }
+        },
+        {
+          "id": "Roller_10_19",
+          "select": {
+            "bodies": [
+              "Roller (10)"
+            ]
+          }
+        },
+        {
+          "id": "Roller_11_20",
+          "select": {
+            "bodies": [
+              "Roller (11)"
+            ]
+          }
+        },
+        {
+          "id": "Roller_12_21",
+          "select": {
+            "bodies": [
+              "Roller (12)"
+            ]
+          }
+        },
+        {
+          "id": "Roller_13_22",
+          "select": {
+            "bodies": [
+              "Roller (13)"
+            ]
+          }
+        },
+        {
+          "id": "Roller_14_23",
+          "select": {
+            "bodies": [
+              "Roller (14)"
+            ]
+          }
+        },
+        {
+          "id": "Roller_15_24",
+          "select": {
+            "bodies": [
+              "Roller (15)"
+            ]
+          }
+        },
+        {
+          "id": "Roller_16_25",
+          "select": {
+            "bodies": [
+              "Roller (16)"
+            ]
+          }
+        },
+        {
+          "id": "Roller_17_26",
+          "select": {
+            "bodies": [
+              "Roller (17)"
+            ]
+          }
+        },
+        {
+          "id": "Roller_18_27",
+          "select": {
+            "bodies": [
+              "Roller (18)"
+            ]
+          }
+        },
+        {
+          "id": "Roller_19_28",
+          "select": {
+            "bodies": [
+              "Roller (19)"
+            ]
+          }
+        },
+        {
+          "id": "Roller_20_29",
+          "select": {
+            "bodies": [
+              "Roller (20)"
+            ]
+          }
+        }
       ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "OutputBase"
-      ],
-      "translate": [
-       -80.0,
-       -24.0,
-       -6.5
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "OutputTop"
-      ],
-      "translate": [
-       -2.0,
-       -24.0,
-       -26.0
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "CamA"
-      ],
-      "translate": [
-       70.5,
-       90.0,
-       -11.0
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "CamB"
-      ],
-      "translate": [
-       73.5,
-       64.0,
-       -18.5
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "InputShaft"
-      ],
-      "axis": [
-       0,
-       1,
-       0
-      ],
-      "angle": "90 deg"
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "InputShaft"
-      ],
-      "translate": [
-       65.0,
-       9.9998,
-       3.2
-      ]
-     }
     }
-   ]
-  },
-  {
-   "id": "layout-glb",
-   "kind": "export",
-   "format": "glb",
-   "commands": [
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "Housing"
-      ],
-      "translate": [
-       -66.0,
-       -0.0,
-       0.0
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "Cover"
-      ],
-      "translate": [
-       66.0,
-       -20.0,
-       -31.5
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "Roller"
-      ],
-      "translate": [
-       -16.0,
-       48.0,
-       -6.5
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "Roller (2)"
-      ],
-      "translate": [
-       -2.0423,
-       35.6393,
-       -6.5
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "Roller (3)"
-      ],
-      "translate": [
-       15.6393,
-       24.4886,
-       -6.5
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "Roller (4)"
-      ],
-      "translate": [
-       36.4886,
-       15.6393,
-       -6.5
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "Roller (5)"
-      ],
-      "translate": [
-       59.6393,
-       9.9577,
-       -6.5
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "Roller (6)"
-      ],
-      "translate": [
-       84.0,
-       8.0,
-       -6.5
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "Roller (7)"
-      ],
-      "translate": [
-       108.3607,
-       9.9577,
-       -6.5
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "Roller (8)"
-      ],
-      "translate": [
-       131.5114,
-       15.6393,
-       -6.5
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "Roller (9)"
-      ],
-      "translate": [
-       152.3607,
-       24.4886,
-       -6.5
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "Roller (10)"
-      ],
-      "translate": [
-       170.0423,
-       35.6393,
-       -6.5
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "Roller (11)"
-      ],
-      "translate": [
-       64.0,
-       60.0,
-       -6.5
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "Roller (12)"
-      ],
-      "translate": [
-       74.0423,
-       72.3607,
-       -6.5
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "Roller (13)"
-      ],
-      "translate": [
-       80.3607,
-       83.5114,
-       -6.5
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "Roller (14)"
-      ],
-      "translate": [
-       83.5114,
-       92.3607,
-       -6.5
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "Roller (15)"
-      ],
-      "translate": [
-       84.3607,
-       98.0423,
-       -6.5
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "Roller (16)"
-      ],
-      "translate": [
-       84.0,
-       100.0,
-       -6.5
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "Roller (17)"
-      ],
-      "translate": [
-       83.6393,
-       98.0423,
-       -6.5
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "Roller (18)"
-      ],
-      "translate": [
-       84.4886,
-       92.3607,
-       -6.5
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "Roller (19)"
-      ],
-      "translate": [
-       87.6393,
-       83.5114,
-       -6.5
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "Roller (20)"
-      ],
-      "translate": [
-       93.9577,
-       72.3607,
-       -6.5
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "Housing"
-      ],
-      "translate": [
-       0,
-       280,
-       0
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "Cover"
-      ],
-      "translate": [
-       0,
-       280,
-       0
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "Roller"
-      ],
-      "translate": [
-       0,
-       280,
-       0
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "Roller (2)"
-      ],
-      "translate": [
-       0,
-       280,
-       0
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "Roller (3)"
-      ],
-      "translate": [
-       0,
-       280,
-       0
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "Roller (4)"
-      ],
-      "translate": [
-       0,
-       280,
-       0
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "Roller (5)"
-      ],
-      "translate": [
-       0,
-       280,
-       0
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "Roller (6)"
-      ],
-      "translate": [
-       0,
-       280,
-       0
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "Roller (7)"
-      ],
-      "translate": [
-       0,
-       280,
-       0
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "Roller (8)"
-      ],
-      "translate": [
-       0,
-       280,
-       0
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "Roller (9)"
-      ],
-      "translate": [
-       0,
-       280,
-       0
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "Roller (10)"
-      ],
-      "translate": [
-       0,
-       280,
-       0
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "Roller (11)"
-      ],
-      "translate": [
-       0,
-       280,
-       0
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "Roller (12)"
-      ],
-      "translate": [
-       0,
-       280,
-       0
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "Roller (13)"
-      ],
-      "translate": [
-       0,
-       280,
-       0
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "Roller (14)"
-      ],
-      "translate": [
-       0,
-       280,
-       0
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "Roller (15)"
-      ],
-      "translate": [
-       0,
-       280,
-       0
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "Roller (16)"
-      ],
-      "translate": [
-       0,
-       280,
-       0
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "Roller (17)"
-      ],
-      "translate": [
-       0,
-       280,
-       0
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "Roller (18)"
-      ],
-      "translate": [
-       0,
-       280,
-       0
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "Roller (19)"
-      ],
-      "translate": [
-       0,
-       280,
-       0
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "Roller (20)"
-      ],
-      "translate": [
-       0,
-       280,
-       0
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "DiscA"
-      ],
-      "translate": [
-       -81.2689,
-       62.0,
-       -11.0
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "DiscB"
-      ],
-      "translate": [
-       5.2689,
-       62.0,
-       -18.5
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "OutputBase"
-      ],
-      "translate": [
-       -80.0,
-       -24.0,
-       -6.5
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "OutputTop"
-      ],
-      "translate": [
-       -2.0,
-       -24.0,
-       -26.0
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "CamA"
-      ],
-      "translate": [
-       70.5,
-       90.0,
-       -11.0
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "CamB"
-      ],
-      "translate": [
-       73.5,
-       64.0,
-       -18.5
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "InputShaft"
-      ],
-      "axis": [
-       0,
-       1,
-       0
-      ],
-      "angle": "90 deg"
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "InputShaft"
-      ],
-      "translate": [
-       65.0,
-       9.9998,
-       3.2
-      ]
-     }
-    }
-   ]
-  },
-  {
-   "id": "check",
-   "kind": "commands",
-   "commands": [
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "Housing"
-      ],
-      "translate": [
-       -66.0,
-       -0.0,
-       0.0
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "Cover"
-      ],
-      "translate": [
-       66.0,
-       -20.0,
-       -31.5
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "Roller"
-      ],
-      "translate": [
-       -16.0,
-       48.0,
-       -6.5
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "Roller (2)"
-      ],
-      "translate": [
-       -2.0423,
-       35.6393,
-       -6.5
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "Roller (3)"
-      ],
-      "translate": [
-       15.6393,
-       24.4886,
-       -6.5
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "Roller (4)"
-      ],
-      "translate": [
-       36.4886,
-       15.6393,
-       -6.5
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "Roller (5)"
-      ],
-      "translate": [
-       59.6393,
-       9.9577,
-       -6.5
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "Roller (6)"
-      ],
-      "translate": [
-       84.0,
-       8.0,
-       -6.5
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "Roller (7)"
-      ],
-      "translate": [
-       108.3607,
-       9.9577,
-       -6.5
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "Roller (8)"
-      ],
-      "translate": [
-       131.5114,
-       15.6393,
-       -6.5
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "Roller (9)"
-      ],
-      "translate": [
-       152.3607,
-       24.4886,
-       -6.5
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "Roller (10)"
-      ],
-      "translate": [
-       170.0423,
-       35.6393,
-       -6.5
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "Roller (11)"
-      ],
-      "translate": [
-       64.0,
-       60.0,
-       -6.5
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "Roller (12)"
-      ],
-      "translate": [
-       74.0423,
-       72.3607,
-       -6.5
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "Roller (13)"
-      ],
-      "translate": [
-       80.3607,
-       83.5114,
-       -6.5
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "Roller (14)"
-      ],
-      "translate": [
-       83.5114,
-       92.3607,
-       -6.5
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "Roller (15)"
-      ],
-      "translate": [
-       84.3607,
-       98.0423,
-       -6.5
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "Roller (16)"
-      ],
-      "translate": [
-       84.0,
-       100.0,
-       -6.5
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "Roller (17)"
-      ],
-      "translate": [
-       83.6393,
-       98.0423,
-       -6.5
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "Roller (18)"
-      ],
-      "translate": [
-       84.4886,
-       92.3607,
-       -6.5
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "Roller (19)"
-      ],
-      "translate": [
-       87.6393,
-       83.5114,
-       -6.5
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "Roller (20)"
-      ],
-      "translate": [
-       93.9577,
-       72.3607,
-       -6.5
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "DiscA"
-      ],
-      "translate": [
-       -81.2689,
-       62.0,
-       -11.0
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "DiscB"
-      ],
-      "translate": [
-       5.2689,
-       62.0,
-       -18.5
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "OutputBase"
-      ],
-      "translate": [
-       -80.0,
-       -24.0,
-       -6.5
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "OutputTop"
-      ],
-      "translate": [
-       -2.0,
-       -24.0,
-       -26.0
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "CamA"
-      ],
-      "translate": [
-       70.5,
-       90.0,
-       -11.0
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "CamB"
-      ],
-      "translate": [
-       73.5,
-       64.0,
-       -18.5
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "InputShaft"
-      ],
-      "axis": [
-       0,
-       1,
-       0
-      ],
-      "angle": "90 deg"
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "InputShaft"
-      ],
-      "translate": [
-       65.0,
-       9.9998,
-       3.2
-      ]
-     }
-    },
-    {
-     "command": "inspect.measure",
-     "params": {}
-    },
-    {
-     "command": "model.faces",
-     "params": {
-      "body": "InputShaft"
-     }
-    }
-   ]
   }
- ]
 }

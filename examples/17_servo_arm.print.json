@@ -1,720 +1,238 @@
 {
- "version": 1,
- "defaults": false,
- "requests": [
-  {
-   "id": "plate1-3mf",
-   "kind": "export",
-   "format": "3mf",
-   "commands": [
+  "version": 1,
+  "defaults": false,
+  "requests": [
     {
-     "command": "solid.remove",
-     "params": {
-      "bodies": [
-       "Servo1",
-       "Horn1",
-       "Servo2",
-       "Horn2",
-       "UpperArm",
-       "Servo3",
-       "Horn3",
-       "ElbowBrace",
-       "ShoulderClevis",
-       "Forearm",
-       "Servo4",
-       "Horn4",
-       "ForearmClevis",
-       "Wrist",
-       "Servo5",
-       "Horn5",
-       "FingerA",
-       "FingerB",
-       "Head1",
-       "Head2",
-       "Head3",
-       "Head4",
-       "Head5",
-       "Head7",
-       "Head8",
-       "Head9",
-       "Head10",
-       "Head11",
-       "Head12"
-      ]
-     }
+      "id": "plate1-3mf",
+      "kind": "export",
+      "format": "3mf",
+      "layout": "plate_1"
     },
     {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "Base"
+      "id": "plate1-check",
+      "kind": "commands",
+      "commands": [
+        {
+          "command": "inspect.interference",
+          "params": {}
+        },
+        {
+          "command": "inspect.measure",
+          "params": {}
+        }
       ],
-      "translate": [
-       -65.0,
-       -71.0,
-       0.0
-      ]
-     }
+      "layout": "plate_1"
     },
     {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "Turntable"
-      ],
-      "translate": [
-       53.0,
-       -68.6,
-       -47.4
-      ]
-     }
+      "id": "plate2-3mf",
+      "kind": "export",
+      "format": "3mf",
+      "layout": "plate_2"
     },
     {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "EdgeClamp"
+      "id": "plate2-check",
+      "kind": "commands",
+      "commands": [
+        {
+          "command": "inspect.interference",
+          "params": {}
+        },
+        {
+          "command": "inspect.measure",
+          "params": {}
+        }
       ],
-      "axis": [
-       0,
-       1,
-       0
-      ],
-      "angle": "-90 deg"
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "EdgeClamp"
-      ],
-      "translate": [
-       -115.9998,
-       39.0001,
-       65.0
-      ]
-     }
+      "layout": "plate_2"
     }
-   ]
-  },
-  {
-   "id": "plate1-check",
-   "kind": "commands",
-   "commands": [
-    {
-     "command": "solid.remove",
-     "params": {
-      "bodies": [
-       "Servo1",
-       "Horn1",
-       "Servo2",
-       "Horn2",
-       "UpperArm",
-       "Servo3",
-       "Horn3",
-       "ElbowBrace",
-       "ShoulderClevis",
-       "Forearm",
-       "Servo4",
-       "Horn4",
-       "ForearmClevis",
-       "Wrist",
-       "Servo5",
-       "Horn5",
-       "FingerA",
-       "FingerB",
-       "Head1",
-       "Head2",
-       "Head3",
-       "Head4",
-       "Head5",
-       "Head7",
-       "Head8",
-       "Head9",
-       "Head10",
-       "Head11",
-       "Head12"
+  ],
+  "layouts": {
+    "plate_1": {
+      "spacing": "5 mm",
+      "parts": [
+        {
+          "id": "Base_1",
+          "select": {
+            "bodies": [
+              "Base"
+            ]
+          }
+        },
+        {
+          "id": "EdgeClamp_2",
+          "select": {
+            "bodies": [
+              "EdgeClamp"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                0,
+                1,
+                0
+              ],
+              "angle": "-90 deg"
+            }
+          ]
+        },
+        {
+          "id": "Turntable_5",
+          "select": {
+            "bodies": [
+              "Turntable"
+            ]
+          }
+        }
       ]
-     }
     },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "Base"
-      ],
-      "translate": [
-       -65.0,
-       -71.0,
-       0.0
+    "plate_2": {
+      "spacing": "5 mm",
+      "parts": [
+        {
+          "id": "UpperArm_8",
+          "select": {
+            "bodies": [
+              "UpperArm"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                1,
+                0,
+                0
+              ],
+              "angle": "-90 deg"
+            }
+          ]
+        },
+        {
+          "id": "ElbowBrace_11",
+          "select": {
+            "bodies": [
+              "ElbowBrace"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                1,
+                0,
+                0
+              ],
+              "angle": "90 deg"
+            }
+          ]
+        },
+        {
+          "id": "ShoulderClevis_12",
+          "select": {
+            "bodies": [
+              "ShoulderClevis"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                1,
+                0,
+                0
+              ],
+              "angle": "90 deg"
+            }
+          ]
+        },
+        {
+          "id": "Forearm_13",
+          "select": {
+            "bodies": [
+              "Forearm"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                1,
+                0,
+                0
+              ],
+              "angle": "-90 deg"
+            }
+          ]
+        },
+        {
+          "id": "ForearmClevis_16",
+          "select": {
+            "bodies": [
+              "ForearmClevis"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                1,
+                0,
+                0
+              ],
+              "angle": "90 deg"
+            }
+          ]
+        },
+        {
+          "id": "Wrist_17",
+          "select": {
+            "bodies": [
+              "Wrist"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                1,
+                0,
+                0
+              ],
+              "angle": "-90 deg"
+            }
+          ]
+        },
+        {
+          "id": "FingerA_20",
+          "select": {
+            "bodies": [
+              "FingerA"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                1,
+                0,
+                0
+              ],
+              "angle": "-90 deg"
+            }
+          ]
+        },
+        {
+          "id": "FingerB_21",
+          "select": {
+            "bodies": [
+              "FingerB"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                1,
+                0,
+                0
+              ],
+              "angle": "-90 deg"
+            }
+          ]
+        }
       ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "Turntable"
-      ],
-      "translate": [
-       53.0,
-       -68.6,
-       -47.4
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "EdgeClamp"
-      ],
-      "axis": [
-       0,
-       1,
-       0
-      ],
-      "angle": "-90 deg"
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "EdgeClamp"
-      ],
-      "translate": [
-       -115.9998,
-       39.0001,
-       65.0
-      ]
-     }
-    },
-    {
-     "command": "inspect.interference",
-     "params": {}
-    },
-    {
-     "command": "inspect.measure",
-     "params": {}
     }
-   ]
-  },
-  {
-   "id": "plate2-3mf",
-   "kind": "export",
-   "format": "3mf",
-   "commands": [
-    {
-     "command": "solid.remove",
-     "params": {
-      "bodies": [
-       "Base",
-       "EdgeClamp",
-       "Servo1",
-       "Horn1",
-       "Turntable",
-       "Servo2",
-       "Horn2",
-       "Servo3",
-       "Horn3",
-       "Servo4",
-       "Horn4",
-       "Servo5",
-       "Horn5",
-       "Head1",
-       "Head2",
-       "Head3",
-       "Head4",
-       "Head5",
-       "Head7",
-       "Head8",
-       "Head9",
-       "Head10",
-       "Head11",
-       "Head12"
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "UpperArm"
-      ],
-      "axis": [
-       1,
-       0,
-       0
-      ],
-      "angle": "-90 deg"
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "UpperArm"
-      ],
-      "translate": [
-       -108.5,
-       -207.0,
-       2.5
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "Forearm"
-      ],
-      "axis": [
-       1,
-       0,
-       0
-      ],
-      "angle": "-90 deg"
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "Forearm"
-      ],
-      "translate": [
-       -69.5,
-       -307.0,
-       24.3
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "Wrist"
-      ],
-      "axis": [
-       1,
-       0,
-       0
-      ],
-      "angle": "-90 deg"
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "Wrist"
-      ],
-      "translate": [
-       -30.5,
-       -397.0,
-       2.5
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "FingerB"
-      ],
-      "axis": [
-       1,
-       0,
-       0
-      ],
-      "angle": "-90 deg"
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "FingerB"
-      ],
-      "translate": [
-       -3.7186,
-       -454.0066,
-       -19.3
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "FingerA"
-      ],
-      "axis": [
-       1,
-       0,
-       0
-      ],
-      "angle": "-90 deg"
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "FingerA"
-      ],
-      "translate": [
-       51.2072,
-       -454.2186,
-       -19.2998
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "ShoulderClevis"
-      ],
-      "axis": [
-       1,
-       0,
-       0
-      ],
-      "angle": "90 deg"
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "ShoulderClevis"
-      ],
-      "translate": [
-       83.2006,
-       25.0,
-       58.9
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "ForearmClevis"
-      ],
-      "axis": [
-       1,
-       0,
-       0
-      ],
-      "angle": "90 deg"
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "ForearmClevis"
-      ],
-      "translate": [
-       -111.0,
-       261.891,
-       37.1
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "ElbowBrace"
-      ],
-      "axis": [
-       1,
-       0,
-       0
-      ],
-      "angle": "90 deg"
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "ElbowBrace"
-      ],
-      "translate": [
-       -74.0,
-       226.7735,
-       30.6
-      ]
-     }
-    }
-   ]
-  },
-  {
-   "id": "plate2-check",
-   "kind": "commands",
-   "commands": [
-    {
-     "command": "solid.remove",
-     "params": {
-      "bodies": [
-       "Base",
-       "EdgeClamp",
-       "Servo1",
-       "Horn1",
-       "Turntable",
-       "Servo2",
-       "Horn2",
-       "Servo3",
-       "Horn3",
-       "Servo4",
-       "Horn4",
-       "Servo5",
-       "Horn5",
-       "Head1",
-       "Head2",
-       "Head3",
-       "Head4",
-       "Head5",
-       "Head7",
-       "Head8",
-       "Head9",
-       "Head10",
-       "Head11",
-       "Head12"
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "UpperArm"
-      ],
-      "axis": [
-       1,
-       0,
-       0
-      ],
-      "angle": "-90 deg"
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "UpperArm"
-      ],
-      "translate": [
-       -108.5,
-       -207.0,
-       2.5
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "Forearm"
-      ],
-      "axis": [
-       1,
-       0,
-       0
-      ],
-      "angle": "-90 deg"
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "Forearm"
-      ],
-      "translate": [
-       -69.5,
-       -307.0,
-       24.3
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "Wrist"
-      ],
-      "axis": [
-       1,
-       0,
-       0
-      ],
-      "angle": "-90 deg"
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "Wrist"
-      ],
-      "translate": [
-       -30.5,
-       -397.0,
-       2.5
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "FingerB"
-      ],
-      "axis": [
-       1,
-       0,
-       0
-      ],
-      "angle": "-90 deg"
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "FingerB"
-      ],
-      "translate": [
-       -3.7186,
-       -454.0066,
-       -19.3
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "FingerA"
-      ],
-      "axis": [
-       1,
-       0,
-       0
-      ],
-      "angle": "-90 deg"
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "FingerA"
-      ],
-      "translate": [
-       51.2072,
-       -454.2186,
-       -19.2998
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "ShoulderClevis"
-      ],
-      "axis": [
-       1,
-       0,
-       0
-      ],
-      "angle": "90 deg"
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "ShoulderClevis"
-      ],
-      "translate": [
-       83.2006,
-       25.0,
-       58.9
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "ForearmClevis"
-      ],
-      "axis": [
-       1,
-       0,
-       0
-      ],
-      "angle": "90 deg"
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "ForearmClevis"
-      ],
-      "translate": [
-       -111.0,
-       261.891,
-       37.1
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "ElbowBrace"
-      ],
-      "axis": [
-       1,
-       0,
-       0
-      ],
-      "angle": "90 deg"
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "ElbowBrace"
-      ],
-      "translate": [
-       -74.0,
-       226.7735,
-       30.6
-      ]
-     }
-    },
-    {
-     "command": "inspect.interference",
-     "params": {}
-    },
-    {
-     "command": "inspect.measure",
-     "params": {}
-    }
-   ]
   }
- ]
 }

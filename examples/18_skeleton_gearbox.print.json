@@ -1,0 +1,154 @@
+{
+  "version": 1,
+  "defaults": false,
+  "requests": [
+    {
+      "id": "print-3mf",
+      "kind": "export",
+      "format": "3mf",
+      "layout": "plate_1"
+    },
+    {
+      "id": "print-glb",
+      "kind": "export",
+      "format": "glb",
+      "layout": "plate_1"
+    },
+    {
+      "id": "print-check",
+      "kind": "commands",
+      "commands": [
+        {
+          "command": "inspect.interference",
+          "params": {}
+        },
+        {
+          "command": "inspect.measure",
+          "params": {}
+        }
+      ],
+      "layout": "plate_1"
+    }
+  ],
+  "layouts": {
+    "plate_1": {
+      "spacing": "5 mm",
+      "parts": [
+        {
+          "id": "Sun_1",
+          "select": {
+            "bodies": [
+              "Sun"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                1,
+                0,
+                0
+              ],
+              "angle": "180 deg"
+            }
+          ]
+        },
+        {
+          "id": "Planet_2",
+          "select": {
+            "bodies": [
+              "Planet"
+            ]
+          }
+        },
+        {
+          "id": "Planet_2_3",
+          "select": {
+            "bodies": [
+              "Planet (2)"
+            ]
+          }
+        },
+        {
+          "id": "Planet_3_4",
+          "select": {
+            "bodies": [
+              "Planet (3)"
+            ]
+          }
+        },
+        {
+          "id": "Housing_5",
+          "select": {
+            "bodies": [
+              "Housing"
+            ]
+          }
+        },
+        {
+          "id": "Lid_6",
+          "select": {
+            "bodies": [
+              "Lid"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                1,
+                0,
+                0
+              ],
+              "angle": "180 deg"
+            }
+          ]
+        },
+        {
+          "id": "CarrierBase_7",
+          "select": {
+            "bodies": [
+              "CarrierBase"
+            ]
+          }
+        },
+        {
+          "id": "CarrierTop_8",
+          "select": {
+            "bodies": [
+              "CarrierTop"
+            ]
+          }
+        },
+        {
+          "id": "InputCrank_9",
+          "select": {
+            "bodies": [
+              "InputCrank"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                1,
+                0,
+                0
+              ],
+              "angle": "180 deg"
+            }
+          ]
+        },
+        {
+          "id": "OutputCrank_10",
+          "select": {
+            "bodies": [
+              "OutputCrank"
+            ]
+          }
+        }
+      ],
+      "bed": [
+        250,
+        250
+      ]
+    }
+  }
+}

@@ -17,7 +17,7 @@ expression behavior. `tests/evaluate.rs` checks body count and analytic volume t
 | 9 | [Heat sink](../examples/09_heat_sink.sc) | Computed integer count, centered fin array | 45600 |
 | 10 | [Rotating link](../examples/10_rotating_link.sc) | Persistent rotated points, shared endpoints, counterbores | 6000 − 118π |
 
-Case 10 requires a development engine with persistent point expressions; see
+Case 10 requires persistent point expressions, available in the pinned 0.19.0 release; see
 [expression semantics and engine setup](expressions.md). Its integration test saves and
 reopens the model, deletes the source, changes the angle from 30° to 135° and length from
 60 to 80 mm, and checks both volume and rotated bounds. It also recompiles decompiled source

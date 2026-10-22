@@ -1,6 +1,6 @@
 //! Reproducible observations of a saved model. Each request opens a private copy of the
-//! same input; command parameters remain engine-native instead of a second CAD API.
-use std::collections::HashSet;
+//! same input; optional declarative layouts prepare independent geometry for those requests.
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
@@ -37,10 +37,12 @@ pub struct Plan {
     pub defaults: bool,
     #[serde(default)]
     pub requests: Vec<Request>,
+    #[serde(default)]
+    pub layouts: BTreeMap<String, crate::layout::Layout>,
 }
 impl Default for Plan {
     fn default() -> Self {
-        Self { version: 1, defaults: true, requests: vec![] }
+        Self { version: 1, defaults: true, requests: vec![], layouts: BTreeMap::new() }
     }
 }
 
@@ -51,6 +53,9 @@ pub struct Request {
     /// Optional request failures are warnings and do not fail the evaluation.
     #[serde(default = "yes")]
     pub required: bool,
+    /// Named or inline preparation, applied before this request on a private geometry copy.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub layout: Option<crate::layout::LayoutRef>,
     #[serde(flatten)]
     pub action: Action,
 }
@@ -163,10 +168,31 @@ impl Plan {
         if self.version != 1 {
             return Err("unsupported request version; expected 1".into());
         }
+        for (name, layout) in &self.layouts {
+            if !safe_name(name) {
+                return Err(format!("invalid layout name: {name}"));
+            }
+            layout.validate()?;
+        }
         let mut ids = HashSet::new();
         for r in &self.requests {
             if !safe_name(&r.id) || ["source", "design", "request_results"].contains(&r.id.as_str()) || !ids.insert(&r.id) {
                 return Err(format!("invalid, reserved or duplicate request id: {}", r.id));
+            }
+            if let Some(layout) = &r.layout {
+                let layout = match layout {
+                    crate::layout::LayoutRef::Named(name) => self.layouts.get(name).ok_or_else(|| format!("{}: unknown layout `{name}`", r.id))?,
+                    crate::layout::LayoutRef::Inline(layout) => layout,
+                };
+                layout.validate()?;
+                if let Action::Export { format, params, .. } = &r.action {
+                    if (format == "step" || format == "3mf-tagged") && layout.geometry != crate::layout::Geometry::Solid {
+                        return Err(format!("{}: {format} layout export requires geometry: solid", r.id));
+                    }
+                    if !["3mf", "3mf-tagged", "stl", "stla", "obj", "step", "glb"].contains(&format.as_str()) || params.contains_key("bodies") {
+                        return Err(format!("{}: layout exports support 3mf, stl, obj, step or glb; select bodies in the layout", r.id));
+                    }
+                }
             }
             let result = match &r.action {
                 Action::Snapshot { options } => validate_snapshot(options),
@@ -210,11 +236,17 @@ impl Plan {
         let mut requests = Vec::new();
         if self.defaults && previews {
             for (id, options) in ["iso", "front", "top", "right"].into_iter().zip(views.clone()) {
-                requests.push(Request { id: id.into(), required: true, action: Action::Snapshot { options } });
+                requests.push(Request { id: id.into(), required: true, layout: None, action: Action::Snapshot { options } });
             }
-            requests.push(Request { id: "overview".into(), required: true, action: Action::Sheet { views, columns: 2 } });
+            requests.push(Request { id: "overview".into(), required: true, layout: None, action: Action::Sheet { views, columns: 2 } });
         }
-        for r in &self.requests {
+        for source in &self.requests {
+            let mut r = source.clone();
+            if let Some(crate::layout::LayoutRef::Named(name)) = &r.layout
+                && let Some(layout) = self.layouts.get(name)
+            {
+                r.layout = Some(crate::layout::LayoutRef::Inline(layout.clone()));
+            }
             if let Some(old) = requests.iter_mut().find(|old| old.id == r.id) {
                 *old = r.clone();
             } else {
@@ -256,6 +288,7 @@ pub fn capabilities(cli: &str) -> Result<Value, String> {
             "concise": {"compilation":"engine commands", "coverage":"supported modeling syntax"},
             "native": {"format":"solidcraft-source/1", "compilation":"direct native document loading", "coverage":"all document fields and package entry payloads, including unknown fields", "validation":"engine required for semantic validation"}
         },
+        "layouts": {"placement":"measured bounds; automatic packing or explicit lower-left XY; on-bed by default", "expressions":"saved user parameters; mm and degrees", "geometry":"mesh snapshots by default; explicit solid mode uses verified STEP transfer", "instance_selection":"exact occurrence-name paths; requires occurrence.properties world_name", "reusable":"named layouts apply to export, snapshot, sheet and commands"},
         "placeholders": {"$design": "private input design", "$output": "requested output file (requires extension for commands/cli)", "$dir": "request directory"},
         "glb": {"implementation": "binary STL conversion", "units": "metres", "up": "Y", "preserves": ["triangle geometry"], "omits": ["CAD features", "materials", "assembly hierarchy"]},
         "notes": ["Native commands and CLI arguments have the engine's normal filesystem access; request isolation is not a sandbox.", "Snapshot cameras and export parameters are engine-native. Unsupported capabilities return per-request errors."]
@@ -265,10 +298,10 @@ pub fn capabilities(cli: &str) -> Result<Value, String> {
 fn write_json(path: &Path, v: &impl Serialize) -> Result<(), String> {
     std::fs::write(path, serde_json::to_vec_pretty(v).map_err(|e| e.to_string())?).map_err(|e| e.to_string())
 }
-struct Context<'a> {
+pub(crate) struct Context<'a> {
     cli: &'a str,
-    dir: PathBuf,
-    design: PathBuf,
+    pub(crate) dir: PathBuf,
+    pub(crate) design: PathBuf,
     output: Option<PathBuf>,
 }
 impl Context<'_> {
@@ -285,7 +318,7 @@ impl Context<'_> {
             _ => v.clone(),
         })
     }
-    fn run(&self, args: &[String], log: &str) -> Result<Value, String> {
+    pub(crate) fn run(&self, args: &[String], log: &str) -> Result<Value, String> {
         let args = self.replace(&json!(args))?;
         let args: Vec<String> = serde_json::from_value(args).map_err(|e| e.to_string())?;
         let out = Command::new(self.cli).args(&args).current_dir(&self.dir).output().map_err(|e| format!("{}: {e}", self.cli))?;
@@ -297,7 +330,7 @@ impl Context<'_> {
         }
         Ok(serde_json::from_slice(&out.stdout).unwrap_or_else(|_| json!({"stdout": String::from_utf8_lossy(&out.stdout)})))
     }
-    fn script(&self, commands: &[Value], filename: &str) -> Result<PathBuf, String> {
+    pub(crate) fn script(&self, commands: &[Value], filename: &str) -> Result<PathBuf, String> {
         let path = self.dir.join(filename);
         write_json(&path, &self.replace(&json!({"commands": commands}))?)?;
         Ok(path)
@@ -349,7 +382,7 @@ impl Context<'_> {
 /// Run every request independently and retain both successful and failed results.
 /// Returns diagnostics to merge into the evaluation/observation report.
 pub fn execute(cli: &str, design: &Path, dir: &Path, requests: &[Request], report: &mut Value) -> Result<Vec<Value>, String> {
-    Plan { version: 1, defaults: false, requests: requests.to_vec() }.validate()?;
+    Plan { version: 1, defaults: false, requests: requests.to_vec(), layouts: BTreeMap::new() }.validate()?;
     let mut diagnostics = vec![];
     let mut results = vec![];
     let root = dir.join("requests");
@@ -361,14 +394,44 @@ pub fn execute(cli: &str, design: &Path, dir: &Path, requests: &[Request], repor
     } else {
         cli.into()
     };
+    let mut layouts: HashMap<String, (PathBuf, Value)> = HashMap::new();
+    let mut layout_source = crate::layout::SourceCache::default();
     for request in requests {
         let rd = root.join(&request.id);
         std::fs::create_dir(&rd).map_err(|e| e.to_string())?;
         write_json(&rd.join("request.json"), request)?;
         let input = rd.join("input.solidcraft");
         std::fs::copy(design, &input).map_err(|e| e.to_string())?;
-        let ctx = Context { cli: &executable, dir: rd.clone(), design: input, output: None };
-        let result = perform(ctx, &request.action);
+        let mut ctx = Context { cli: &executable, dir: rd.clone(), design: input, output: None };
+        let result: Result<(PathBuf, Value), String> = (|| {
+            let layout = match &request.layout {
+                Some(crate::layout::LayoutRef::Inline(layout)) => {
+                    let key = serde_json::to_string(layout).map_err(|e| e.to_string())?;
+                    let (cached, mut metadata) = if let Some(cached) = layouts.get(&key) {
+                        cached.clone()
+                    } else {
+                        let metadata = crate::layout::prepare(&mut ctx, layout, &mut layout_source)?;
+                        let cached = root.join(format!("layout-cache-{}.solidcraft", layouts.len()));
+                        std::fs::copy(&ctx.design, &cached).map_err(|e| e.to_string())?;
+                        layouts.insert(key, (cached.clone(), metadata.clone()));
+                        (cached, metadata)
+                    };
+                    let prepared = rd.join("prepared.solidcraft");
+                    std::fs::copy(&cached, &prepared).map_err(|e| e.to_string())?;
+                    ctx.design = prepared.clone();
+                    metadata["design"] = json!(prepared);
+                    write_json(&rd.join("layout.json"), &metadata)?;
+                    metadata
+                }
+                Some(crate::layout::LayoutRef::Named(_)) => return Err("unresolved named layout".into()),
+                None => Value::Null,
+            };
+            let (path, mut metadata) = perform(ctx, &request.action)?;
+            if !layout.is_null() {
+                metadata["layout"] = layout;
+            }
+            Ok((path, metadata))
+        })();
         let mut entry = json!({"id": request.id, "required": request.required, "request": request, "directory": rd, "ok": result.is_ok()});
         match result {
             Ok((path, metadata)) => {

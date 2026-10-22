@@ -1,6 +1,6 @@
 # Calculations and persistent geometry
 
-The DSL and the updated SolidCraft engine use the same `solidcraft-expr` scalar core:
+The DSL uses `solidcraft-expr`, extracted from SolidCraft's scalar evaluator:
 operators, precedence, units, functions, dependency resolution and errors. No second math parser
 or string-to-JavaScript evaluation is involved. Lengths resolve to mm and angles to radians.
 
@@ -52,18 +52,19 @@ Bound points remain signed through quadrant changes and can be referenced by lin
 polylines. They do not automatically join nearby points. Literal bindings are fixed too.
 Do not add conflicting driving constraints to bound geometry.
 
-**Engine requirement:** persistent sketch points exist in the current engine source, but not
-in released CLI versions 0.15 or 0.16.2. `evaluate` checks the advertised command capability
-and returns an actionable error. Use a development build explicitly:
+**Engine requirement:** SolidCraft 0.19.0 supports persistent sketch points. Older CLI versions
+0.15 and 0.16.2 do not. `evaluate` checks the advertised command capability and returns an
+actionable error. Use the pinned release explicitly:
 
 ```sh
-cargo build --manifest-path ../solidcraft/Cargo.toml -p solidcraft-cli --bin solidcraft-cli
-export SOLIDCRAFT_CLI="$PWD/../solidcraft/target/debug/solidcraft-cli"
+ci/install-solidcraft-cli.sh 0.19.0 "$PWD/build/release-engine"
+export SOLIDCRAFT_CLI="$PWD/build/release-engine/solidcraft-cli"
 cargo run -- evaluate examples/10_rotating_link.sc --json
 ```
 
-The first nine numbered examples work with the release engine. Persistent point tests print
-an explicit skip on older engines; run the suite with the development binary to exercise all ten.
+All ten expression examples work with 0.19.0. Persistent point tests print an explicit skip on
+older engines. For a strict test of every DSL capability, including assemblies, use
+`ci/check-compatibility.sh` with the [compatible engine](assemblies.md#engine-compatibility).
 
 ## Inspect and iterate
 
@@ -82,11 +83,12 @@ native edits remain distinct revisions: observe the exact saved model when revie
 changes. Decompilation preserves explicit bound points and native formulas, but cannot recover
 source helper names or original seed expressions after they have been lowered.
 
-## Shared core distribution
+## Scalar core distribution
 
 `crates/solidcraft-expr` is a standalone crate, extracted from SolidCraft's expression module;
-see its [provenance](../crates/solidcraft-expr/README.md). The companion engine change replaces
-its old evaluator with a thin document-error adapter and depends on the same crate source at
-`crates/expr`. Both repositories contain the package so either checkout builds independently.
-Until the crate is published, changes to its implementation must be synchronized and tested
-in both repositories; these copies are not independently maintained evaluators.
+see its [provenance](../crates/solidcraft-expr/README.md). The earlier companion checkout also
+uses this crate through a document-error adapter. Upstream 0.19.0 still maintains its evaluator
+in `crates/doc/src/expr.rs`; the small assembly compatibility patch does not replace it.
+The engine integration tests exercise arithmetic, units, parameter changes and persistent
+bindings across this boundary. New upstream expression syntax must be checked explicitly when
+updating the pin; sharing a published scalar crate upstream remains a separate integration step.

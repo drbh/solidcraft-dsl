@@ -18,23 +18,23 @@
       # parameters) that was measured on this version; bump it here, run the tests, and update
       # the version in README.md. Hashes are from the release's SHA256SUMS.txt.
       solidcraft = {
-        version = "0.15.0";
+        version = "0.19.0";
         assets = {
           aarch64-darwin = {
-            file = "solidcraft-cli-0.15.0-macos-universal.zip";
-            sha256 = "b0420edaaf6d894b87585b770d26d2f1fa5f54fb514ce9ea70aa4b6e56de964b";
+            file = "solidcraft-cli-0.19.0-macos-universal.zip";
+            sha256 = "e9ec50c3a838336feeffd7028dc2594fef791cdfee3ccbf5cbf235f78ba88245";
           };
           x86_64-darwin = {
-            file = "solidcraft-cli-0.15.0-macos-universal.zip";
-            sha256 = "b0420edaaf6d894b87585b770d26d2f1fa5f54fb514ce9ea70aa4b6e56de964b";
+            file = "solidcraft-cli-0.19.0-macos-universal.zip";
+            sha256 = "e9ec50c3a838336feeffd7028dc2594fef791cdfee3ccbf5cbf235f78ba88245";
           };
           aarch64-linux = {
-            file = "solidcraft-0.15.0-linux-aarch64.tar.gz";
-            sha256 = "bd3ce28666a7b131903e74ce2964d973a0ab4ea97daf30cdd7b8c8e28ac7cbf3";
+            file = "solidcraft-0.19.0-linux-aarch64.tar.gz";
+            sha256 = "109a495c3a6049edd790304f5bd6abbd0abd79063120adf3847ca9c305f375c6";
           };
           x86_64-linux = {
-            file = "solidcraft-0.15.0-linux-x86_64.tar.gz";
-            sha256 = "4d62f8e41a92d150da5bd1152ea5d22230a4893e33e81cb573cebab81475bf4f";
+            file = "solidcraft-0.19.0-linux-x86_64.tar.gz";
+            sha256 = "1e3650237a617667f557a16e865bbf544b20ece1dec39f7c380239d7058d632d";
           };
         };
       };
@@ -45,7 +45,7 @@
         let
           asset = solidcraft.assets.${system};
           src = pkgs.fetchurl {
-            url = "https://github.com/bherbruck/solidcraft/releases/download/v${solidcraft.version}/${asset.file}";
+            url = "https://github.com/tangency-labs/solidcraft/releases/download/v${solidcraft.version}/${asset.file}";
             inherit (asset) sha256;
           };
           isDarwin = pkgs.stdenv.isDarwin;
@@ -71,7 +71,7 @@
           '';
           meta = {
             description = "SolidCraft headless CLI (pinned release ${solidcraft.version})";
-            homepage = "https://github.com/bherbruck/solidcraft";
+            homepage = "https://github.com/tangency-labs/solidcraft";
             platforms = [ system ];
           };
         };

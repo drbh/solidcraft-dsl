@@ -213,3 +213,9 @@ Treat request files as executable engine instructions.
 Standard review views hide construction geometry. Sketch geometry remains visible so sketch-only
 designs still have useful previews. [Solid-only review requests](solid-review-requests.json) hide
 sketches too; custom snapshots control visibility through their own commands.
+
+## Reusable layouts
+
+Requests can use a named or inline `layout` to prepare selected solids before exporting,
+rendering or inspecting them. See [print layouts](print-layouts.md) for measured placement,
+parameter expressions, instance selection and geometry-transfer limits.

@@ -1,550 +1,150 @@
 {
- "version": 1,
- "defaults": false,
- "requests": [
-  {
-   "id": "print-3mf",
-   "kind": "export",
-   "format": "3mf",
-   "commands": [
+  "version": 1,
+  "defaults": false,
+  "requests": [
     {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "Sun"
-      ],
-      "axis": [
-       1,
-       0,
-       0
-      ],
-      "angle": "180 deg"
-     }
+      "id": "print-3mf",
+      "kind": "export",
+      "format": "3mf",
+      "layout": "plate_1"
     },
     {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "Sun"
-      ],
-      "translate": [
-       65,
-       -40,
-       18
-      ]
-     }
+      "id": "print-glb",
+      "kind": "export",
+      "format": "glb",
+      "layout": "plate_1"
     },
     {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "Lid"
+      "id": "print-check",
+      "kind": "commands",
+      "commands": [
+        {
+          "command": "inspect.interference",
+          "params": {}
+        },
+        {
+          "command": "inspect.measure",
+          "params": {}
+        }
       ],
-      "axis": [
-       1,
-       0,
-       0
-      ],
-      "angle": "180 deg"
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "Lid"
-      ],
-      "translate": [
-       60,
-       60,
-       28
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "Housing"
-      ],
-      "translate": [
-       -60,
-       60,
-       0
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "CarrierBase"
-      ],
-      "translate": [
-       -75,
-       -60,
-       -3.5
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "CarrierTop"
-      ],
-      "translate": [
-       5,
-       -60,
-       -18.5
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "Planet"
-      ],
-      "translate": [
-       38,
-       -80,
-       -8
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "Planet (2)"
-      ],
-      "translate": [
-       113.5,
-       -63.383,
-       -8
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "Planet (3)"
-      ],
-      "translate": [
-       113.5,
-       -56.617,
-       -8
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "InputCrank"
-      ],
-      "axis": [
-       1,
-       0,
-       0
-      ],
-      "angle": "180 deg"
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "InputCrank"
-      ],
-      "translate": [
-       -80,
-       -10,
-       -6
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "OutputCrank"
-      ],
-      "translate": [
-       10,
-       -10,
-       -37.5
-      ]
-     }
+      "layout": "plate_1"
     }
-   ]
-  },
-  {
-   "id": "print-glb",
-   "kind": "export",
-   "format": "glb",
-   "commands": [
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "Sun"
-      ],
-      "axis": [
-       1,
-       0,
-       0
-      ],
-      "angle": "180 deg"
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "Sun"
-      ],
-      "translate": [
-       65,
-       -40,
-       18
+  ],
+  "layouts": {
+    "plate_1": {
+      "spacing": "5 mm",
+      "parts": [
+        {
+          "id": "Sun_1",
+          "select": {
+            "bodies": [
+              "Sun"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                1,
+                0,
+                0
+              ],
+              "angle": "180 deg"
+            }
+          ]
+        },
+        {
+          "id": "Planet_2",
+          "select": {
+            "bodies": [
+              "Planet"
+            ]
+          }
+        },
+        {
+          "id": "Planet_2_3",
+          "select": {
+            "bodies": [
+              "Planet (2)"
+            ]
+          }
+        },
+        {
+          "id": "Planet_3_4",
+          "select": {
+            "bodies": [
+              "Planet (3)"
+            ]
+          }
+        },
+        {
+          "id": "Housing_5",
+          "select": {
+            "bodies": [
+              "Housing"
+            ]
+          }
+        },
+        {
+          "id": "Lid_6",
+          "select": {
+            "bodies": [
+              "Lid"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                1,
+                0,
+                0
+              ],
+              "angle": "180 deg"
+            }
+          ]
+        },
+        {
+          "id": "CarrierBase_7",
+          "select": {
+            "bodies": [
+              "CarrierBase"
+            ]
+          }
+        },
+        {
+          "id": "CarrierTop_8",
+          "select": {
+            "bodies": [
+              "CarrierTop"
+            ]
+          }
+        },
+        {
+          "id": "InputCrank_9",
+          "select": {
+            "bodies": [
+              "InputCrank"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                1,
+                0,
+                0
+              ],
+              "angle": "180 deg"
+            }
+          ]
+        },
+        {
+          "id": "OutputCrank_10",
+          "select": {
+            "bodies": [
+              "OutputCrank"
+            ]
+          }
+        }
       ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "Lid"
-      ],
-      "axis": [
-       1,
-       0,
-       0
-      ],
-      "angle": "180 deg"
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "Lid"
-      ],
-      "translate": [
-       60,
-       60,
-       28
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "Housing"
-      ],
-      "translate": [
-       -60,
-       60,
-       0
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "CarrierBase"
-      ],
-      "translate": [
-       -75,
-       -60,
-       -3.5
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "CarrierTop"
-      ],
-      "translate": [
-       5,
-       -60,
-       -18.5
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "Planet"
-      ],
-      "translate": [
-       38,
-       -80,
-       -8
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "Planet (2)"
-      ],
-      "translate": [
-       113.5,
-       -63.383,
-       -8
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "Planet (3)"
-      ],
-      "translate": [
-       113.5,
-       -56.617,
-       -8
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "InputCrank"
-      ],
-      "axis": [
-       1,
-       0,
-       0
-      ],
-      "angle": "180 deg"
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "InputCrank"
-      ],
-      "translate": [
-       -80,
-       -10,
-       -6
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "OutputCrank"
-      ],
-      "translate": [
-       10,
-       -10,
-       -37.5
-      ]
-     }
     }
-   ]
-  },
-  {
-   "id": "print-check",
-   "kind": "commands",
-   "commands": [
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "Sun"
-      ],
-      "axis": [
-       1,
-       0,
-       0
-      ],
-      "angle": "180 deg"
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "Sun"
-      ],
-      "translate": [
-       65,
-       -40,
-       18
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "Lid"
-      ],
-      "axis": [
-       1,
-       0,
-       0
-      ],
-      "angle": "180 deg"
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "Lid"
-      ],
-      "translate": [
-       60,
-       60,
-       28
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "Housing"
-      ],
-      "translate": [
-       -60,
-       60,
-       0
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "CarrierBase"
-      ],
-      "translate": [
-       -75,
-       -60,
-       -3.5
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "CarrierTop"
-      ],
-      "translate": [
-       5,
-       -60,
-       -18.5
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "Planet"
-      ],
-      "translate": [
-       38,
-       -80,
-       -8
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "Planet (2)"
-      ],
-      "translate": [
-       113.5,
-       -63.383,
-       -8
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "Planet (3)"
-      ],
-      "translate": [
-       113.5,
-       -56.617,
-       -8
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "InputCrank"
-      ],
-      "axis": [
-       1,
-       0,
-       0
-      ],
-      "angle": "180 deg"
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "InputCrank"
-      ],
-      "translate": [
-       -80,
-       -10,
-       -6
-      ]
-     }
-    },
-    {
-     "command": "solid.move",
-     "params": {
-      "bodies": [
-       "OutputCrank"
-      ],
-      "translate": [
-       10,
-       -10,
-       -37.5
-      ]
-     }
-    },
-    {
-     "command": "inspect.interference",
-     "params": {}
-    },
-    {
-     "command": "inspect.measure",
-     "params": {}
-    }
-   ]
   }
- ]
 }

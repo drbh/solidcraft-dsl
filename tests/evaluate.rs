@@ -263,6 +263,19 @@ fn supports_bound_points(cli: &str) -> bool {
 }
 
 #[test]
+fn advanced_cuts_and_joined_pulley_remain_single_solids() {
+    let Some(cli) = cli() else { return };
+    for name in ["11_phone_stand", "12_spoked_pulley"] {
+        let w = Workspace::new();
+        let source = std::fs::read_to_string(format!("{}/examples/{name}.sc", env!("CARGO_MANIFEST_DIR"))).unwrap();
+        let report = evaluate(&w.options(&source, &cli)).unwrap();
+        assert_eq!(report["ok"], true, "{name}: {}", report["diagnostics"]);
+        assert_eq!(report["measurements"]["body_count"], 1, "{name}: the hub and spokes must belong to the final solid");
+        assert!(report["measurements"]["total"]["volume_mm3"].as_f64().unwrap() > 1000.0, "{name}");
+    }
+}
+
+#[test]
 fn ten_progressive_models_match_analytic_volumes() {
     let Some(cli) = cli() else {
         eprintln!("no engine: skipped stress geometry");

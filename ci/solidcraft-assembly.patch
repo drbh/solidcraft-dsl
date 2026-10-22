@@ -1,0 +1,152 @@
+diff --git a/crates/engine/src/cmd/component.rs b/crates/engine/src/cmd/component.rs
+index bbd341e4..1fb1086c 100644
+--- a/crates/engine/src/cmd/component.rs
++++ b/crates/engine/src/cmd/component.rs
+@@ -27,7 +27,7 @@ pub static COMMANDS: &[CommandSpec] = &[
+     CommandSpec::new("component.create", "New Component", new_component)
+         .at("SOLID", "ASSEMBLE")
+         .icon("component")
+-        .params("name?, parent?: component id or name (default: the active one); parent_path?: exact parent placement; activate?: bool (default true)"),
++        .params("name?, occurrence_name?: unique nonnumeric name for the first instance; parent?: component id or name (default: the active one); parent_path?: exact parent placement; activate?: bool (default true)"),
+     CommandSpec::new("component.from_bodies", "Create Components from Bodies", from_bodies)
+         .icon("component")
+         .params("bodies: [names] → one new component per body, named after it"),
+@@ -41,7 +41,7 @@ pub static COMMANDS: &[CommandSpec] = &[
+         .params("component?: id or name (default active); descendants?: bool (default true). Measures the first placement, or all placements for root, including pending moves; material-aware mass and center of mass in world coordinates"),
+     CommandSpec::new("occurrence.properties", "Occurrence Physical Properties", properties::occurrence)
+         .icon("measure").noundo()
+-        .params("occurrence: id or name; path?: [occurrence ids] (required if nested under multiple instances); descendants?: bool (default true). Physical properties of this placement in world coordinates, including pending moves"),
++        .params("occurrence: id or name; path?: [occurrence ids] (required if nested under multiple instances); descendants?: bool (default true). Physical properties of this placement in world coordinates, including pending moves; bodies include world_name for exact export selection"),
+     CommandSpec::new("component.rename", "Rename Component", rename).icon("rename").params("component, name"),
+     CommandSpec::new("component.delete", "Delete Component", delete).icon("delete").params("component: deletes it, its subcomponents, occurrences and features"),
+     CommandSpec::new("component.unlock", "Unlock Contents", unlock).icon("rigid_group").params(
+@@ -51,7 +51,7 @@ pub static COMMANDS: &[CommandSpec] = &[
+     CommandSpec::new("component.move_bodies", "Move Bodies to Component", move_bodies).icon("move").params("bodies: [names], component"),
+     CommandSpec::new("component.move_sketches", "Move Sketches to Component", move_sketches).icon("move").params("sketches: [ids or names], component"),
+     CommandSpec::new("occurrence.copy", "Paste (Instance)", copy_occurrence).icon("copy")
+-        .params("component (or occurrence): what to place again; path?: validates selected occurrence; parent?: component (default: the same parent); translate?: [x,y,z]. Copies the selected effective transform, including pending moves"),
++        .params("component (or occurrence): what to place again; occurrence_name?: unique nonnumeric instance name; path?: validates selected occurrence; parent?: component (default: the same parent); translate?: [x,y,z]. Copies the selected effective transform, including pending moves"),
+     CommandSpec::new("component.paste_new", "Paste New", paste_new).icon("paste").params("component: independently copy its nested definition graph and history, materials and styles; occurrence?, path?: selected source placement; translate?: [x,y,z]. Reassigned external bodies become base geometry; retained external links and omitted boundary joints are reported"),
+     CommandSpec::new("occurrence.move", "Move Occurrence", move_occurrence).icon("move")
+         .params("occurrence; path?: exact placement; space?: local|world (default local); translate?: [x,y,z]; axis?: [x,y,z], angle?: radians or \"30 deg\", origin?: [x,y,z]; matrix?: [12 or 16 numbers] (instead of translate/axis/angle/origin: a rigid move as a row-major 3x4 rotation-and-translation or 4x4 matrix, flat or as rows; one that is a rotation only up to rounding is orthonormalised, a scale, shear or mirror is refused); tolerance?: largest accepted |RᵀR − I| (default 1e-9, at most 1e-3); capture?: bool (default true; false keeps it pending until Capture Position). Nested occurrence definitions remain shared"),
+@@ -78,6 +78,19 @@ fn occurrence(s: &Session, p: &Value, cmd: &str) -> Result<u64> {
+     s.doc.occurrences.iter().find(|o| o.id.to_string() == kk || o.name == kk).map(|o| o.id).ok_or_else(|| bad(cmd, format!("no occurrence `{kk}`")))
+ }
+ 
++/// Authored occurrence names let static scripts address instances without guessing ids.
++fn authored_occurrence_name(s: &Session, p: &Value, cmd: &str) -> Result<Option<String>> {
++    let Some(v) = p.get("occurrence_name") else { return Ok(None) };
++    let name = v
++        .as_str()
++        .filter(|n| !n.trim().is_empty() && n.len() <= 1024)
++        .ok_or_else(|| bad(cmd, "occurrence_name must be a nonempty string of at most 1024 bytes"))?;
++    if name.eq_ignore_ascii_case("root") || name.parse::<u64>().is_ok() || s.doc.occurrences.iter().any(|o| o.name == name) {
++        return Err(bad(cmd, "occurrence_name must be unique, nonnumeric, and not root"));
++    }
++    Ok(Some(name.to_string()))
++}
++
+ fn translation(t: Vec3) -> Mat {
+     solidcraft_doc::rigid(t, Vec3::ZERO, Vec3::Z, 0.0)
+ }
+@@ -109,6 +122,7 @@ pub(super) fn valid_position(m: &Mat) -> bool {
+ 
+ pub(super) fn new_component(s: &mut Session, p: &Value) -> Result<Value> {
+     let cmd = "component.create";
++    let occurrence_name = authored_occurrence_name(s, p, cmd)?;
+     let parent = if p.get("parent").is_some() { component(s, p, "parent", cmd)? } else { s.active_component };
+     let parent_path = if let Some(value) = p.get("parent_path") {
+         let path = value
+@@ -130,6 +144,11 @@ pub(super) fn new_component(s: &mut Session, p: &Value) -> Result<Value> {
+         return Err(bad(cmd, "new component exceeds occurrence depth limit"));
+     }
+     let id = s.doc_mut().add_component(str_(p, "name"), parent)?;
++    if let Some(name) = occurrence_name
++        && let Some(o) = s.doc_mut().occurrences.iter_mut().find(|o| o.component == id)
++    {
++        o.name = name;
++    }
+     if p.get("activate").and_then(Value::as_bool).unwrap_or(true) {
+         let mut path = parent_path;
+         if let Some(o) = s.doc.occurrence_of(id) {
+@@ -314,6 +333,7 @@ fn move_sketches(s: &mut Session, p: &Value) -> Result<Value> {
+ 
+ pub(super) fn copy_occurrence(s: &mut Session, p: &Value) -> Result<Value> {
+     let cmd = "occurrence.copy";
++    let occurrence_name = authored_occurrence_name(s, p, cmd)?;
+     let selected = if p.get("occurrence").is_some() {
+         let o = occurrence(s, p, cmd)?;
+         Some(o)
+@@ -339,6 +359,11 @@ pub(super) fn copy_occurrence(s: &mut Session, p: &Value) -> Result<Value> {
+         return Err(bad(cmd, "copy transform exceeds supported numeric range"));
+     }
+     let id = s.doc_mut().add_occurrence(comp, parent, m)?;
++    if let Some(name) = occurrence_name
++        && let Some(o) = s.doc_mut().occurrences.iter_mut().find(|o| o.id == id)
++    {
++        o.name = name;
++    }
+     Ok(json!({"occurrence": id, "component": comp}))
+ }
+ 
+diff --git a/crates/engine/src/cmd/component_properties.rs b/crates/engine/src/cmd/component_properties.rs
+index 764afed3..04a6762a 100644
+--- a/crates/engine/src/cmd/component_properties.rs
++++ b/crates/engine/src/cmd/component_properties.rs
+@@ -129,7 +129,7 @@ fn properties(s: &Session, doc: &Document, selected: &[u64], descendants: bool,
+             faces += measured.merged.faces;
+             edges += measured.merged.edges;
+             vertices += measured.merged.vertices;
+-            bodies.push(json!({"name": body.name, "component": component, "path": path,
++            bodies.push(json!({"name": body.name, "world_name": doc.world_body_name(&state, &body.name, component, &path), "component": component, "path": path,
+                 "material": doc.materials.get(&body.name).map(String::as_str).unwrap_or("Default"),
+                 "density_g_cm3": density, "mass_g": body_mass, "volume_mm3": measured.volume,
+                 "area_mm2": measured.area, "center_of_mass": measured.centroid,
+diff --git a/crates/engine/src/cmd/component_properties_tests.rs b/crates/engine/src/cmd/component_properties_tests.rs
+index 611b885d..ac07da8d 100644
+--- a/crates/engine/src/cmd/component_properties_tests.rs
++++ b/crates/engine/src/cmd/component_properties_tests.rs
+@@ -33,6 +33,10 @@ fn assembly_counts_instances_and_resolves_original_materials() {
+     close(&second["total"]["center_of_mass"][0], 25.0);
+     assert_eq!(second["bodies"][0]["material"], "Steel");
+     assert_eq!(first["path"], json!([occurrence]));
++    assert_eq!(first["bodies"][0]["world_name"], body);
++    let placed = second["bodies"][0]["world_name"].as_str().unwrap();
++    assert_ne!(placed, body);
++    assert!(s.world_state().body(placed).is_some());
+ }
+ 
+ #[test]
+@@ -68,6 +72,7 @@ fn nested_instances_require_a_path_and_can_exclude_descendants() {
+     assert!(s.execute("occurrence.properties", &json!({"occurrence": child_occurrence})).is_err());
+     let r = run(&mut s, "occurrence.properties", json!({"occurrence": child_occurrence, "path": [copy["occurrence"], child_occurrence]}));
+     close(&r["total"]["center_of_mass"][0], 105.0);
++    assert!(s.world_state().body(r["bodies"][0]["world_name"].as_str().unwrap()).is_some());
+     let r = run(&mut s, "component.properties", json!({"component": parent["component"]}));
+     assert_eq!(r["body_count"], 1);
+     let r = run(&mut s, "component.properties", json!({"component": parent["component"], "descendants": false}));
+diff --git a/crates/engine/src/cmd/occurrence_tests.rs b/crates/engine/src/cmd/occurrence_tests.rs
+index d5bdfd9d..31260519 100644
+--- a/crates/engine/src/cmd/occurrence_tests.rs
++++ b/crates/engine/src/cmd/occurrence_tests.rs
+@@ -789,3 +789,20 @@ fn joins_into_a_moved_occurrence_meet_the_tool_where_it_is_shown() {
+     let want = 10.0 * 10.0 * 10.0 - 4.0 * 4.0 * 10.0;
+     assert!((volume(&s, "C") - want).abs() < 1e-6 * want, "C: {} vs {want}", volume(&s, "C"));
+ }
++
++#[test]
++fn authored_occurrence_names_are_addressable_unique_and_transactional() {
++    let mut s = Session::default();
++    run(&mut s, "component.create", json!({"name":"Leaf","occurrence_name":"fixed_leaf"}));
++    run(&mut s, "occurrence.copy", json!({"component":"Leaf","occurrence_name":"moving_leaf"}));
++    run(&mut s, "occurrence.move", json!({"occurrence":"moving_leaf","translate":[10,0,0]}));
++    let leaf = s.doc.occurrences.iter().find(|o| o.name == "moving_leaf").unwrap();
++    assert_eq!(leaf.transform[3][0], 10.0);
++    assert_eq!(s.doc.occurrences.iter().find(|o| o.name == "fixed_leaf").unwrap().transform[3][0], 0.0);
++    let before = serde_json::to_value(&s.doc).unwrap();
++    for name in [json!("moving_leaf"), json!(""), json!("123"), json!("ROOT"), json!(7)] {
++        assert!(s.execute("occurrence.copy", &json!({"component":"Leaf","occurrence_name":name})).is_err());
++        assert!(s.execute("component.create", &json!({"name":"Other","occurrence_name":name})).is_err());
++        assert_eq!(serde_json::to_value(&s.doc).unwrap(), before);
++    }
++}

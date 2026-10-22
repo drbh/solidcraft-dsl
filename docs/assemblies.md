@@ -109,18 +109,28 @@ arbitrary browser moves and joint edits are not written back into concise source
 ## Engine compatibility
 
 This implementation adds optional `occurrence_name` arguments to engine `component.create`
-and `occurrence.copy` in the sibling SolidCraft checkout. This addresses occurrences by authored
+and `occurrence.copy` in the compatible SolidCraft build. This addresses occurrences by authored
 names without guessing global IDs. The arguments use the existing saved name field; no file
 schema change is needed. Names must be unique, nonnumeric, and different from `root`.
 
-Assembly execution requires an engine/app containing this command addition. Released 0.15 and
-0.16.2 binaries do not provide it. `check` and `compile` work without the engine; `run`, `pack`,
+Assembly execution requires an engine/app containing this command addition. Stock 0.19.0 still
+does not provide it. `check` and `compile` work without the engine; `run`, `pack`,
 `evaluate` and `watch` check capabilities before execution. For direct command-script replay,
 use the same compatible engine.
 
 ```sh
-# After building the sibling checkout with cargo build -p solidcraft-cli:
-export SOLIDCRAFT_CLI="$PWD/../solidcraft/target/debug/solidcraft-cli"
+# From the DSL repository, with Rust 1.95 or newer:
+git clone https://github.com/tangency-labs/solidcraft.git build/engine
+git -C build/engine checkout --detach 3d3dd27439995f37eaed1feaa1c53a0e42d2fe39
+git -C build/engine apply ../../ci/solidcraft-assembly.patch
+cargo build --manifest-path build/engine/Cargo.toml --locked -p solidcraft-cli --bin solidcraft-cli
+export SOLIDCRAFT_CLI="$PWD/build/engine/target/debug/solidcraft-cli"
+ci/check-compatibility.sh
 cargo run -- evaluate examples/assembly_hinge.sc --output-dir build/hinge --json
 cargo run -- explain examples/assembly_hinge.sc --json
 ```
+
+The patch also exposes `world_name` in occurrence properties so layouts can select repeated
+instances precisely. It changes no saved-document fields. This is upstream SolidCraft plus
+two local API additions, not an unmodified release. The `full-engine` CI job builds this exact
+revision and patch; the release jobs separately test the stock binary.

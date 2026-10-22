@@ -19,6 +19,7 @@ pub mod decompile;
 pub mod evaluate;
 pub mod expressions;
 mod glb;
+pub mod layout;
 pub mod lex;
 pub mod native;
 pub mod parse;
@@ -61,7 +62,7 @@ mod tests {
         for name in std::fs::read_dir(concat!(env!("CARGO_MANIFEST_DIR"), "/examples")).unwrap().flatten() {
             let n = name.file_name();
             let n = n.to_string_lossy();
-            if n.ends_with(".print.json") {
+            if n.ends_with(".print.json") || n.ends_with(".checks.json") {
                 continue;
             }
             assert!(n.ends_with(&format!(".{FILE_EXTENSION}")), "examples/{n} does not end in .{FILE_EXTENSION}");

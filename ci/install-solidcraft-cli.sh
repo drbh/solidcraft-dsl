@@ -2,7 +2,7 @@
 # Install solidcraft-cli from a SolidCraft GitHub release into a directory.
 #
 #   ci/install-solidcraft-cli.sh latest  DIR     the newest release
-#   ci/install-solidcraft-cli.sh 0.15.0  DIR     that version
+#   ci/install-solidcraft-cli.sh 0.19.0  DIR     that version
 #
 # Downloads are checked against the release's SHA256SUMS.txt. Needs curl, and unzip (macOS)
 # or tar (Linux). Prints the installed binary's path last.
@@ -10,7 +10,7 @@ set -eu
 
 VERSION="${1:-latest}"
 DIR="${2:-$HOME/.local/bin}"
-REPO="${SOLIDCRAFT_REPO:-bherbruck/solidcraft}"
+REPO="${SOLIDCRAFT_REPO:-tangency-labs/solidcraft}"
 API="https://api.github.com/repos/$REPO/releases"
 
 need() { command -v "$1" >/dev/null 2>&1 || { echo "error: $1 is required" >&2; exit 1; }; }

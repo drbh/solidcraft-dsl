@@ -22,7 +22,7 @@ pub fn present(d: &Design) -> bool {
 }
 
 // Length-prefix names are injective even when authored names contain punctuation.
-fn qualified(scope: &str, name: &str) -> String {
+pub(crate) fn qualified(scope: &str, name: &str) -> String {
     format!("@{}:{scope}/{name}", scope.len())
 }
 fn validate_name(name: &str, line: usize) -> R<()> {
