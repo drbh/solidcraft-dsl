@@ -88,6 +88,10 @@ impl Session {
         let design = crate::parse(&src)?;
         crate::check(&design)?;
         let c = crate::compile(&design)?;
+        if c.expressions["requires"].as_array().is_some_and(|r| !r.is_empty()) {
+            let capabilities = self.ctl.call("engine.commands", json!({}))?;
+            crate::assembly::check_capabilities(&c, &capabilities)?;
+        }
         let commands = c.script["commands"].clone();
         let n = commands.as_array().map_or(0, Vec::len);
         self.ctl.call("engine.execute", json!({"command": "file.new", "params": {}}))?;

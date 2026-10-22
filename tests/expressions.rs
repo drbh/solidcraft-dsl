@@ -58,6 +58,9 @@ fn area_helpers_and_nested_math_use_engine_semantics() {
 fn all_stress_examples_compile_and_fix_accepts_entity_lists() {
     for entry in std::fs::read_dir(concat!(env!("CARGO_MANIFEST_DIR"), "/examples")).unwrap() {
         let path = entry.unwrap().path();
+        if path.extension().is_none_or(|ext| ext != "sc") {
+            continue;
+        }
         let result = build(&std::fs::read_to_string(&path).unwrap());
         assert!(result.is_ok(), "{}: {result:?}", path.display());
     }

@@ -205,6 +205,7 @@ fn run(args: cli::Args) -> Result<(), String> {
                 return Err("pack requires -o FILE.solidcraft".into());
             }
             let cli = solidcraft_cli();
+            solidcraft_dsl::assembly::check_engine(&cli, &c)?;
             let dir = temp_dir()?;
             let script = dir.join("script.json");
             std::fs::write(&script, text).map_err(|e| format!("{}: {e}", script.display()))?;

@@ -7,6 +7,8 @@
     { "include": "#comment" },
     { "include": "#design" },
     { "include": "#param" },
+    { "include": "#let" },
+    { "include": "#assembly" },
     { "include": "#sketch-header" },
     { "include": "#sketch-block" },
     { "include": "#feature" },
@@ -41,6 +43,18 @@
         "2": { "name": "variable.other.constant.param.solidcraft" },
         "3": { "name": "keyword.operator.assignment.solidcraft" }
       }
+    },
+    "let": {
+      "match": "^\\s*(let)\\s+([A-Za-z_][A-Za-z0-9_]*)\\s*(=)",
+      "captures": {
+        "1": { "name": "keyword.control.let.solidcraft" },
+        "2": { "name": "variable.other.constant.let.solidcraft" },
+        "3": { "name": "keyword.operator.assignment.solidcraft" }
+      }
+    },
+    "assembly": {
+      "match": "\\b(component|instance|connector|ground|joint|between|and|rotate|value|values|limits|opposed)\\b",
+      "name": "keyword.control.assembly.solidcraft"
     },
     "sketch-header": {
       "comment": "sketch NAME on XY …; the name may be a quoted string when it is not an identifier",

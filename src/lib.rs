@@ -10,6 +10,7 @@
 pub const FILE_EXTENSION: &str = "sc";
 
 pub mod artifacts;
+pub mod assembly;
 pub mod ast;
 pub mod check;
 pub mod compile;
@@ -60,6 +61,9 @@ mod tests {
         for name in std::fs::read_dir(concat!(env!("CARGO_MANIFEST_DIR"), "/examples")).unwrap().flatten() {
             let n = name.file_name();
             let n = n.to_string_lossy();
+            if n.ends_with(".print.json") {
+                continue;
+            }
             assert!(n.ends_with(&format!(".{FILE_EXTENSION}")), "examples/{n} does not end in .{FILE_EXTENSION}");
         }
     }

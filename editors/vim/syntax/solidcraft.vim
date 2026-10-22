@@ -17,6 +17,8 @@ syn iskeyword @,48-57,_
 " ---- words that appear everywhere --------------------------------------------------------
 
 " option keys (from, distance, radius, at, edges, …)
+syn keyword scKey       between and rotate value values limits opposed
+syn keyword scStatement component instance connector ground joint
 syn keyword scKey       from distance distance2 radius diameter at edges faces profiles targets body
 syn keyword scKey       plane axis count count2 spacing spacing2 dir dir2 offset units on about
 syn keyword scKey       taper angle clearance thread depth height width length major minor
@@ -58,9 +60,9 @@ syn cluster scCommon contains=scKey,scModifier,scPlane,scAxis,scOrigin,scReferen
 
 " ---- top level ---------------------------------------------------------------------------
 
-syn keyword scKeyword     design param sketch
+syn keyword scKeyword     design param let sketch
 syn match   scDesignName  "\%(^\s*design\s\+\)\@<=\h\w*"
-syn match   scParamName   "\%(^\s*param\s\+\)\@<=\h\w*"
+syn match   scParamName   "\%(^\s*\%(param\|let\)\s\+\)\@<=\h\w*"
 syn match   scSketchName  '\%(^\s*sketch\s\+\)\@<=\%(\h\w*\|"[^"]*"\)'
 
 syn match   scFeature     "^\s*\%(extrude\|revolve\|hole\|box\|cylinder\|sphere\|torus\|fillet\|chamfer\|shell\|mirror\|pattern\|combine\|move\|remove\|sweep\|loft\)\>"
@@ -115,3 +117,5 @@ hi def link scDimKind      StorageClass
 hi def link scConstraint   Function
 
 let b:current_syntax = "solidcraft"
+
+hi def link scStatement Statement

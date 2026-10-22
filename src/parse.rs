@@ -276,13 +276,118 @@ fn tok_text(t: &Tok) -> String {
 pub fn parse(src: &str) -> R<Design> {
     let lines = lex(src)?;
     let mut p = P { lines: &lines, i: 0 };
+    parse_design(&mut p, None)
+}
+
+fn parse_design(p: &mut P, open: Option<usize>) -> R<Design> {
     let mut d = Design::default();
     while let Some(l) = p.lines.get(p.i) {
+        if l.toks == [Tok::Punct('}')] {
+            if open.is_none() {
+                return Err(err(l.no, "unexpected `}`"));
+            }
+            p.i += 1;
+            return Ok(d);
+        }
         p.i += 1;
         let mut c = Cur::new(l);
         let head = c.ident("a statement")?;
         match head.as_str() {
+            "component" => {
+                if open.is_some() {
+                    return Err(err(l.no, "define components at the top level; nest them with instances"));
+                }
+                let name = c.ident("the component name")?;
+                c.expect_punct('{')?;
+                c.end()?;
+                let design = parse_design(p, Some(l.no))?;
+                d.components.push(Component { name, design, line: l.no });
+            }
+            "instance" => {
+                let name = c.ident("the instance name")?;
+                c.expect_punct('=')?;
+                let component = c.ident("a component definition")?;
+                let mut at = zero3();
+                let mut axis = axis3("Z");
+                let mut angle = "0 deg".into();
+                if c.eat_ident("at") {
+                    at = c.tuple()?;
+                }
+                if c.eat_ident("rotate") {
+                    axis = parse_axis(&mut c)?;
+                    angle = c.expr1("a rotation angle")?;
+                }
+                c.end()?;
+                d.instances.push(Instance { name, component, at, axis, angle, line: l.no });
+            }
+            "connector" => {
+                if open.is_none() {
+                    return Err(err(l.no, "connectors belong inside a component definition"));
+                }
+                let name = c.ident("the connector name")?;
+                if !c.eat_ident("at") {
+                    return Err(err(l.no, "expected `at (x,y,z)`"));
+                }
+                let at = c.tuple()?;
+                let z = if c.eat_ident("axis") { parse_axis(&mut c)? } else { axis3("Z") };
+                let x = if c.eat_ident("x") { parse_axis(&mut c)? } else { axis3("X") };
+                c.end()?;
+                d.connectors.push(Connector { name, at, z, x, line: l.no });
+            }
+            "ground" => {
+                let name = c.ident("an instance name")?;
+                c.end()?;
+                d.grounds.push((name, l.no));
+            }
+            "joint" => {
+                if open.is_some() {
+                    return Err(err(
+                        l.no,
+                        "joints currently belong at the top level; repeated subassembly joints require placement-aware engine origins",
+                    ));
+                }
+                let name = c.ident("the joint name")?;
+                let kind = c.ident("a joint type")?;
+                if !c.eat_ident("between") {
+                    return Err(err(l.no, "expected `between instance.connector and instance.connector`"));
+                }
+                let a = c.reference()?;
+                if !c.eat_ident("and") {
+                    return Err(err(l.no, "expected `and`"));
+                }
+                let b = c.reference()?;
+                let mut joint =
+                    Joint { name, kind, a, b, values: vec![], limits: vec![], offset: "0 mm".into(), angle: "0 deg".into(), flip: true, line: l.no };
+                let mut seen = std::collections::HashSet::new();
+                while !c.done() {
+                    let key = c.ident("a joint option")?;
+                    let canonical = if key == "value" { "values" } else { &key };
+                    if !seen.insert(canonical.to_string()) {
+                        return Err(err(l.no, format!("duplicate joint option `{key}`")));
+                    }
+                    match key.as_str() {
+                        "value" => joint.values.push(Comp::Expr(c.expr1("a joint value")?)),
+                        "values" => joint.values = c.tuple()?,
+                        "limits" => {
+                            while c.peek() == Some(&Tok::Punct('(')) {
+                                joint.limits.push(c.tuple()?);
+                            }
+                            if joint.limits.is_empty() {
+                                return Err(err(l.no, "expected limits (min,max), one pair per joint value"));
+                            }
+                        }
+                        "offset" => joint.offset = c.expr1("a joint offset")?,
+                        "angle" => joint.angle = c.expr1("a frame angle")?,
+                        "opposed" => joint.flip = false,
+                        _ => return Err(err(l.no, format!("unknown joint option `{key}`"))),
+                    }
+                }
+                d.joints.push(joint);
+            }
             "design" => {
+                if open.is_some() {
+                    return Err(err(l.no, "design declarations belong at the top level"));
+                }
                 d.name = Some(c.ident("the design name")?);
                 if c.eat_ident("units") {
                     d.units = Some(c.ident("a unit")?);
@@ -290,20 +395,49 @@ pub fn parse(src: &str) -> R<Design> {
                 c.end()?;
             }
             "param" | "let" => {
+                if open.is_some() {
+                    return Err(err(l.no, "parameters and helpers are global; declare them outside components"));
+                }
                 let name = c.ident("the parameter name")?;
                 let expr = c.rest_after_eq()?;
                 d.params.push(Param { name, expr, comment: None, line: l.no, local: head == "let" });
             }
             "sketch" => {
                 let s = parse_sketch_head(&mut c, l.no)?;
-                let stmts = parse_block(&mut p, l.no, parse_sketch_stmt)?;
+                let stmts = parse_block(p, l.no, parse_sketch_stmt)?;
                 d.items.push(Item::Sketch(Sketch { stmts, ..s }));
             }
             k if FEATURES.contains(&k) => d.items.push(Item::Feature(parse_feature(&mut c, k)?)),
             other => return Err(err(l.no, format!("unknown statement `{other}`"))),
         }
     }
+    if let Some(line) = open {
+        return Err(err(line, "component block is never closed with `}`"));
+    }
     Ok(d)
+}
+
+fn zero3() -> Vec<Comp> {
+    vec![Comp::Num(0.0, "0".into()); 3]
+}
+fn axis3(axis: &str) -> Vec<Comp> {
+    ["X", "Y", "Z"]
+        .iter()
+        .map(|a| {
+            let n = if *a == axis { 1.0 } else { 0.0 };
+            Comp::Num(n, format!("{n}"))
+        })
+        .collect()
+}
+fn parse_axis(c: &mut Cur) -> R<Vec<Comp>> {
+    if c.peek() == Some(&Tok::Punct('(')) {
+        return c.tuple();
+    }
+    let axis = c.ident("X, Y, Z or (x,y,z)")?;
+    if !matches!(axis.as_str(), "X" | "Y" | "Z") {
+        return Err(err(c.no, "axis must be X, Y, Z or (x,y,z)"));
+    }
+    Ok(axis3(&axis))
 }
 
 fn parse_sketch_head(c: &mut Cur, line: usize) -> R<Sketch> {

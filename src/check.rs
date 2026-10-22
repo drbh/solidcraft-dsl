@@ -271,6 +271,10 @@ fn is_default_body(name: &str) -> bool {
 /// Check a parsed design. Duplicate names are left to the compiler, which reports them with
 /// both lines.
 pub fn check(d: &Design) -> R<()> {
+    if crate::assembly::present(d) { crate::assembly::compile(d).map(|_| ()) } else { check_geometry(d) }
+}
+
+pub(crate) fn check_geometry(d: &Design) -> R<()> {
     let env = crate::expressions::Environment::new(d)?;
     crate::expressions::lower(d)?;
     let mut c = Checker { params: env.values.into_iter().collect(), names: HashMap::new(), bodies: Vec::new() };

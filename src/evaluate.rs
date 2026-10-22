@@ -142,21 +142,16 @@ fn build(
         }
     };
     report["expressions"] = c.expressions.clone();
-    if c.expressions["requires"].as_array().is_some_and(|r| !r.is_empty()) {
-        let out = Command::new(&opts.cli).arg("commands").output().map_err(|e| e.to_string())?;
-        let commands: Value = serde_json::from_slice(&out.stdout).map_err(|e| format!("cannot discover engine capabilities: {e}"))?;
-        let supported = commands.as_array().is_some_and(|commands| {
-            commands.iter().any(|c| c["id"] == "sketch.point" && c["params"].as_str().is_some_and(|p| p.contains("expression")))
-        });
-        if !supported {
-            return Err("`bind point` requires an engine with persistent sketch point expressions; releases 0.15 and 0.16.2 lack this capability. Set SOLIDCRAFT_CLI to a current development build.".into());
-        }
-    }
+    crate::assembly::check_engine(&opts.cli, c)?;
     let mut script = if c.native.is_some() { json!({"commands":[]}) } else { c.script.clone() };
     let cmds = script["commands"].as_array_mut().ok_or("compiler did not emit commands")?;
     let count = cmds.len();
+    let assembly = c.expressions["assembly"].is_object() || c.native.as_ref().is_some_and(|n| n.document["assembly"].is_object());
     cmds.push(json!({"command": "inspect.measure", "params": {}}));
     cmds.push(json!({"command": "document.inspect", "params": {"measure": false}}));
+    if assembly {
+        cmds.push(json!({"command":"joint.list","params":{}}));
+    }
     let script_path = dir.join("script.json");
     write_json(&script_path, &script)?;
     write_json(&dir.join("source-map.json"), &json!(c.lines))?;
@@ -189,13 +184,31 @@ fn build(
     }
     let raw: Value = serde_json::from_slice(&output.stdout).map_err(|e| format!("invalid engine JSON: {e}"))?;
     let results = raw.get("results").unwrap_or(&raw).as_array().ok_or("engine results must be an array")?;
-    if results.len() != count + 2 {
-        return Err(format!("engine returned {} results; expected {}", results.len(), count + 2));
+    let expected = count + 2 + usize::from(assembly);
+    if results.len() != expected {
+        return Err(format!("engine returned {} results; expected {expected}", results.len()));
     }
     let measures = &results[count];
     let doc = &results[count + 1];
     if !measures["bodies"].is_array() || !measures["body_count"].is_number() || !doc["timeline"].is_array() || !doc["sketches"].is_array() {
         return Err("engine inspection response is missing bodies, body_count, timeline or sketches".into());
+    }
+    if assembly {
+        let state = &results[count + 2];
+        if !state["joints"].is_array() || !state["errors"].is_array() || !state["conflicts"].is_array() {
+            return Err("engine assembly inspection is missing joints, errors or conflicts".into());
+        }
+        report["assembly"] = state.clone();
+        for field in ["errors", "conflicts"] {
+            for issue in state[field].as_array().into_iter().flatten() {
+                diagnostics.push(diagnostic("assembly", format!("{}: {}", issue["name"], issue["why"]), source_for_name(c, &issue["name"]), source));
+            }
+        }
+        for floating in state["floating"].as_array().into_iter().flatten() {
+            let mut d = diagnostic("assembly", format!("floating assembly group: {}", floating["occurrences"]), None, source);
+            d["severity"] = json!("warning");
+            diagnostics.push(d);
+        }
     }
     report["measurements"] = measures.clone();
     report["sketches"] = doc["sketches"].clone();

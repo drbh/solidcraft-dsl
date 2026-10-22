@@ -203,4 +203,50 @@ pub struct Design {
     pub units: Option<String>,
     pub params: Vec<Param>,
     pub items: Vec<Item>,
+    pub components: Vec<Component>,
+    pub instances: Vec<Instance>,
+    pub connectors: Vec<Connector>,
+    pub grounds: Vec<(String, usize)>,
+    pub joints: Vec<Joint>,
+}
+
+#[derive(Debug, Clone)]
+pub struct Component {
+    pub name: String,
+    pub design: Design,
+    pub line: usize,
+}
+
+#[derive(Debug, Clone)]
+pub struct Instance {
+    pub name: String,
+    pub component: String,
+    pub at: Vec<Comp>,
+    pub axis: Vec<Comp>,
+    pub angle: String,
+    pub line: usize,
+}
+
+/// A component-local frame, independent of transient face and edge numbering.
+#[derive(Debug, Clone)]
+pub struct Connector {
+    pub name: String,
+    pub at: Vec<Comp>,
+    pub z: Vec<Comp>,
+    pub x: Vec<Comp>,
+    pub line: usize,
+}
+
+#[derive(Debug, Clone)]
+pub struct Joint {
+    pub name: String,
+    pub kind: String,
+    pub a: Ref,
+    pub b: Ref,
+    pub values: Vec<Comp>,
+    pub limits: Vec<Vec<Comp>>,
+    pub offset: String,
+    pub angle: String,
+    pub flip: bool,
+    pub line: usize,
 }

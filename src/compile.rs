@@ -361,6 +361,10 @@ pub struct Compiled {
 }
 
 pub fn compile(d: &Design) -> R<Compiled> {
+    if crate::assembly::present(d) { crate::assembly::compile(d) } else { compile_geometry(d) }
+}
+
+pub(crate) fn compile_geometry(d: &Design) -> R<Compiled> {
     let lowered = crate::expressions::lower(d)?;
     let d = &lowered.design;
     let environment = crate::expressions::Environment::new(d)?;
