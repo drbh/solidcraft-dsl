@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "defaults": false,
+  "requests": [
+    {"id": "plate-3mf", "kind": "export", "format": "3mf", "layout": "plate"},
+    {"id": "plate-preview", "kind": "snapshot", "layout": "plate", "options": {"view": "iso"}}
+  ],
+  "layouts": {
+    "plate": {
+      "spacing": "5 mm",
+      "parts": [
+        {
+          "id": "Clamp",
+          "select": {"bodies": ["Clamp"]},
+          "rotate": [{"axis": [1, 0, 0], "angle": "90 deg"}]
+        }
+      ]
+    }
+  }
+}
