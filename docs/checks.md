@@ -44,6 +44,13 @@ body is meant to have more than one, say so with `check <body> shells == 2`.
 where they stand in the design. When they overlap, the clearance is 0 and the overlap volume
 is reported, so any lower bound fails. A failing check names the two closest points.
 
+Some pairs of faces the engine can only measure on their meshes (it says so: `"exact": false`).
+Engines 0.19 and 0.27 also mesh some faces very coarsely, for example a cone face spanning 120 deg
+in two triangles, whose flat chords sag far inside the true surface. A failure measured that way
+is a warning, not an error, and says it was measured on the meshes. Check that fit by hand or with
+a test print. `47_print_in_place_hinge_box` is the case: its cones keep their designed 0.4 mm
+(engine 0.15 measures it exactly), while the newer engines' meshes read 0.08 mm.
+
 ## Overhang
 
 `check Part overhang <= 45 deg [up <direction>]` checks that the body prints without supports
