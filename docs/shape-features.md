@@ -14,6 +14,9 @@ sketch Label on XY offset 2 {
 }
 ```
 
+- Text can come from a text parameter (engine 0.27+): `param who = "ADA LOVELACE"`, then
+  `text who at (…)` or `text (who + " - L") at (…)`. A parameter edit in SolidCraft relabels
+  the part. An older engine refuses the design (`text_parameters`).
 - `text` must come last in its sketch. The engine numbers glyph curves from the same counters
   as every other entity, so nothing drawn after the text can be predicted. Put labels in a sketch
   of their own.
@@ -119,6 +122,8 @@ material Shelf, ShelfLeft PLA
 - A pattern along a path turns the copies to follow it unless it is `identical`.
 - `split` keeps the target's name on the side the normal points to and names the other piece
   (`-> body`). Check each piece's size against the bed (`55_split_wall_shelf`).
+- `color Body "#rrggbb" faces (x,y,z) …` colours only the faces at those points, over the body's
+  colour. Use it for lettering tops or trim.
 - `color` and `material` set what an export and the measured mass use. Materials come from the
   engine's library: `PLA`, `ABS Plastic`, `Nylon`, `Polycarbonate`, `Steel`, `Aluminum`, ….
 - Engines before 0.27 cannot pattern or mirror a rib or web; repeat it instead. Naming a split
@@ -130,7 +135,7 @@ material Shelf, ShelfLeft PLA
 loft Pot sections Base, Middle, Rim -> body Pot                 // 32_lofted_planter
 sweep Hook from Profile path Path.a, Path.k, Path.b new -> body Hook   // 33_swept_wall_hook
 pipe Tube path Path.a, Path.b diameter 6 wall 1 new -> body Tube
-thread NeckThread face (rn, 0, z) designation M28x2 modeled     // 49_bottle_and_cap; `left` for left-handed (engine 0.27+)
+thread NeckThread face (rn, 0, z) designation M28x2 modeled     // 49_bottle_and_cap; `left` for left-handed (engine 0.27+); for play between the flanks, scale the internal-thread part out in XY about its axis (49)
 coil Spring diameter 20 turns 5 pitch 4 section_size 1.5 base (0,0,0) new -> body Spring
 emboss Letters from Label depth 1 targets Tag                   // 50_name_tag (deboss to cut in)
 ```
@@ -154,6 +159,14 @@ flange Shelf edges (W/2, 0, 0) height 80 mm flip body Bracket     // edge flange
 hem Safe edges (80,0,15) length 5 mm body Grille            // also: gap, flip
 perforate Holes diameter 4 mm pitch 6.5 mm margin 8 mm body Grille   // staggered; or square
 ```
+
+```sc
+path_flange Z edge (20,30,0) path Zed.up, Zed.out radius 1.5 mm body Bracket   // engine 0.27+
+```
+
+A path flange bends flanges along an open chain of sketch lines drawn across a sheet edge,
+from the edge out: one flange per line, one bend per corner (a Z, a hat, a return lip). An
+engine before 0.27 refuses the design up front (`sheet_path_flange`).
 
 A hem folds an edge back on itself. A perforation is a hole field over the flat sheet: it is in
 the flat pattern, the DXF (layer PERFORATION) and the mass, but is not cut into the solid. See

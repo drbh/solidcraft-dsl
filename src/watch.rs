@@ -112,7 +112,7 @@ impl Session {
         }
         if c.expressions["requires"].as_array().is_some_and(|r| !r.is_empty()) {
             let capabilities = self.ctl.call("engine.commands", json!({}))?;
-            crate::assembly::check_capabilities(&c, &capabilities)?;
+            crate::assembly::fit_script(&c, &mut script, &capabilities)?;
         }
         let commands = script["commands"].clone();
         let n = commands.as_array().map_or(0, Vec::len);

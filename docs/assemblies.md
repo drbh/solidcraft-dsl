@@ -152,6 +152,14 @@ Linking needs `component.insert_design` to accept `occurrence_name` (the
 
 ## Engine compatibility
 
+Released engines can't take authored occurrence names. On those engines the DSL builds the
+assembly anyway, using the names the engine gives occurrences itself: `Component:k`, where `k`
+counts that component's occurrences in the order they are made. Placements, grounding, joints
+and checks work the same way. The difference is in naming: occurrence paths in body names read
+`(Pair:2/Block:1)` instead of `(second/left)`, and a layout must select bodies, not
+`instance` paths. The compatible build below keeps the authored names.
+
+
 This implementation adds optional `occurrence_name` arguments to engine `component.create`,
 `occurrence.copy` and `component.insert_design` in the compatible SolidCraft build. This addresses occurrences by authored
 names without guessing global IDs. The arguments use the existing saved name field; no file

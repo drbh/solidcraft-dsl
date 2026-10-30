@@ -63,6 +63,7 @@ const TUPLE_KEYS: &[&str] = &[
     "countersink",
     "face",
     "through",
+    "edge",
     "pull",
     "factors",
 ];
@@ -113,7 +114,7 @@ const FLAGS: &[&str] = &[
     "left",
 ];
 
-const FEATURES: &[&str] = &[
+pub const FEATURES: &[&str] = &[
     "extrude",
     "revolve",
     "hole",
@@ -145,6 +146,7 @@ const FEATURES: &[&str] = &[
     "offset_faces",
     "scale",
     "hem",
+    "path_flange",
     "cone",
     "perforate",
 ];
@@ -519,8 +521,16 @@ fn parse_design(p: &mut P, open: Option<usize>) -> R<Design> {
                     bodies.push(c.ident("a body name")?);
                 }
                 let value = c.expr1(if head == "color" { "a colour, \"#rrggbb\"" } else { "a material name" })?;
+                let mut opts = vec![("bodies".to_string(), Val::List(bodies)), ("value".to_string(), Val::Expr(value))];
+                // `color Body "#rrggbb" faces (x,y,z) …`: only those faces.
+                if head == "color" && c.eat_ident("faces") {
+                    let mut faces = vec![c.tuple()?];
+                    while c.peek() == Some(&Tok::Punct('(')) {
+                        faces.push(c.tuple()?);
+                    }
+                    opts.push(("faces".to_string(), Val::Tuples(faces)));
+                }
                 c.end()?;
-                let opts = vec![("bodies".to_string(), Val::List(bodies)), ("value".to_string(), Val::Expr(value))];
                 d.items.push(Item::Feature(Feature { kind: head.clone(), name: format!("{head}@{}", l.no), opts, line: l.no }));
             }
             // `print A, B up X` or `print bed (w, d)`
@@ -553,6 +563,16 @@ fn parse_design(p: &mut P, open: Option<usize>) -> R<Design> {
             }
             "use" => {
                 return Err(err(l.no, "`use` reads another file relative to this one: build the design from its file (`run`, `evaluate`, `watch`)"));
+            }
+            // `suppress A, B`: build these features, then switch them off (SolidCraft can turn them on).
+            "suppress" => {
+                let mut features = vec![c.ident("a feature name")?];
+                while c.eat_punct(',') {
+                    features.push(c.ident("a feature name")?);
+                }
+                c.end()?;
+                let opts = vec![("features".to_string(), Val::List(features))];
+                d.items.push(Item::Feature(Feature { kind: "suppress".into(), name: format!("suppress@{}", l.no), opts, line: l.no }));
             }
             "check" => {
                 if open.is_some() {
@@ -990,9 +1010,24 @@ fn parse_sketch_stmt(c: &mut Cur) -> R<SketchStmt> {
             SketchKind::Ellipse { name, center, major, minor: c.expr1("the minor radius")? }
         }
         "text" => {
-            let text = match c.next() {
-                Some(Tok::Str(s)) => s.clone(),
-                _ => return Err(err(line, "expected the text in quotes: `text \"LABEL\" at (x, y)`")),
+            // `text "WORDS"`, `text label` (a text parameter) or `text (label + " - L")`.
+            let (text, expression) = match c.next() {
+                Some(Tok::Str(s)) => (s.clone(), false),
+                Some(Tok::Ident(s)) => (s.clone(), true),
+                Some(Tok::Punct('(')) => {
+                    let mut e = String::new();
+                    loop {
+                        match c.next() {
+                            Some(Tok::Punct(')')) => break,
+                            Some(Tok::Str(s)) => e.push_str(&format!("'{s}'")),
+                            Some(t) => e.push_str(&tok_text(t)),
+                            None => return Err(err(line, "unterminated `(` in the text expression")),
+                        }
+                        e.push(' ');
+                    }
+                    (e.trim().to_string(), true)
+                }
+                _ => return Err(err(line, "expected the text in quotes: `text \"LABEL\" at (x, y)`, or a text parameter")),
             };
             if !c.eat_ident("at") {
                 return Err(err(line, "expected `at (x, y)`: the start of the baseline"));
@@ -1010,7 +1045,7 @@ fn parse_sketch_stmt(c: &mut Cur) -> R<SketchStmt> {
                     other => return Err(err(line, format!("unknown text option `{other}`"))),
                 }
             }
-            SketchKind::Text { text, at, height, angle, align, font, bold, italic }
+            SketchKind::Text { text, expression, at, height, angle, align, font, bold, italic }
         }
         "dim" => {
             let kind = match c.peek_ident() {

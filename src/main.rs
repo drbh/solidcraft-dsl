@@ -179,6 +179,10 @@ fn run(args: cli::Args) -> Result<(), String> {
     }
     let mut script = c.script.clone();
     solidcraft_dsl::link::inline_files(&mut script, std::path::Path::new(path)).map_err(|e| format!("{path}: {e}"))?;
+    if matches!(sub, "run" | "pack") {
+        // An engine without authored occurrence names gets the names it gives occurrences itself.
+        solidcraft_dsl::assembly::fit_engine(&solidcraft_cli(), &c, &mut script)?;
+    }
     if !c.links.is_empty() && matches!(sub, "run" | "pack") {
         // A packed assembly links to part designs saved beside it; a plain run uses a cache.
         let (dir, naming) = match (sub, args.output.as_deref()) {
@@ -188,8 +192,6 @@ fn run(args: cli::Args) -> Result<(), String> {
             _ => (std::env::temp_dir().join("solidcraft-dsl-parts"), solidcraft_dsl::link::Naming::Cache),
         };
         let cli = solidcraft_cli();
-        // Refuse an engine that can't link before spending time building parts.
-        solidcraft_dsl::assembly::check_engine(&cli, &c)?;
         let mut parts = solidcraft_dsl::link::Parts::new(&cli, &dir, naming);
         parts.prepare(&mut script, &c.links, std::path::Path::new(path)).map_err(|e| format!("{path}:{}", e.strip_prefix("line ").unwrap_or(&e)))?;
         for part in parts.parts() {
@@ -225,7 +227,6 @@ fn run(args: cli::Args) -> Result<(), String> {
                 return Err("pack requires -o FILE.solidcraft".into());
             }
             let cli = solidcraft_cli();
-            solidcraft_dsl::assembly::check_engine(&cli, &c)?;
             let dir = temp_dir()?;
             let script = dir.join("script.json");
             std::fs::write(&script, text).map_err(|e| format!("{}: {e}", script.display()))?;

@@ -182,17 +182,46 @@ fn unroll(lines: &[(String, usize)], params: &HashMap<String, Value>) -> R<Vec<(
                 out.extend(unroll(&body, params)?);
             }
         } else {
-            let condition = head["if ".len()..head.len() - 1].trim();
+            let mut condition = head["if ".len()..head.len() - 1].trim();
+            // `if <condition> keep {`: build both branches and suppress the features of the one
+            // the condition leaves out, so SolidCraft can switch them.
+            let keep = condition.ends_with(" keep");
+            if keep {
+                condition = condition[..condition.len() - " keep".len()].trim();
+            }
             let (then, otherwise) = match split {
                 Some(k) => (&lines[i + 1..k], &lines[k + 1..j]),
                 None => (&lines[i + 1..j], &lines[j..j]),
             };
-            let chosen = if holds(condition, params).map_err(|e| format!("line {no}: if: {e}"))? { then } else { otherwise };
+            let holds = holds(condition, params).map_err(|e| format!("line {no}: if: {e}"))?;
+            let (chosen, other) = if holds { (then, otherwise) } else { (otherwise, then) };
             out.extend(unroll(chosen, params)?);
+            if keep {
+                let other = unroll(other, params)?;
+                let names: Vec<String> = other.iter().filter_map(|(t, _)| feature_name(t)).collect();
+                out.extend(other);
+                if !names.is_empty() {
+                    out.push((format!("suppress {}", names.join(", ")), no));
+                }
+            }
         }
         i = j + 1;
     }
     Ok(out)
+}
+
+/// The name a feature statement gives (`box Name …`, `pattern circular Name …`).
+fn feature_name(line: &str) -> Option<String> {
+    let mut words = crate::lex::strip_comment(line).split_whitespace();
+    let kind = words.next()?;
+    if !crate::parse::FEATURES.contains(&kind) {
+        return None;
+    }
+    let mut name = words.next()?;
+    if kind == "pattern" && matches!(name, "circular" | "rectangular") {
+        name = words.next()?;
+    }
+    Some(name.to_string())
 }
 
 /// `a <op> b` (==, !=, <=, >=, <, >) or a value that is true unless zero.
@@ -533,6 +562,17 @@ mod tests {
         let c = crate::build_file(host, &dir.join("h.sc")).unwrap();
         assert_eq!(features(&c), ["A_B", "B_B", "B_T"]);
         let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn if_keep_builds_both_branches_and_suppresses_the_unchosen_one() {
+        let src = "design T units mm\nparam lid = 0\nbox B size 10 10 2 -> body Base\nif lid keep {\n  box Lid size 10 10 1 corner (0,0,2) join targets Base\n  pattern circular Ring features Lid axis Z count 2\n} else {\n  box Foot size 2 2 1 join targets Base\n}\n";
+        let c = crate::build(src).unwrap();
+        let cmds = c.script["commands"].as_array().unwrap();
+        let names: Vec<&str> = cmds.iter().filter(|c| c["command"] != "parameters.add").filter_map(|c| c["params"]["name"].as_str()).collect();
+        assert_eq!(names, ["B", "Foot", "Lid", "Ring"]);
+        assert_eq!(cmds.last().unwrap(), &json!({"command": "timeline.suppress", "params": {"features": ["Lid", "Ring"], "suppressed": true}}));
+        assert_eq!(*c.lines.last().unwrap(), 4);
     }
 
     #[test]

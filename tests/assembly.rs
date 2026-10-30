@@ -89,6 +89,49 @@ fn missing_capabilities_are_explicit() {
     assert!(solidcraft_dsl::assembly::check_capabilities(&c, &json!([])).unwrap_err().contains("authored_occurrence_names"));
 }
 
+#[test]
+fn engines_without_authored_names_address_occurrences_by_their_own() {
+    let c = build(HINGE).unwrap();
+    let mut script = c.script.clone();
+    solidcraft_dsl::assembly::fit_script(&c, &mut script, &json!([])).unwrap();
+    let commands = script["commands"].as_array().unwrap();
+    assert!(commands.iter().all(|c| c["params"].get("occurrence_name").is_none()));
+    let moved: Vec<&str> =
+        commands.iter().filter(|c| c["command"] == "occurrence.move").map(|c| c["params"]["occurrence"].as_str().unwrap()).collect();
+    assert_eq!(moved, ["Leaf:1", "Leaf:2"]);
+    // Any other missing capability still stops the build.
+    let cone = build("cone C radius 2 height 3 -> body C\n").unwrap();
+    assert!(solidcraft_dsl::assembly::fit_script(&cone, &mut cone.script.clone(), &json!([])).unwrap_err().contains("solid_cone"));
+}
+
+#[test]
+fn assemblies_build_on_released_engines() {
+    let cli = std::env::var("SOLIDCRAFT_CLI").unwrap_or_else(|_| "solidcraft-cli".into());
+    if std::process::Command::new(&cli).arg("commands").output().is_err() {
+        eprintln!("no solidcraft-cli: skipped");
+        return;
+    }
+    let dir = std::env::temp_dir().join(format!("sc-assembly-released-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let source = dir.join("hinge.sc");
+    std::fs::write(&source, HINGE).unwrap();
+    let report = solidcraft_dsl::evaluate::evaluate(&solidcraft_dsl::evaluate::Options {
+        source,
+        output: dir.join("review"),
+        cli,
+        previews: false,
+        expectations: None,
+        requests: None,
+    })
+    .unwrap();
+    assert_eq!(report["ok"], true, "{report}");
+    assert_eq!(report["assembly"]["joints"][0]["values"][0]["value"], 35.0);
+    assert_eq!(report["assembly"]["joints"][0]["frame_a"]["origin"], json!([10.0, 20.0, 0.0]));
+    assert_eq!(report["assembly"]["joints"][0]["frame_b"]["origin"], json!([10.0, 20.0, 3.0]));
+    assert_eq!(report["measurements"]["body_count"], 2);
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
 fn engine() -> Option<String> {
     let cli = std::env::var("SOLIDCRAFT_CLI").unwrap_or_else(|_| "solidcraft-cli".into());
     let out = std::process::Command::new(&cli).arg("commands").output().ok()?;
@@ -238,7 +281,8 @@ fn linked_parts_insert_their_design_once_and_copy_it_after() {
 #[test]
 fn engine_links_parts_and_reports_their_errors_and_cycles() {
     let Some(cli) = engine() else { return };
-    if solidcraft_dsl::assembly::check_engine(&cli, &build(LINKED).unwrap()).is_err() {
+    let linked = build(LINKED).unwrap();
+    if solidcraft_dsl::assembly::fit_engine(&cli, &linked, &mut linked.script.clone()).is_err() {
         eprintln!("installed engine lacks linked occurrence names: skipped engine test");
         return;
     }

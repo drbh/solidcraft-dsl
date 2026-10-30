@@ -477,7 +477,9 @@ pub fn compile(d: &Design) -> R<Compiled> {
 }
 
 /// Check required command capabilities before mutating a document.
-pub fn check_capabilities(c: &Compiled, commands: &Value) -> R<()> {
+/// The capabilities `c` requires that the engine (its `commands` listing) lacks.
+fn missing(c: &Compiled, commands: &Value) -> R<Vec<(String, &'static str, &'static str)>> {
+    let mut out = Vec::new();
     for required in c.expressions["requires"].as_array().into_iter().flatten() {
         let specs: &[(&str, &str)] = match required.as_str() {
             Some("persistent_sketch_point_expressions") => &[("sketch.point", "expression")],
@@ -485,19 +487,75 @@ pub fn check_capabilities(c: &Compiled, commands: &Value) -> R<()> {
             Some("linked_occurrence_names") => &[("component.insert_design", "occurrence_name")],
             Some("solid_cone") => &[("solid.cone", "top_radius")],
             Some("thread_handedness") => &[("solid.thread", "handedness")],
+            Some("text_parameters") => &[("sketch.text", "text_expression")],
+            Some("sheet_path_flange") => &[("sheet.path_flange", "edge")],
             _ => return Err(format!("unknown required engine capability {required}")),
         };
         for (id, field) in specs {
             if !commands.as_array().is_some_and(|a| a.iter().any(|c| c["id"] == *id && c["params"].as_str().is_some_and(|s| s.contains(field)))) {
-                return Err(format!(
-                    "this design requires engine capability {required} ({id}: {field}); use a compatible development build via SOLIDCRAFT_CLI or update the running app"
-                ));
+                out.push((required.as_str().unwrap_or("").to_string(), *id, *field));
+                break;
             }
         }
     }
+    Ok(out)
+}
+
+pub fn check_capabilities(c: &Compiled, commands: &Value) -> R<()> {
+    match missing(c, commands)?.first() {
+        None => Ok(()),
+        Some((required, id, field)) => Err(format!(
+            "this design requires engine capability {required} ({id}: {field}); use a compatible development build via SOLIDCRAFT_CLI or update the running app"
+        )),
+    }
+}
+
+/// Fit `script` (compiled as `c`) to an engine with these `commands`. An engine that can't take
+/// authored occurrence names still builds the assembly: it names occurrences `Component:k`, k
+/// counting that component's occurrences in the order they are made, so the script uses those
+/// names instead. Any other missing capability is an error.
+pub fn fit_script(c: &Compiled, script: &mut Value, commands: &Value) -> R<()> {
+    let names = ["authored_occurrence_names", "linked_occurrence_names"];
+    let missing = missing(c, commands)?;
+    if let Some((required, id, field)) = missing.iter().find(|(r, ..)| !names.contains(&r.as_str())) {
+        return Err(format!(
+            "this design requires engine capability {required} ({id}: {field}); use a compatible development build via SOLIDCRAFT_CLI or update the running app"
+        ));
+    }
+    if !missing.is_empty() {
+        default_occurrence_names(script);
+    }
     Ok(())
 }
-pub fn check_engine(cli: &str, c: &Compiled) -> R<()> {
+
+/// Replace authored occurrence names with the engine's own (`Component:k`).
+pub fn default_occurrence_names(script: &mut Value) {
+    let mut counts: HashMap<String, usize> = HashMap::new();
+    let mut names: HashMap<String, String> = HashMap::new();
+    let Some(commands) = script["commands"].as_array_mut() else { return };
+    for cmd in commands.iter_mut() {
+        let component = match cmd["command"].as_str() {
+            Some("component.create" | "component.insert_design") => cmd["params"]["name"].as_str(),
+            Some("occurrence.copy") => cmd["params"]["component"].as_str(),
+            _ => None,
+        };
+        let Some(component) = component.map(str::to_string) else { continue };
+        let Some(authored) = cmd["params"].as_object_mut().and_then(|p| p.remove("occurrence_name")) else { continue };
+        let k = counts.entry(component.clone()).or_default();
+        *k += 1;
+        if let Some(authored) = authored.as_str() {
+            names.insert(authored.to_string(), format!("{component}:{k}"));
+        }
+    }
+    for cmd in commands.iter_mut() {
+        if let Some(name) = cmd["params"]["occurrence"].as_str().and_then(|n| names.get(n)) {
+            cmd["params"]["occurrence"] = json!(name);
+        }
+    }
+}
+
+/// Fit `script` to the engine at `cli`; see `fit_script`.
+pub fn fit_engine(cli: &str, c: &Compiled, script: &mut Value) -> R<()> {
     if c.expressions["requires"].as_array().is_none_or(|r| r.is_empty()) {
         return Ok(());
     }
@@ -506,5 +564,5 @@ pub fn check_engine(cli: &str, c: &Compiled) -> R<()> {
         return Err(format!("cannot discover engine capabilities: {}", String::from_utf8_lossy(&out.stderr)));
     }
     let commands: Value = serde_json::from_slice(&out.stdout).map_err(|e| e.to_string())?;
-    check_capabilities(c, &commands)
+    fit_script(c, script, &commands)
 }

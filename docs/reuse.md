@@ -75,3 +75,18 @@ and a `for` block's variable. In a used part, it sees the values that `with` giv
 The choice is made when compiling: change the parameter and build again to switch a feature
 on or off. Editing the parameter in SolidCraft changes sizes but doesn't add or remove
 features. See `59_pcb_box` (`mount_ears`).
+
+### Switching features in SolidCraft: `keep` and `suppress`
+
+```sc
+if mount_ears keep {
+  box EarL size ear (2*ear) ear_t corner (-ear, D/2 - ear, 0) join targets Box
+}
+suppress Fillets, Logo
+```
+
+With `keep`, an `if` builds both of its branches and suppresses the features of the branch its
+condition leaves out. The design opens as chosen, and either branch can be switched on in
+SolidCraft's timeline. Both branches must build, so they can't create bodies with the same
+name. `suppress A, B` suppresses any features after they are built. In `59_pcb_box`,
+`if mount_ears keep` keeps the ears available.

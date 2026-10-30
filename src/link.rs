@@ -145,9 +145,10 @@ impl<'a> Parts<'a> {
         if let Some(native) = &c.native {
             native.write(&tmp)?;
         } else {
-            crate::assembly::check_engine(self.cli, c)?;
+            let mut fitted = c.script.clone();
+            crate::assembly::fit_engine(self.cli, c, &mut fitted)?;
             let script = self.dir.join(format!("{stem}-{}.{}.json", &sha256[..12], std::process::id()));
-            std::fs::write(&script, c.script.to_string()).map_err(|e| format!("{}: {e}", script.display()))?;
+            std::fs::write(&script, fitted.to_string()).map_err(|e| format!("{}: {e}", script.display()))?;
             let out = std::process::Command::new(self.cli)
                 .arg("run")
                 .arg(&script)

@@ -27,11 +27,20 @@ impl Environment {
                 return Err(error(p.line, "parameter", format!("`{}` is defined twice", p.name)));
             }
         }
-        let defs: Vec<ParamDef> = d.params.iter().map(|p| ParamDef { name: p.name.clone(), expr: p.expr.clone(), unit: "auto".into() }).collect();
+        // Text parameters hold words, not numbers; only `text` statements use them.
+        let defs: Vec<ParamDef> = d
+            .params
+            .iter()
+            .filter(|p| p.text().is_none())
+            .map(|p| ParamDef { name: p.name.clone(), expr: p.expr.clone(), unit: "auto".into() })
+            .collect();
         let (values, errors) = eval_params(&defs, 1.0);
         for p in &d.params {
             if let Some(e) = errors.get(&p.name) {
                 return Err(error(p.line, &format!("parameter `{}`", p.name), e));
+            }
+            if p.local && p.text().is_some() {
+                return Err(error(p.line, "parameter", "text belongs in a `param`, not a `let`"));
             }
             if !p.local && values.get(&p.name).is_some_and(|v| v.kind().is_none()) {
                 return Err(error(

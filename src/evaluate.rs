@@ -144,8 +144,8 @@ fn build(
         }
     };
     report["expressions"] = c.expressions.clone();
-    crate::assembly::check_engine(&opts.cli, c)?;
     let mut script = if c.native.is_some() { json!({"commands":[]}) } else { c.script.clone() };
+    crate::assembly::fit_engine(&opts.cli, c, &mut script)?;
     if let Err(e) = crate::link::inline_files(&mut script, &opts.source) {
         diagnostics.push(diagnostic("compile", e, None, source));
         return Ok(());

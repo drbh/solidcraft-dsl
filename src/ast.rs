@@ -42,6 +42,14 @@ pub struct Param {
     pub line: usize,
 }
 
+impl Param {
+    /// `param label = "TEXT"`: a text parameter's words, for `text label …`.
+    pub fn text(&self) -> Option<&str> {
+        let e = self.expr.trim();
+        (e.len() >= 2 && e.starts_with('"') && e.ends_with('"')).then(|| &e[1..e.len() - 1])
+    }
+}
+
 #[derive(Debug, Clone)]
 pub enum Plane {
     /// `XY`, `XZ`, `YZ` or a construction plane's name.
@@ -168,7 +176,9 @@ pub enum SketchKind {
     /// The engine numbers glyph curves from the same counters as everything else, so text
     /// comes last in its sketch.
     Text {
+        /// The words, or with `expression` a text expression over text parameters.
         text: String,
+        expression: bool,
         at: [Comp; 2],
         height: Option<String>,
         angle: Option<String>,

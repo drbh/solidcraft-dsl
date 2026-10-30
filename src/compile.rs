@@ -431,6 +431,11 @@ pub(crate) fn compile_geometry(d: &Design) -> R<Compiled> {
         if names.insert(p.name.clone(), p.line).is_some() {
             return Err(err(p.line, format!("parameter `{}` is defined twice", p.name)));
         }
+        if let Some(words) = p.text() {
+            out.push(cmd("parameters.add", json!({"name": p.name, "expression": words, "unit": "text"})));
+            lines.push(p.line);
+            continue;
+        }
         let value = environment.values.get(&p.name).ok_or_else(|| err(p.line, "missing evaluated parameter"))?;
         let unit = match value.kind() {
             Some(solidcraft_expr::Kind::Angle) => "deg",
@@ -483,6 +488,16 @@ pub(crate) fn compile_geometry(d: &Design) -> R<Compiled> {
                 }
                 if uses("thread", Some("left")) {
                     r.push(json!("thread_handedness"));
+                }
+                let text_expression = d
+                    .items
+                    .iter()
+                    .any(|i| matches!(i, Item::Sketch(s) if s.stmts.iter().any(|st| matches!(st.kind, SketchKind::Text { expression: true, .. }))));
+                if uses("path_flange", None) {
+                    r.push(json!("sheet_path_flange"));
+                }
+                if text_expression || d.params.iter().any(|p| p.text().is_some()) {
+                    r.push(json!("text_parameters"));
                 }
             }
             e
@@ -685,8 +700,9 @@ fn compile_sketch(s: &Sketch, out: &mut Vec<Value>, lines: &mut Vec<usize>, dims
                 t.define(line, name, Entity::Ellipse { id, points })?;
                 out.push(cmd("sketch.ellipse", json!({"center": pt(center), "major": pt(major), "minor_radius": expr(minor)})));
             }
-            SketchKind::Text { text, at, height, angle, align, font, bold, italic } => {
-                let mut p = json!({"text": text, "at": pt(at)});
+            SketchKind::Text { text, expression, at, height, angle, align, font, bold, italic } => {
+                let mut p = json!({"at": pt(at)});
+                p[if *expression { "text_expression" } else { "text" }] = json!(text);
                 for (k, v) in [("height", height), ("angle", angle), ("font", font)] {
                     if let Some(v) = v {
                         p[k] = expr(v);
@@ -1512,6 +1528,11 @@ fn compile_feature(f: &Feature, sketches: &mut HashMap<String, SketchTable>) -> 
             }
             "solid.scale"
         }
+        "suppress" => {
+            let features = o.list("features")?.unwrap_or_default();
+            o.finish(json!({}))?;
+            return Ok(vec![cmd("timeline.suppress", json!({"features": features, "suppressed": true}))]);
+        }
         // `color Body "#rrggbb"` and `material Body Name`: properties, not timeline features.
         "color" | "material" => {
             p["bodies"] = json!(o.list("bodies")?.unwrap_or_default());
@@ -1522,6 +1543,17 @@ fn compile_feature(f: &Feature, sketches: &mut HashMap<String, SketchTable>) -> 
                     return Err(err(line, format!("a colour is \"#rrggbb\", not `{value}`")));
                 }
                 p["color"] = json!(value);
+                if let Some(faces) = o.tuples("faces")? {
+                    // Faces of one body; the points pick them.
+                    let Some([body]) = p["bodies"].as_array().map(Vec::as_slice) else {
+                        return Err(err(line, "color the faces of one body at a time"));
+                    };
+                    p["body"] = body.clone();
+                    p["faces"] = json!(faces);
+                    if let Some(m) = p.as_object_mut() {
+                        m.remove("bodies");
+                    }
+                }
                 "appearance.assign"
             } else {
                 p["material"] = json!(value);
@@ -1654,6 +1686,38 @@ fn compile_feature(f: &Feature, sketches: &mut HashMap<String, SketchTable>) -> 
                 }
             }
             "sheet.flange"
+        }
+        // Flanges along an open chain of sketch lines, bent from a sheet edge (engine 0.27+).
+        "path_flange" => {
+            p["edge"] = o.tuple("edge")?.ok_or_else(|| err(line, "`path_flange` needs `edge (x,y,z)` on a top or bottom edge of the sheet"))?;
+            let refs =
+                o.list("path")?.ok_or_else(|| err(line, "`path_flange` needs `path Sketch.a, Sketch.b` (lines from the edge out, in order)"))?;
+            let mut sketch: Option<String> = None;
+            let mut curves = Vec::new();
+            for r in refs {
+                let Some((base, rest)) = r.split_once('.') else {
+                    return Err(err(line, format!("`path` takes sketch lines, `Sketch.line`; `{r}` names no line")));
+                };
+                let r = Ref { base: base.to_string(), parts: rest.split('.').map(str::to_string).collect() };
+                let (s, id) = sketch_ref(&r, None, sketches, line)?;
+                if Kind::of(&id) != Kind::Line {
+                    return Err(err(line, format!("`path` takes lines; `{}` is {}", r.text(), Kind::of(&id).name())));
+                }
+                if sketch.as_ref().is_some_and(|x| *x != s) {
+                    return Err(err(line, "all path lines must be in one sketch"));
+                }
+                sketch = Some(s);
+                curves.push(id);
+            }
+            p["sketch"] = json!(sketch);
+            p["curves"] = json!(curves);
+            if let Some(r) = o.expr("radius")? {
+                p["radius"] = r;
+            }
+            if let Some(b) = o.ident("body")? {
+                p["body"] = json!(b);
+            }
+            "sheet.path_flange"
         }
         // A sheet edge folded back on itself.
         "hem" => {
@@ -1946,6 +2010,36 @@ mod tests {
         assert_eq!(left.expressions["requires"], json!(["thread_handedness"]));
         let right = compile(&parse("cylinder S radius 4 height 20 -> body B\nthread T face (4,0,10) designation M8\n").unwrap()).unwrap();
         assert_eq!(right.expressions["requires"], json!([]));
+    }
+
+    #[test]
+    fn face_colours_text_parameters_path_flanges_and_suppression() {
+        let c = compile(
+            &parse(
+                "param who = \"ADA\"\nbox B size 20 20 10 -> body Cube\ncolor Cube \"#ff3300\" faces (10,10,10) (20,10,5)\n\
+                 sketch L on XY offset 10 mm {\n text who at (1,1)\n text (who + \" - L\") at (1,8)\n}\n\
+                 sketch Z on YZ offset 10 mm {\n line up = (20,0) (20,15)\n line out = (20,15) (40,15)\n}\n\
+                 path_flange F edge (10,20,0) path Z.up, Z.out radius 1 mm body Cube\nsuppress F\n",
+            )
+            .unwrap(),
+        )
+        .unwrap();
+        let cmds = c.script["commands"].as_array().unwrap();
+        let by = |id: &str| cmds.iter().filter(|c| c["command"] == id).map(|c| c["params"].clone()).collect::<Vec<_>>();
+        assert_eq!(by("parameters.add")[0], json!({"name": "who", "expression": "ADA", "unit": "text"}));
+        assert_eq!(by("appearance.assign")[0], json!({"color": "#ff3300", "body": "Cube", "faces": [[10.0, 10.0, 10.0], [20.0, 10.0, 5.0]]}));
+        let texts = by("sketch.text");
+        assert_eq!((texts[0]["text_expression"].clone(), texts[1]["text_expression"].clone()), (json!("who"), json!("who + ' - L'")));
+        assert_eq!(
+            by("sheet.path_flange")[0],
+            json!({"edge": [10.0, 20.0, 0.0], "sketch": "Z", "curves": ["l1", "l2"], "radius": "1 mm", "body": "Cube", "name": "F"})
+        );
+        assert_eq!(by("timeline.suppress")[0], json!({"features": ["F"], "suppressed": true}));
+        assert_eq!(c.expressions["requires"], json!(["sheet_path_flange", "text_parameters"]));
+        assert!(
+            fails("box B size 1 1 1 -> body A\nbox C size 1 1 1 -> body D\ncolor A, D \"#000000\" faces (0,0,0)\n").contains("one body at a time")
+        );
+        assert!(compile(&parse("let w = \"X\"\n").unwrap()).unwrap_err().contains("text belongs in a `param`"));
     }
 
     #[test]
