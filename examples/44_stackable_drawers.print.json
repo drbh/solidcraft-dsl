@@ -1,0 +1,19 @@
+{
+  "version": 1,
+  "defaults": false,
+  "requests": [
+    { "id": "print-3mf", "kind": "export", "format": "3mf", "layout": "plate" },
+    { "id": "preview-glb", "kind": "export", "format": "glb", "layout": "plate" },
+    { "id": "print-stl", "kind": "export", "format": "stl", "layout": "plate" },
+    { "id": "print-check", "kind": "commands", "layout": "plate",
+      "commands": [ { "command": "inspect.measure", "params": {} } ] },
+    { "id": "single-view", "kind": "snapshot", "layout": "plate", "options": { "view": "iso" } }
+  ],
+  "layouts": {
+    "plate": { "spacing": "10 mm", "parts": [
+      { "id": "Cabinet", "select": { "bodies": ["Cabinet"] },
+        "rotate": [{"axis": [1, 0, 0], "angle": "-90 deg"}], "at": [0, 0] },
+      { "id": "Drawer", "select": { "bodies": ["Drawer"] }, "at": [0, "75 mm"] }
+    ] }
+  }
+}
