@@ -44,9 +44,11 @@ const POSITIVE_KEYS: &[&str] = &["diameter", "radius", "depth", "height", "width
 const CREATORS: &[&str] = &["extrude", "revolve", "box", "cylinder", "sphere", "torus", "loft", "sweep", "pipe", "coil"];
 
 /// Does `f` create the body its `body` option names? A flange does when it is a base flange
-/// (`from <sketch>`); edge flanges name the sheet they bend.
+/// (`from <sketch>`); edge flanges name the sheet they bend. A split names the piece it cuts off.
 fn creates_body(f: &Feature) -> bool {
-    CREATORS.contains(&f.kind.as_str()) || (f.kind == "flange" && f.opts.iter().any(|(k, _)| k == "from"))
+    CREATORS.contains(&f.kind.as_str())
+        || (f.kind == "flange" && f.opts.iter().any(|(k, _)| k == "from"))
+        || (f.kind == "split" && f.opts.iter().any(|(k, _)| k == "body"))
 }
 
 /// What a top-level name denotes, for error messages when the wrong kind is named.

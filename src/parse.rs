@@ -39,6 +39,7 @@ const EXPR_KEYS: &[&str] = &[
     "bend_radius",
     "start_angle",
     "fraction",
+    "factor",
 ];
 const TUPLE_KEYS: &[&str] = &[
     "profiles",
@@ -58,10 +59,26 @@ const TUPLE_KEYS: &[&str] = &[
     "countersink",
     "face",
     "through",
+    "pull",
+    "factors",
 ];
-const LIST_KEYS: &[&str] = &["targets", "features", "bodies", "tools", "points", "sections", "between"];
-const IDENT_KEYS: &[&str] =
-    &["from", "body", "axis", "plane", "target", "sketch", "type", "direction", "alignment", "alignment2", "rule", "section_position", "on"];
+const LIST_KEYS: &[&str] = &["targets", "features", "bodies", "tools", "points", "sections", "between", "curves"];
+const IDENT_KEYS: &[&str] = &[
+    "from",
+    "body",
+    "axis",
+    "plane",
+    "target",
+    "sketch",
+    "type",
+    "direction",
+    "alignment",
+    "alignment2",
+    "rule",
+    "section_position",
+    "on",
+    "neutral",
+];
 const FLAGS: &[&str] = &[
     "symmetric",
     "negative",
@@ -116,6 +133,12 @@ const FEATURES: &[&str] = &[
     "sheet_rule",
     "flange",
     "plane",
+    "split",
+    "rib",
+    "web",
+    "draft",
+    "offset_faces",
+    "scale",
 ];
 
 struct P<'a> {
@@ -390,6 +413,17 @@ fn parse_design(p: &mut P, open: Option<usize>) -> R<Design> {
                 let name = c.ident("an instance name")?;
                 c.end()?;
                 d.grounds.push((name, l.no));
+            }
+            // `color A, B "#rrggbb"`, `material A, B "PLA"`
+            "color" | "material" => {
+                let mut bodies = vec![c.ident("a body name")?];
+                while c.eat_punct(',') {
+                    bodies.push(c.ident("a body name")?);
+                }
+                let value = c.expr1(if head == "color" { "a colour, \"#rrggbb\"" } else { "a material name" })?;
+                c.end()?;
+                let opts = vec![("bodies".to_string(), Val::List(bodies)), ("value".to_string(), Val::Expr(value))];
+                d.items.push(Item::Feature(Feature { kind: head.clone(), name: format!("{head}@{}", l.no), opts, line: l.no }));
             }
             "check" => {
                 if open.is_some() {

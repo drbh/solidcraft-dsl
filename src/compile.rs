@@ -452,8 +452,10 @@ pub(crate) fn compile_geometry(d: &Design) -> R<Compiled> {
                 if let Some(prev) = names.insert(f.name.clone(), f.line) {
                     return Err(err(f.line, format!("`{}` is already the name of what line {prev} defines", f.name)));
                 }
-                out.push(compile_feature(f, &mut sketches)?);
-                lines.push(f.line);
+                for c in compile_feature(f, &mut sketches)? {
+                    out.push(c);
+                    lines.push(f.line);
+                }
                 features += 1;
             }
         }
@@ -943,7 +945,7 @@ fn sketch_ref(r: &Ref, default_sketch: Option<&str>, sketches: &mut HashMap<Stri
     Ok((sketch, id))
 }
 
-fn compile_feature(f: &Feature, sketches: &mut HashMap<String, SketchTable>) -> R<Value> {
+fn compile_feature(f: &Feature, sketches: &mut HashMap<String, SketchTable>) -> R<Vec<Value>> {
     let line = f.line;
     let mut o = Opts::new(f);
     let mut p = json!({});
@@ -1180,6 +1182,36 @@ fn compile_feature(f: &Feature, sketches: &mut HashMap<String, SketchTable>) -> 
             } else {
                 return Err(err(line, "`pattern` needs `features A, B` or `bodies A, B`"));
             }
+            // Along a path: `path Sketch.a, Sketch.b count n spacing s|distance d [identical] [flip]`.
+            if let Some(refs) = o.list("path")? {
+                let mut path_sketch: Option<String> = None;
+                let mut curves = Vec::new();
+                for r in refs {
+                    let Some((base, rest)) = r.split_once('.') else {
+                        return Err(err(line, format!("`path` takes sketch curves, `Sketch.curve`; `{r}` names no curve")));
+                    };
+                    let r = Ref { base: base.to_string(), parts: rest.split('.').map(str::to_string).collect() };
+                    let (s, id) = sketch_ref(&r, None, sketches, line)?;
+                    if path_sketch.as_ref().is_some_and(|x| *x != s) {
+                        return Err(err(line, "all path curves must be in one sketch"));
+                    }
+                    path_sketch = Some(s);
+                    curves.push(id);
+                }
+                p["path_sketch"] = json!(path_sketch);
+                p["path"] = json!(curves);
+                p["count"] = o.require("count")?;
+                match (o.expr("spacing")?, o.expr("distance")?) {
+                    (Some(s), None) => p["spacing"] = s,
+                    (None, Some(d)) => p["distance"] = d,
+                    _ => return Err(err(line, "a path pattern needs `spacing` (between copies) or `distance` (first to last)")),
+                }
+                p["orientation"] = json!(if o.flag("identical") { "identical" } else { "path" });
+                if o.flag("flip") {
+                    p["flip"] = json!(true);
+                }
+                return Ok(vec![cmd("solid.pattern.path", o.finish(p)?)]);
+            }
             p["dir1"] = o.tuple("dir")?.ok_or_else(|| err(line, "`pattern` needs `dir (x,y,z)`"))?;
             p["count1"] = o.require("count")?;
             p["spacing1"] = o.require("spacing")?;
@@ -1353,6 +1385,95 @@ fn compile_feature(f: &Feature, sketches: &mut HashMap<String, SketchTable>) -> 
                 "construct.plane.offset"
             }
         }
+        "split" => {
+            let target = o.ident("target")?.ok_or_else(|| err(line, "`split` needs `target <body>`"))?;
+            p["body"] = json!(target);
+            p["plane"] = match (o.ident("plane")?, o.tuple("origin")?, o.tuple("normal")?) {
+                (Some(pl), None, None) => json!(pl),
+                (None, Some(origin), Some(normal)) => json!({"origin": origin, "normal": normal}),
+                _ => return Err(err(line, "`split` needs `plane <plane>` or `origin (x,y,z) normal (x,y,z)`")),
+            };
+            // The piece behind the plane (against its normal) becomes a new body, `<target> (1)`.
+            let piece = o.ident("body")?;
+            let params = o.finish(p)?;
+            let mut out = vec![cmd("solid.split_body", params)];
+            if let Some(piece) = piece {
+                out.push(cmd("body.rename", json!({"body": format!("{target} (1)"), "name": piece})));
+            }
+            return Ok(out);
+        }
+        "rib" | "web" => {
+            let sketch = o.ident("from")?.ok_or_else(|| err(line, format!("`{}` needs `from <sketch>`", f.kind)))?;
+            p["curves"] = json!(sketch_curves(&mut o, "curves", &sketch, sketches)?);
+            p["sketch"] = json!(sketch);
+            p["thickness"] = o.require("thickness")?;
+            if let Some(d) = o.expr("depth")? {
+                p["depth"] = d;
+            }
+            if o.flag("flip") {
+                p["flip"] = json!(true);
+            }
+            if let Some(d) = o.ident("direction")? {
+                if !matches!(d.as_str(), "in_plane" | "normal") {
+                    return Err(err(line, "`direction` is in_plane or normal"));
+                }
+                p["direction"] = json!(d);
+            }
+            if f.kind == "rib" { "solid.rib" } else { "solid.web" }
+        }
+        "draft" => {
+            p["faces"] = json!(o.tuples("faces")?.ok_or_else(|| err(line, "`draft` needs `faces (x,y,z) …`"))?);
+            p["angle"] = o.require("angle")?;
+            p["neutral"] = json!(o.ident("neutral")?.unwrap_or_else(|| "XY".into()));
+            if let Some(pull) = o.tuple("pull")? {
+                p["pull"] = pull;
+            }
+            if let Some(b) = o.ident("body")? {
+                p["body"] = json!(b);
+            }
+            "solid.draft"
+        }
+        "offset_faces" => {
+            p["faces"] = json!(o.tuples("faces")?.ok_or_else(|| err(line, "`offset_faces` needs `faces (x,y,z) …`"))?);
+            p["distance"] = o.require("distance")?;
+            if let Some(b) = o.ident("body")? {
+                p["body"] = json!(b);
+            }
+            "solid.offset_face"
+        }
+        "scale" => {
+            p["bodies"] = json!(o.list("bodies")?.ok_or_else(|| err(line, "`scale` needs `bodies A, B`"))?);
+            match (o.expr("factor")?, o.tuple("factors")?) {
+                (Some(k), None) => p["factor"] = k,
+                (None, Some(ks)) => p["factors"] = ks,
+                _ => return Err(err(line, "`scale` needs `factor k` or `factors (kx, ky, kz)`")),
+            }
+            if let Some(origin) = o.tuple("origin")? {
+                p["origin"] = origin;
+            }
+            "solid.scale"
+        }
+        // `color Body "#rrggbb"` and `material Body Name`: properties, not timeline features.
+        "color" | "material" => {
+            p["bodies"] = json!(o.list("bodies")?.unwrap_or_default());
+            let value = o.ident("value")?.unwrap_or_default();
+            let id = if f.kind == "color" {
+                let hex = value.strip_prefix('#').filter(|h| h.len() == 6 && h.chars().all(|c| c.is_ascii_hexdigit()));
+                if hex.is_none() {
+                    return Err(err(line, format!("a colour is \"#rrggbb\", not `{value}`")));
+                }
+                p["color"] = json!(value);
+                "appearance.assign"
+            } else {
+                p["material"] = json!(value);
+                "material.assign"
+            };
+            let mut params = o.finish(p)?;
+            if let Some(m) = params.as_object_mut() {
+                m.remove("name");
+            }
+            return Ok(vec![cmd(id, params)]);
+        }
         "thread" => {
             p["face"] = o.tuple("face")?.ok_or_else(|| err(line, "`thread` needs `face (x,y,z)` on a cylindrical face"))?;
             if let Some(d) = o.ident("designation")? {
@@ -1428,7 +1549,7 @@ fn compile_feature(f: &Feature, sketches: &mut HashMap<String, SketchTable>) -> 
             }
             p["active"] = json!(true);
             let params = o.finish(p)?;
-            return Ok(cmd("sheet.manage_rules", params));
+            return Ok(vec![cmd("sheet.manage_rules", params)]);
         }
         "flange" => {
             if let Some(rule) = o.ident("rule")? {
@@ -1474,7 +1595,24 @@ fn compile_feature(f: &Feature, sketches: &mut HashMap<String, SketchTable>) -> 
         other => return Err(err(line, format!("`{other}` is not supported yet"))),
     };
     let params = o.finish(p)?;
-    Ok(cmd(id, params))
+    Ok(vec![cmd(id, params)])
+}
+
+/// Sketch curves named in `key` (`curves a, b`), in the feature's `from` sketch.
+fn sketch_curves(o: &mut Opts, key: &str, sketch: &str, sketches: &mut HashMap<String, SketchTable>) -> R<Vec<String>> {
+    let line = o.f.line;
+    let names = o.list(key)?.ok_or_else(|| err(line, format!("`{}` needs `{key} a, b` (curves of `{sketch}`)", o.f.kind)))?;
+    names
+        .iter()
+        .map(|n| {
+            let r = Ref { base: n.clone(), parts: vec![] };
+            let (_, id) = sketch_ref(&r, Some(sketch), sketches, line)?;
+            if !Kind::of(&id).is_curve() {
+                return Err(err(line, format!("`{key}` takes curves; `{n}` is {}", Kind::of(&id).name())));
+            }
+            Ok(id)
+        })
+        .collect()
 }
 
 #[cfg(test)]
@@ -1620,6 +1758,44 @@ mod tests {
         let e = fails("sketch S on XY {\n circle c = (0,0) radius 1\n mirror c about c\n}\n");
         assert!(e.contains("mirror about a line, not a circle"), "{e}");
         assert!(fails("sketch S on XY {\n circle c = (0,0) radius 1\n pattern circular c count 1\n}\n").contains("2 through 500"));
+    }
+
+    #[test]
+    fn shaping_splitting_and_properties() {
+        let cmds = script(
+            "box B size 100 40 30 corner (0,0,0) -> body Tray\nsketch C on YZ offset 20 mm {\n line g = (10,2) (2,10)\n}\n\
+             rib Gusset from C curves g thickness 2 mm direction normal flip\nweb Walls from C curves g thickness 1 mm depth 5 mm\n\
+             draft D faces (0,20,15) angle (-3 deg) neutral XY pull (0,0,1) body Tray\noffset_faces O faces (100,20,15) distance 1 mm body Tray\n\
+             scale S bodies Tray factors (1, 1, 2)\nsketch P on XY {\n arc a = center (0,0) start (50,0) end (0,50)\n}\n\
+             pattern Along features O path P.a count 3 spacing 10 mm identical\nsplit Halves target Tray plane YZ -> body Left\n\
+             color Tray, Left \"#cc2222\"\nmaterial Left PLA\n",
+        );
+        let by = |id: &str| cmds.iter().find(|c| c["command"] == id).unwrap()["params"].clone();
+        assert_eq!(
+            by("solid.rib"),
+            json!({"curves": ["l1"], "sketch": "C", "thickness": "2 mm", "flip": true, "direction": "normal", "name": "Gusset"})
+        );
+        assert_eq!(by("solid.web")["depth"], json!("5 mm"));
+        assert_eq!(
+            by("solid.draft"),
+            json!({"faces": [[0.0, 20.0, 15.0]], "angle": "-3 deg", "neutral": "XY", "pull": [0.0, 0.0, 1.0], "body": "Tray", "name": "D"})
+        );
+        assert_eq!(by("solid.scale")["factors"], json!([1.0, 1.0, 2.0]));
+        assert_eq!(
+            by("solid.pattern.path"),
+            json!({"features": ["O"], "path_sketch": "P", "path": ["a1"], "count": 3.0, "spacing": "10 mm", "orientation": "identical", "name": "Along"})
+        );
+        let split = cmds.iter().position(|c| c["command"] == "solid.split_body").unwrap();
+        assert_eq!(cmds[split]["params"], json!({"body": "Tray", "plane": "YZ", "name": "Halves"}));
+        assert_eq!(cmds[split + 1], json!({"command": "body.rename", "params": {"body": "Tray (1)", "name": "Left"}}));
+        assert_eq!(by("appearance.assign"), json!({"bodies": ["Tray", "Left"], "color": "#cc2222"}));
+        assert_eq!(by("material.assign"), json!({"bodies": ["Left"], "material": "PLA"}));
+        assert!(fails("box B size 1 1 1 -> body T\ncolor T red\n").contains("a colour is \"#rrggbb\""));
+        assert!(
+            fails("box B size 1 1 1 -> body T\nsketch C on XY {\n point q = (0,0)\n}\nrib R from C curves q thickness 1\n").contains("takes curves")
+        );
+        // The piece a split names is a body afterwards.
+        crate::check(&parse("box B size 10 10 10 -> body T\nsplit S target T plane YZ -> body U\ncolor U \"#000000\"\n").unwrap()).unwrap();
     }
 
     #[test]

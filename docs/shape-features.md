@@ -1,4 +1,4 @@
-# Sketch copies, planes, lofts, sweeps, threads, text and sheet metal
+# Sketch copies, planes, shaping, lofts, sweeps, threads, text and sheet metal
 
 These statements map one to one onto SolidCraft engine commands. Each section names an example
 that uses it.
@@ -62,6 +62,33 @@ sketch Lettering on Face { … }
 A plane can be used by name wherever a plane is taken: in `sketch … on`, in another
 `plane … on`, and in a mirror's `plane`. Offsets and angles stay live. See
 `53_desk_name_plate`, where the lettering follows the slope parameter.
+
+## Shaping and splitting solids
+
+```sc
+rib Gusset from Corner curves g thickness 4 mm          // one connected chain, filled to the faces it meets
+web Divide from Floor curves a, b, c thickness 1.2 mm depth 20 mm direction normal flip
+draft Walls faces (60,0,15) (60,80,15) angle (-4 deg) neutral XY body Tray
+offset_faces Grow faces (126,3,3) distance 1 mm body Peg
+scale Big bodies Peg factor 1.5 origin (120,0,0)        // or factors (1, 1, 2)
+pattern Teeth features Tooth path Rail.edge count 9 distance 120 mm   // or spacing; identical; flip
+split Halves target Shelf origin (160,0,0) normal (1,0,0) -> body ShelfLeft   // or plane Mid
+color Shelf "#d9a441"
+material Shelf, ShelfLeft PLA
+```
+
+- `rib` takes one connected chain. `web` makes one wall per curve. `direction normal` grows
+  along the sketch's normal, and `flip` turns it to the other side.
+- `draft`: a positive angle narrows the part along the pull, which defaults to the neutral
+  plane's normal; a negative angle widens it. Draft a solid before shelling it: the shell keeps
+  the walls even. Drafting the faces of a shelled body together can fail (`54_nesting_tray`).
+- A pattern along a path turns the copies to follow it unless it is `identical`.
+- `split` keeps the target's name on the side the normal points to and names the other piece
+  (`-> body`). Check each piece's size against the bed (`55_split_wall_shelf`).
+- `color` and `material` set what an export and the measured mass use. Materials come from the
+  engine's library: `PLA`, `ABS Plastic`, `Nylon`, `Polycarbonate`, `Steel`, `Aluminum`, ….
+- Engines before 0.27 cannot pattern or mirror a rib or web; repeat it instead. Naming a split
+  piece needs engine 0.19 or later; 0.15 loses the name when it rebuilds.
 
 ## Solid features
 
