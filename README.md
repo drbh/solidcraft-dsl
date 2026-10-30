@@ -3,7 +3,7 @@
 > [!CAUTION]
 > this project is a personal experiment and is actively being iterated on and may change significantly without notice at any time - repo may be deprecated for a future version or replaced entirely.
 
-this is a small domain specific language for writing declarative 3d models.
+this is a small domain specific language for writing declarative 3d models in `.sc` files.
 
 ## why
 
