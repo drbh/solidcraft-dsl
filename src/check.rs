@@ -299,6 +299,11 @@ pub(crate) fn check_geometry(d: &Design) -> R<()> {
             }
         }
     }
+    for k in &d.checks {
+        for body in std::iter::once(&k.body).chain(&k.other) {
+            c.body_ref(k.line, "check", body)?;
+        }
+    }
     Ok(())
 }
 
@@ -368,6 +373,9 @@ mod tests {
         let e = fails("box A size 10 10 10 -> body Blk\nremove R bodies Blk, Other");
         assert!(e.contains("unknown body `Other`; bodies so far: Blk"), "{e}");
         ok("box A size 10 10 10 -> body Blk\ncylinder C radius 2 height 20 cut targets Blk\nremove R bodies Body2");
+        let e = fails("box A size 10 10 10 -> body Blk\ncheck Blok volume >= 5 mm3");
+        assert!(e.contains("line 2: `check`: unknown body `Blok`; bodies so far: Blk"), "{e}");
+        ok("box A size 10 10 10 -> body Blk\nbox B size 1 1 1 -> body Two\ncheck Blk clearance Two >= 1 mm");
         ok("box A size 10 10 10\nbox B size 5 5 5\ncombine J target Body1 tools Body2");
     }
 }

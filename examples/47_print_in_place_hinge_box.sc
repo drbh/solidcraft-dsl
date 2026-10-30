@@ -108,3 +108,8 @@ sketch SocketSk on XZ offset y_a {
   fix ax s1.1 s1.2 s1.3 s2.1 s2.2 s2.3 s3.1 s3.2 s3.3 s4.1 s4.2 s4.3
 }
 revolve Sockets from SocketSk axis ax cut targets Lid
+
+// Prints without supports, in the print recipe's orientation, and the two parts never touch.
+check Lid clearance Box >= gap
+check Box overhang <= 45 deg
+check Lid overhang <= 45 deg

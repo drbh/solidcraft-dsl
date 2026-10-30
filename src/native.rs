@@ -268,6 +268,7 @@ impl Native {
             lines: vec![],
             dims: vec![],
             links: vec![],
+            checks: vec![],
         }
     }
 }

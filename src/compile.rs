@@ -384,6 +384,8 @@ pub struct Compiled {
     /// Linked parts (`component Name from "part.sc"`), whose `component.insert_design` commands
     /// name the part's source until `link::prepare` builds it and points them at the design.
     pub links: Vec<Link>,
+    /// `check` statements, verified by `evaluate` after the build.
+    pub checks: Vec<crate::checks::Check>,
 }
 
 #[derive(Debug, Clone)]
@@ -453,6 +455,7 @@ pub(crate) fn compile_geometry(d: &Design) -> R<Compiled> {
         dims,
         expressions: lowered.explanation,
         links: vec![],
+        checks: vec![],
     })
 }
 
@@ -478,10 +481,7 @@ fn compile_sketch(s: &Sketch, out: &mut Vec<Value>, lines: &mut Vec<usize>, dims
         if let Some(t_line) = text_at
             && !matches!(st.kind, SketchKind::Text { .. })
         {
-            return Err(err(
-                line,
-                format!("text (line {t_line}) must come last in its sketch: the engine numbers its glyph curves unpredictably"),
-            ));
+            return Err(err(line, format!("text (line {t_line}) must come last in its sketch: the engine numbers its glyph curves unpredictably")));
         }
         match &st.kind {
             SketchKind::Dim { .. } => dims.push(Some(line)),
@@ -1476,7 +1476,9 @@ mod tests {
 
     #[test]
     fn ellipse_ids_and_text_comes_last() {
-        let cmds = script("sketch S on XY {\n ellipse e = (0,0) major (10,0) minor 4\n line l = (20,0) (30,0)\n dim e.center -> l.start = 20\n text \"HI\" at (0,-10) height 5 align center\n}\n");
+        let cmds = script(
+            "sketch S on XY {\n ellipse e = (0,0) major (10,0) minor 4\n line l = (20,0) (30,0)\n dim e.center -> l.start = 20\n text \"HI\" at (0,-10) height 5 align center\n}\n",
+        );
         assert_eq!(cmds[3]["params"]["entities"], json!(["p1", "l1.start"]));
         assert_eq!(cmds[4]["params"]["align"], json!("center"));
         let cmds = script("sketch S on XY {\n slot s = centers (0,0) (10,0) width 4\n polyline closed t = (0,0) (5,0) (0,5)\n fix s t\n}\n");

@@ -89,7 +89,7 @@ pub fn evaluate(opts: &Options) -> Result<Value, String> {
     let mut report = json!({
         "schema_version": 1, "ok": false, "source": opts.source, "source_sha256": hash,
         "attempt": attempt, "report": dir.join("report.json"),
-        "diagnostics": [], "checks": [], "measurements": null, "sketches": [],
+        "diagnostics": [], "checks": [], "design_checks": [], "measurements": null, "sketches": [],
         "artifacts": {"source": dir.join("source.sc")},
         "previous_success": previous.as_ref().map(|r| &r["report"]),
         "validity": {"status": "not_checked", "reason": "No independent solid-validity check is performed."}
@@ -258,6 +258,8 @@ fn build(
         return Err("engine reported success without saving the design".into());
     }
     report["artifacts"]["design"] = json!(design);
+    let bodies = measures["bodies"].as_array().cloned().unwrap_or_default();
+    diagnostics.extend(design_checks(opts, dir, &design, source, c, &bodies, report)?);
     diagnostics.extend(crate::artifacts::execute(&opts.cli, &design, dir, &plan.expanded(opts.previews), report)?);
     let check_results: Vec<Value> = checks.as_array().into_iter().flatten().map(|check| {
         let pointer = check["pointer"].as_str().unwrap_or("");
@@ -279,6 +281,78 @@ fn build(
     report["checks"] = json!(check_results);
 
     Ok(())
+}
+
+/// Verify the design's `check` statements and every body's implied one-piece check. Clearance
+/// and overhang checks need one more engine run on the saved design, for clearances and meshes.
+fn design_checks(
+    opts: &Options,
+    dir: &Path,
+    design: &Path,
+    source: &str,
+    c: &crate::Compiled,
+    bodies: &[Value],
+    report: &mut Value,
+) -> Result<Vec<Value>, String> {
+    let exists = |n: &str| bodies.iter().any(|b| b["name"] == n);
+    let asked = |k: &crate::checks::Check| k.needs_engine() && exists(&k.body) && k.other.as_deref().is_none_or(exists);
+    let mut commands = Vec::new();
+    let mut meshes = std::collections::BTreeMap::new();
+    for k in c.checks.iter().filter(|k| asked(k)) {
+        if k.quantity == "clearance" {
+            commands.push(crate::checks::clearance_command(k));
+        } else if !meshes.contains_key(&k.body) {
+            let path = dir.join(format!("check-{}.stl", meshes.len()));
+            commands.push(json!({"command": "file.export", "params": {"path": path, "format": "stl", "bodies": [k.body]}}));
+            meshes.insert(k.body.clone(), path);
+        }
+    }
+    let mut replies = Vec::new();
+    if !commands.is_empty() {
+        let script = dir.join("checks.json");
+        write_json(&script, &json!({"commands": commands}))?;
+        let output = Command::new(&opts.cli)
+            .arg("run")
+            .arg(&script)
+            .arg("--in")
+            .arg(design)
+            .args(["--results", "--quiet"])
+            .output()
+            .map_err(|e| format!("cannot run `{}`: {e}", opts.cli))?;
+        if !output.status.success() {
+            let message = format!("checks: {}", String::from_utf8_lossy(&output.stderr).trim());
+            return Ok(vec![diagnostic("check", message, None, source)]);
+        }
+        let raw: Value = serde_json::from_slice(&output.stdout).map_err(|e| format!("invalid engine JSON: {e}"))?;
+        replies = raw.get("results").unwrap_or(&raw).as_array().cloned().unwrap_or_default();
+    }
+    // Replies to clearance queries, aligned with the clearance checks (null where not asked).
+    let mut answers = replies.iter().zip(&commands).filter(|(_, cmd)| cmd["command"] == "inspect.clearance").map(|(r, _)| r.clone());
+    let clearances: Vec<Value> = c
+        .checks
+        .iter()
+        .filter(|k| k.quantity == "clearance")
+        .map(|k| if asked(k) { answers.next().unwrap_or(Value::Null) } else { Value::Null })
+        .collect();
+    let mesh = |body: &str| -> Result<Vec<u8>, String> {
+        let path = meshes.get(body).ok_or("the body was not exported")?;
+        std::fs::read(path).map_err(|e| format!("reading the body's mesh: {e}"))
+    };
+    let outcomes = crate::checks::verify(&c.checks, &crate::checks::Evidence { bodies, clearances: &clearances, mesh: &mesh });
+    let mut diagnostics = Vec::new();
+    for o in &outcomes {
+        if let Some(message) = &o.failure {
+            let line = o.entry["line"].as_u64().map(|n| n as usize).or_else(|| o.entry["body"].as_str().and_then(|b| body_line(source, b)));
+            diagnostics.push(diagnostic("check", message, line, source));
+        }
+    }
+    report["design_checks"] = json!(outcomes.into_iter().map(|o| o.entry).collect::<Vec<_>>());
+    Ok(diagnostics)
+}
+
+/// The line whose statement creates `body` (`-> body Name`).
+fn body_line(source: &str, body: &str) -> Option<usize> {
+    source.lines().position(|l| l.split("->").nth(1).is_some_and(|t| t.split_whitespace().eq(["body", body]))).map(|i| i + 1)
 }
 
 /// Gather more evidence from a saved evaluation or native design without reading/recompiling

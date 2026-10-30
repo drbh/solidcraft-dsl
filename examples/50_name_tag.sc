@@ -44,3 +44,6 @@ sketch Lettering on XY offset base_t {
   text "if found, call 555 0100" at ((face_x0 + L - rim)/2, rim + 2 mm) height line2_h align center
 }
 emboss Letters from Lettering depth relief targets Tag
+
+// Prints without supports, in the print recipe's orientation.
+check Tag overhang <= 45 deg

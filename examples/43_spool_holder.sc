@@ -78,3 +78,8 @@ cylinder RollerBRunIn radius (run_in/2) height (roller_len/2 - bearing_w/2 + 1 m
 // Small chamfer on the roller ends so the spool flange rides on smoothly
 chamfer RollerAEnds edges (-xs, -roller_len/2, axle_z + roller_od/2) (-xs, roller_len/2, axle_z + roller_od/2) distance 1 mm body RollerA
 chamfer RollerBEnds edges (xs, -roller_len/2, axle_z + roller_od/2) (xs, roller_len/2, axle_z + roller_od/2) distance 1 mm body RollerB
+
+// Prints without supports, in the print recipe's orientation.
+check Stand overhang <= 45 deg
+check RollerA overhang <= 45 deg up Y
+check RollerB overhang <= 45 deg up Y

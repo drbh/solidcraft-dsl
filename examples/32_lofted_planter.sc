@@ -78,3 +78,7 @@ revolve Saucer from SaucerSection axis Z new -> body Saucer
 // Radial ribs the pot stands on, sunk 0.5 mm into the floor so they fuse with it
 box Rib size (base_r - 14 mm) rib_w (rib_h + 0.5 mm) corner (10 mm,-rib_w/2,z_floor - 0.5 mm) join targets Saucer
 pattern circular RibRing features Rib axis Z count ribs angle 360 deg
+
+// Prints without supports, in the print recipe's orientation.
+check Pot overhang <= 45 deg
+check Saucer overhang <= 45 deg

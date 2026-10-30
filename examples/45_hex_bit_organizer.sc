@@ -79,3 +79,6 @@ sketch LabelSk on face (width/2,0,base_h/2) {
   text "1/4 in HEX" at (cols*pitch_x/2 + margin,3 mm) height label_h align center
 }
 emboss Label from LabelSk depth 0.6 mm deboss targets Tray
+
+// Prints without supports, in the print recipe's orientation.
+check Tray overhang <= 45 deg

@@ -90,8 +90,29 @@ const FLAGS: &[&str] = &[
 ];
 
 const FEATURES: &[&str] = &[
-    "extrude", "revolve", "hole", "box", "cylinder", "sphere", "torus", "fillet", "chamfer", "shell", "mirror", "pattern", "combine", "move",
-    "remove", "sweep", "loft", "pipe", "thread", "coil", "emboss", "sheet_rule", "flange",
+    "extrude",
+    "revolve",
+    "hole",
+    "box",
+    "cylinder",
+    "sphere",
+    "torus",
+    "fillet",
+    "chamfer",
+    "shell",
+    "mirror",
+    "pattern",
+    "combine",
+    "move",
+    "remove",
+    "sweep",
+    "loft",
+    "pipe",
+    "thread",
+    "coil",
+    "emboss",
+    "sheet_rule",
+    "flange",
 ];
 
 struct P<'a> {
@@ -367,6 +388,12 @@ fn parse_design(p: &mut P, open: Option<usize>) -> R<Design> {
                 c.end()?;
                 d.grounds.push((name, l.no));
             }
+            "check" => {
+                if open.is_some() {
+                    return Err(err(l.no, "checks belong at the top level"));
+                }
+                d.checks.push(parse_check(&mut c, l.no)?);
+            }
             "joint" => {
                 if open.is_some() {
                     return Err(err(
@@ -466,6 +493,58 @@ fn parse_axis(c: &mut Cur) -> R<Vec<Comp>> {
         return Err(err(c.no, "axis must be X, Y, Z or (x,y,z)"));
     }
     Ok(axis3(&axis))
+}
+
+/// `check Body quantity [Other] op value [unit] [up axis]`
+fn parse_check(c: &mut Cur, line: usize) -> R<Check> {
+    let body = c.ident("a body name")?;
+    let mut quantity = c.ident("what to check: shells, volume, area, mass, size.x, clearance or overhang")?;
+    if quantity == "size" {
+        c.expect_punct('.')?;
+        quantity = format!("size.{}", c.ident("x, y or z")?);
+    }
+    if !matches!(quantity.as_str(), "shells" | "volume" | "area" | "mass" | "size.x" | "size.y" | "size.z" | "clearance" | "overhang") {
+        return Err(err(line, format!("cannot check `{quantity}`: use shells, volume, area, mass, size.x|y|z, clearance or overhang")));
+    }
+    let other = if quantity == "clearance" { Some(c.ident("the body to measure the clearance to")?) } else { None };
+    let op = match c.next() {
+        Some(Tok::Punct(p @ ('<' | '>' | '='))) => {
+            let p = *p;
+            if c.eat_punct('=') {
+                format!("{p}=")
+            } else if p == '=' {
+                return Err(err(line, "write `==` to compare for equality"));
+            } else {
+                p.to_string()
+            }
+        }
+        _ => return Err(err(line, "expected a comparison: ==, <=, >=, < or >")),
+    };
+    let value = c.expr1("the value to compare with")?;
+    let unit = match c.peek() {
+        Some(Tok::Ident(u)) if matches!(u.as_str(), "mm2" | "mm3" | "cm3" | "g" | "kg") => {
+            let u = u.clone();
+            c.i += 1;
+            Some(u)
+        }
+        _ => None,
+    };
+    let mut up = axis3("Z");
+    let mut bridge = None;
+    loop {
+        if c.eat_ident("up") {
+            up = parse_axis(c)?;
+        } else if c.eat_ident("bridge") {
+            bridge = Some(c.expr1("the longest bridge")?);
+        } else {
+            break;
+        }
+    }
+    if quantity != "overhang" && (bridge.is_some() || up != axis3("Z")) {
+        return Err(err(line, "`up` and `bridge` belong to overhang checks"));
+    }
+    c.end()?;
+    Ok(Check { body, quantity, other, op, value, unit, up, bridge, line })
 }
 
 fn parse_sketch_head(c: &mut Cur, line: usize) -> R<Sketch> {

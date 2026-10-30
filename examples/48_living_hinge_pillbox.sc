@@ -90,3 +90,6 @@ sketch DaysSk on XZ offset 0 flip {
   text "S" at (wall + cell_w/2 + 6*(cell_w + wall), label_z) height label_h align center
 }
 emboss DayLabels from DaysSk depth label_depth deboss targets Pillbox
+
+// Prints without supports, in the print recipe's orientation.
+check Pillbox overhang <= 45 deg

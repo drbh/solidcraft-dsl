@@ -214,3 +214,6 @@ sketch GearLabelSk on XY offset (face + hub2_h) {
   text "30T" at (center_d,(shaft2_d/2 + hub2_r)/2 - 1.2 mm) height 3 mm align center
 }
 extrude GearLabel from GearLabelSk distance 0.4 mm negative cut targets Gear
+
+// The teeth mesh with backlash and never touch.
+check Pinion clearance Gear > 0 mm

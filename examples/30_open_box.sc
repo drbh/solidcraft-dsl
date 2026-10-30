@@ -8,3 +8,6 @@ param H = 3.5 in
 param wall = 0.8 mm
 box Outer size W L H corner (0,0,0) -> body OpenBox
 shell Cavity faces (W/2,L/2,H) thickness wall inside body OpenBox
+
+// Prints without supports, in the print recipe's orientation.
+check OpenBox overhang <= 45 deg

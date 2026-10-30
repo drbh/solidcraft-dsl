@@ -68,3 +68,6 @@ mirror LugsY features Lug, LugHole plane XZ
 // A mirror cannot take another mirror as input yet, so the -X-Y lug is the original mirrored
 // through the diagonal plane x + y = 0
 mirror LugsXY features Lug, LugHole origin (0,0,0) normal (1,1,0)
+
+// Prints without supports, in the print recipe's orientation.
+check Guard overhang <= 45 deg

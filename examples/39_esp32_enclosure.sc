@@ -148,3 +148,7 @@ sketch LabelSk on XY offset (rim_z+lid_t) {
   text "ESP32" at ((vent_len+out_l)/4,0) height label_h angle 90 deg align center
 }
 emboss Label from LabelSk depth label_depth deboss targets Lid
+
+// Prints without supports, in the print recipe's orientation.
+check Base overhang <= 45 deg
+check Lid overhang <= 45 deg up (0, 0, -1)

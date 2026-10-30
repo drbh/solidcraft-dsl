@@ -228,6 +228,27 @@ pub struct Design {
     pub connectors: Vec<Connector>,
     pub grounds: Vec<(String, usize)>,
     pub joints: Vec<Joint>,
+    pub checks: Vec<Check>,
+}
+
+/// `check Body quantity [Other] op value [unit] [up axis]`: a property of a built body that
+/// `evaluate` verifies, e.g. `check Cap clearance Bottle >= 0.2 mm`.
+#[derive(Debug, Clone)]
+pub struct Check {
+    pub body: String,
+    /// shells, volume, area, mass, size.x|y|z, clearance or overhang
+    pub quantity: String,
+    /// The second body of a clearance check.
+    pub other: Option<String>,
+    pub op: String,
+    pub value: String,
+    /// A unit the expression language has no word for: mm2, mm3, cm3, g or kg.
+    pub unit: Option<String>,
+    /// The print direction of an overhang check.
+    pub up: Vec<Comp>,
+    /// The longest bridge an overhang check accepts.
+    pub bridge: Option<String>,
+    pub line: usize,
 }
 
 #[derive(Debug, Clone)]

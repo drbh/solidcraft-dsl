@@ -18,7 +18,7 @@ syn iskeyword @,48-57,_
 
 " option keys (from, distance, radius, at, edges, …)
 syn keyword scKey       between and rotate value values limits opposed
-syn keyword scStatement component instance connector ground joint
+syn keyword scStatement component instance connector ground joint check
 syn keyword scKey       from distance distance2 radius diameter at edges faces profiles targets body
 syn keyword scKey       plane axis count count2 spacing spacing2 dir dir2 offset units on about
 syn keyword scKey       taper angle clearance thread depth height width length major minor

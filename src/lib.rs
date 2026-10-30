@@ -13,6 +13,7 @@ pub mod artifacts;
 pub mod assembly;
 pub mod ast;
 pub mod check;
+pub mod checks;
 pub mod compile;
 pub mod control;
 pub mod decompile;
@@ -43,7 +44,9 @@ pub fn build(src: &str) -> Result<Compiled, String> {
     }
     let d = parse(src)?;
     check(&d)?;
-    compile(&d)
+    let mut c = compile(&d)?;
+    c.checks = checks::lower(&d)?;
+    Ok(c)
 }
 
 #[cfg(test)]

@@ -154,3 +154,7 @@ sketch Pocket2Sk on XY offset 2.45 mm {
 }
 extrude Pocket2 from Pocket2Sk distance (plate_h-2.45 mm+0.01 mm) taper 45 deg cut targets Baseplate
 pattern Pockets features Pocket0, Pocket1, Pocket2 dir (1,0,0) count plate_x spacing pitch dir2 (0,1,0) count2 plate_y spacing2 pitch
+
+// Prints without supports, in the print recipe's orientation.
+check Bin overhang <= 45 deg
+check Baseplate overhang <= 45 deg

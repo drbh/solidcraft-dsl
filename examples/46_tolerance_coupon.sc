@@ -104,3 +104,7 @@ sketch PegsSk on XY offset tab_t {
 }
 extrude Pegs from PegsSk distance peg_h join targets PegStrip
 chamfer PegTips edges (x1+nominal/2, tab_y, tab_t+peg_h) (x2+nominal/2, tab_y, tab_t+peg_h) (x3+nominal/2, tab_y, tab_t+peg_h) (x4+nominal/2, tab_y, tab_t+peg_h) (x5+nominal/2, tab_y, tab_t+peg_h) distance 0.8 mm body PegStrip
+
+// Prints without supports, in the print recipe's orientation.
+check Plate overhang <= 45 deg
+check PegStrip overhang <= 45 deg

@@ -70,3 +70,6 @@ extrude Windows from WindowSk distance (2*half_out + 2 mm) cut targets Holder
 // Tube bore and snap slot (slot faces away from the wheel)
 cylinder Bore radius tube_r height (collar_len + 2 mm) base (-1 mm,0,0) axis X cut targets Holder
 box Slot size (collar_len + 2 mm) opening (ring_r + 1 mm) corner (-1 mm,-opening/2,-ring_r - 1 mm) cut targets Holder
+
+// Prints without supports, in the print recipe's orientation.
+check Holder overhang <= 45 deg up X

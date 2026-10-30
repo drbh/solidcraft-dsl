@@ -92,3 +92,7 @@ let rz = (top + leg_bot)/2
 cylinder Ring radius ring_ro height clip_w base (clip_x,ry,rz) axis X join targets Clip
 cylinder RingBore radius ring_ri height (clip_w+2 mm) base (clip_x-1 mm,ry,rz) axis X cut targets Clip
 box RingGap size (clip_w+2 mm) (ring_ro+1 mm) ring_gap corner (clip_x-1 mm,ry,rz-ring_gap/2) cut targets Clip
+
+// Prints without supports, in the print recipe's orientation.
+check Tray overhang <= 45 deg
+check Clip overhang <= 45 deg up X
