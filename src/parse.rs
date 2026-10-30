@@ -547,6 +547,7 @@ fn parse_design(p: &mut P, open: Option<usize>) -> R<Design> {
                     d.prints.push(Print { bodies, up, line: l.no });
                 }
             }
+            "for" => return Err(err(l.no, "`for` blocks are unrolled before parsing: build the design with `build` or from its file")),
             "use" => {
                 return Err(err(l.no, "`use` reads another file relative to this one: build the design from its file (`run`, `evaluate`, `watch`)"));
             }

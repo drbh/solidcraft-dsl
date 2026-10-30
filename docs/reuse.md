@@ -1,4 +1,4 @@
-# Reusing parts with `use`
+# Reusing parts with `use`, and repeating with `for`
 
 A part designed once, in a file of its own, can be placed in other designs:
 
@@ -30,3 +30,24 @@ writes parameter edits from the app back only to designs that use no parts.
 For parts that must stay separate, or move, use an assembly with linked parts instead
 ([assemblies](assemblies.md)): `component Wheel from "wheel.sc"` keeps the part's own document,
 timeline and joints. See `59_pcb_box`.
+
+## Repeating with `for`
+
+```sc
+for k from 1 to 5 {
+  cylinder Hole{k} diameter (pin_d + k*step) height 7 mm base (k*pitch, 15 mm, -1 mm) cut targets Plate
+  sketch Label{k} on XY offset T {
+    text "0.{k}" at (k*pitch, 3 mm) height 3.5 mm align center
+  }
+  emboss Mark{k} from Label{k} depth 0.6 mm deboss targets Plate
+}
+```
+
+A `for` block repeats its statements for each whole number from `from` to `to`, counting down
+when `to` is smaller (`step n` changes the stride). Use it when the copies differ in a way a
+pattern can't express. In each copy, `{k}` is replaced by the number, which gives each copy its
+own name and can go in text. The word `k` on its own in an expression is the number too, and the
+expression stays live (`pin_d + 3*step`). Blocks nest, and a block can hold sketches, features,
+checks and `use`. The bounds are numbers, not parameters, because the repetition happens when
+compiling; a negative value can't go in a name. Errors point at the statement in the block. See
+`60_hole_fit_ladder`.

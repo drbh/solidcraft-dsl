@@ -34,7 +34,7 @@ pub struct Line {
 }
 
 /// Strip a `//` comment that is not inside a string.
-fn strip_comment(s: &str) -> &str {
+pub fn strip_comment(s: &str) -> &str {
     let mut in_str = false;
     let b = s.as_bytes();
     let mut i = 0;

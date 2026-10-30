@@ -70,16 +70,15 @@ fn expand_inner(src: &str, path: &Path, stack: &mut Vec<PathBuf>) -> R<Expanded>
         out.text.push('\n');
         out.origin.push(origin);
     };
-    let lines = lex(src)?;
-    let uses: HashMap<usize, &crate::lex::Line> =
-        lines.iter().filter(|l| matches!(l.toks.first(), Some(Tok::Ident(w)) if w == "use")).map(|l| (l.no, l)).collect();
-    for (i, text) in src.lines().enumerate() {
-        let no = i + 1;
-        let Some(line) = uses.get(&no) else {
-            push(&mut out, text, Origin::Here(no));
+    let numbered: Vec<(String, usize)> = src.lines().enumerate().map(|(i, t)| (t.to_string(), i + 1)).collect();
+    for (text, no) in unroll(&numbered)? {
+        let first = lex(&text)?.into_iter().next();
+        let Some(mut line) = first.filter(|l| matches!(l.toks.first(), Some(Tok::Ident(w)) if w == "use")) else {
+            push(&mut out, &text, Origin::Here(no));
             continue;
         };
-        let u = crate::parse::parse_use(line)?;
+        line.no = no;
+        let u = crate::parse::parse_use(&line)?;
         let file = path.parent().unwrap_or(Path::new(".")).join(&u.file);
         let canonical = std::fs::canonicalize(&file).map_err(|e| format!("line {no}: {}: {e}", file.display()))?;
         if stack.contains(&canonical) || canonical == std::fs::canonicalize(path).unwrap_or_default() {
@@ -103,6 +102,115 @@ fn expand_inner(src: &str, path: &Path, stack: &mut Vec<PathBuf>) -> R<Expanded>
         }
     }
     Ok(out)
+}
+
+/// Unroll `for v from a to b [step s] { … }` blocks: the body once for each value, with `{v}`
+/// (in names and strings) and the word `v` (in expressions) replaced by it. Lines keep their
+/// numbers in the original text.
+fn unroll(lines: &[(String, usize)]) -> R<Vec<(String, usize)>> {
+    let mut out = Vec::new();
+    let mut i = 0;
+    while i < lines.len() {
+        let (text, no) = (&lines[i].0, lines[i].1);
+        let Some((var, values)) = for_head(text, no)? else {
+            out.push(lines[i].clone());
+            i += 1;
+            continue;
+        };
+        // The body runs to the `}` that closes the `for`, past any blocks inside it.
+        let mut depth = 1;
+        let mut j = i + 1;
+        while j < lines.len() {
+            let t = crate::lex::strip_comment(&lines[j].0).trim().to_string();
+            if t.ends_with('{') {
+                depth += 1;
+            } else if t == "}" {
+                depth -= 1;
+                if depth == 0 {
+                    break;
+                }
+            }
+            j += 1;
+        }
+        if j == lines.len() {
+            return Err(format!("line {no}: `for` block is never closed with `}}`"));
+        }
+        let body = unroll(&lines[i + 1..j])?;
+        for v in values {
+            for (t, n) in &body {
+                out.push((substitute(t, &var, v), *n));
+            }
+        }
+        i = j + 1;
+    }
+    Ok(out)
+}
+
+/// `for v from a to b [step s] {`: the variable and its values.
+fn for_head(text: &str, no: usize) -> R<Option<(String, Vec<i64>)>> {
+    let toks = match lex(text)?.into_iter().next() {
+        Some(l) => l.toks,
+        None => return Ok(None),
+    };
+    if !matches!(toks.first(), Some(Tok::Ident(w)) if w == "for") {
+        return Ok(None);
+    }
+    let bad = || format!("line {no}: expected `for v from <whole number> to <whole number> [step <n>] {{`");
+    let mut k = 1;
+    let word = |toks: &[Tok], k: &mut usize| -> Option<String> {
+        let w = match toks.get(*k) {
+            Some(Tok::Ident(w)) => Some(w.clone()),
+            _ => None,
+        };
+        *k += 1;
+        w
+    };
+    let int = |toks: &[Tok], k: &mut usize| -> Option<i64> {
+        let neg = toks.get(*k) == Some(&Tok::Punct('-'));
+        if neg {
+            *k += 1;
+        }
+        let v = match toks.get(*k) {
+            Some(Tok::Num(v, _)) if v.fract() == 0.0 => Some(*v as i64),
+            _ => None,
+        };
+        *k += 1;
+        v.map(|v| if neg { -v } else { v })
+    };
+    let var = word(&toks, &mut k).ok_or_else(bad)?;
+    if word(&toks, &mut k).as_deref() != Some("from") {
+        return Err(bad());
+    }
+    let from = int(&toks, &mut k).ok_or_else(bad)?;
+    if word(&toks, &mut k).as_deref() != Some("to") {
+        return Err(bad());
+    }
+    let to = int(&toks, &mut k).ok_or_else(bad)?;
+    let mut step = 1;
+    if matches!(toks.get(k), Some(Tok::Ident(w)) if w == "step") {
+        k += 1;
+        step = int(&toks, &mut k).filter(|s| *s > 0).ok_or_else(bad)?;
+    }
+    if toks.get(k) != Some(&Tok::Punct('{')) || k + 1 != toks.len() {
+        return Err(bad());
+    }
+    let values: Vec<i64> = if from <= to { (from..=to).step_by(step as usize).collect() } else { (to..=from).rev().step_by(step as usize).collect() };
+    if values.len() > 1000 {
+        return Err(format!("line {no}: a `for` runs at most 1000 times"));
+    }
+    Ok(Some((var, values)))
+}
+
+/// `{var}` anywhere outside comments, and the word `var` outside strings, become `v`.
+fn substitute(line: &str, var: &str, v: i64) -> String {
+    let (code, comment) = match line.find("//") {
+        Some(i) => line.split_at(i),
+        None => (line, ""),
+    };
+    let code = code.replace(&format!("{{{var}}}"), &v.to_string());
+    let value = if v < 0 { format!("({v})") } else { v.to_string() };
+    let names = HashMap::from([(var.to_string(), value)]);
+    rename(&code, &names) + comment
 }
 
 /// The part's lines with its names prefixed, its parameters overridden, and the placing features
@@ -241,7 +349,7 @@ fn rename(line: &str, names: &HashMap<String, String>) -> String {
 #[allow(clippy::unwrap_used)]
 mod tests {
     use super::*;
-    use serde_json::json;
+    use serde_json::{Value, json};
 
     fn files(name: &str, parts: &[(&str, &str)]) -> PathBuf {
         let dir = std::env::temp_dir().join(format!("sc-reuse-{name}-{}", std::process::id()));
@@ -297,6 +405,26 @@ mod tests {
         assert!(e.starts_with("line 2: ") && e.contains("missing.sc"), "{e}");
         assert!(crate::build(&host("use X from \"peg.sc\"")).unwrap_err().contains("build the design from its file"));
         let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn for_blocks_unroll_with_their_variable() {
+        let src = "design L units mm\nbox B size 80 20 4 -> body P\nfor k from 1 to 3 {\n  cylinder H{k} radius (k*1 mm) height 6 base (k*20 mm, 10, -1 mm) cut targets P // k {k}\n  sketch S{k} on XY offset 4 mm {\n    text \"#{k}\" at (k*20 mm, 2) height 3 mm\n  }\n}\nfor i from 2 to 0 step 2 {\n  for j from 1 to 2 {\n    box C{j}x{i} size 1 1 1 corner (i - 3, j, 10) -> body C{j}x{i}\n  }\n}\n";
+        let c = crate::build(src).unwrap();
+        let cmds = c.script["commands"].as_array().unwrap();
+        let names: Vec<&str> = cmds.iter().filter(|c| c["command"] != "sketch.text").filter_map(|c| c["params"]["name"].as_str()).collect();
+        assert_eq!(names, ["B", "H1", "S1", "H2", "S2", "H3", "S3", "C1x2", "C2x2", "C1x0", "C2x0"]);
+        let texts: Vec<&Value> = cmds.iter().filter(|c| c["command"] == "sketch.text").map(|c| &c["params"]["text"]).collect();
+        assert_eq!(texts, [&json!("#1"), &json!("#2"), &json!("#3")]);
+        let by = |n: &str| cmds.iter().find(|c| c["params"]["name"] == n).unwrap()["params"].clone();
+        assert_eq!(by("H2")["radius"], json!("2 * 1 mm"));
+        assert_eq!(by("C2x0")["corner"], json!(["0 - 3", 2.0, 10.0]));
+        // Every line maps back to its line in the loop body.
+        assert!(c.lines.iter().all(|&n| n <= 13), "{:?}", c.lines);
+        let e = crate::build("design L\nfor k from 1 to 3 {\n  box B{k} size -1 1 1\n}\n").unwrap_err();
+        assert!(e.starts_with("line 3:"), "{e}");
+        assert!(crate::build("design L\nfor k from 1 to {\n}\n").unwrap_err().contains("expected `for v from"));
+        assert!(crate::build("design L\nfor k from 1 to 3 {\n box B size 1 1 1\n").unwrap_err().contains("never closed"));
     }
 
     #[test]

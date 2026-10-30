@@ -41,11 +41,17 @@ pub use parse::parse;
 /// Build the design in the file at `path` (whose text is `src`): like `build`, after expanding
 /// the parts it `use`s, with lines and errors mapped back to the original files.
 pub fn build_file(src: &str, path: &std::path::Path) -> Result<Compiled, String> {
-    if native::is_source(src) || !src.lines().any(|l| l.trim_start().starts_with("use ")) {
-        return build(src);
+    build_at(src, Some(path))
+}
+
+fn build_at(src: &str, path: Option<&std::path::Path>) -> Result<Compiled, String> {
+    let starts = |w: &str| src.lines().any(|l| l.trim_start().starts_with(w));
+    // `use` needs the file's location; without it, parsing explains. `for` needs none.
+    if native::is_source(src) || !(starts("for ") || (path.is_some() && starts("use "))) {
+        return build_plain(src);
     }
-    let x = reuse::expand(src, path)?;
-    let mut c = build(&x.text).map_err(|e| x.error(e))?;
+    let x = reuse::expand(src, path.unwrap_or(std::path::Path::new("design.sc")))?;
+    let mut c = build_plain(&x.text).map_err(|e| x.error(e))?;
     let line = |n: usize| x.origin.get(n.wrapping_sub(1)).map(reuse::Origin::line).unwrap_or(n);
     for n in c.lines.iter_mut() {
         *n = line(*n);
@@ -66,6 +72,10 @@ pub fn build_file(src: &str, path: &std::path::Path) -> Result<Compiled, String>
 
 /// Parse, check and compile a `.sc` source.
 pub fn build(src: &str) -> Result<Compiled, String> {
+    build_at(src, None)
+}
+
+fn build_plain(src: &str) -> Result<Compiled, String> {
     if native::is_source(src) {
         return native::Native::from_source(src).map(native::Native::compiled);
     }
