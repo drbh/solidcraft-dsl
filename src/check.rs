@@ -41,7 +41,13 @@ const COUNT_KEYS: &[(&str, f64)] = &[("count", 1.0), ("count2", 1.0), ("sides", 
 /// Options whose literal value must be positive.
 const POSITIVE_KEYS: &[&str] = &["diameter", "radius", "depth", "height", "width", "length", "major", "minor", "thickness", "spacing", "spacing2"];
 /// Features whose `body` option names the body they create (`-> body NAME`), not an existing one.
-const CREATORS: &[&str] = &["extrude", "revolve", "box", "cylinder", "sphere", "torus"];
+const CREATORS: &[&str] = &["extrude", "revolve", "box", "cylinder", "sphere", "torus", "loft", "sweep", "pipe", "coil"];
+
+/// Does `f` create the body its `body` option names? A flange does when it is a base flange
+/// (`from <sketch>`); edge flanges name the sheet they bend.
+fn creates_body(f: &Feature) -> bool {
+    CREATORS.contains(&f.kind.as_str()) || (f.kind == "flange" && f.opts.iter().any(|(k, _)| k == "from"))
+}
 
 /// What a top-level name denotes, for error messages when the wrong kind is named.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -181,7 +187,7 @@ impl Checker {
                     } else if let Some((_, min)) = COUNT_KEYS.iter().find(|(c, _)| *c == key) {
                         self.expect(line, &format!("`{key}`"), e, &Class::Number)?;
                         Self::count(line, &format!("`{key}`"), e, *min)?;
-                    } else if key == "target" || (key == "body" && !CREATORS.contains(&f.kind.as_str())) {
+                    } else if key == "target" || (key == "body" && !creates_body(f)) {
                         self.body_ref(line, key, e)?;
                     }
                 }
@@ -236,7 +242,7 @@ impl Checker {
             }
         }
         // The body a creator names.
-        if CREATORS.contains(&f.kind.as_str())
+        if creates_body(f)
             && let Some((_, Val::Expr(b))) = f.opts.iter().find(|(k, _)| k == "body")
         {
             if self.bodies.iter().any(|x| x == b) {

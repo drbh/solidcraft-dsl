@@ -146,6 +146,26 @@ pub enum SketchKind {
         pts: Vec<Pt>,
         periodic: bool,
     },
+    /// `ellipse e = (cx,cy) major (x,y) minor r`: `major` is the end of the major axis.
+    Ellipse {
+        name: String,
+        center: [Comp; 2],
+        major: [Comp; 2],
+        minor: String,
+    },
+    /// `text "LABEL" at (x,y) [height h] [angle a] [align left|center|right] [font "F"] [bold] [italic]`.
+    /// The engine numbers glyph curves from the same counters as everything else, so text
+    /// comes last in its sketch.
+    Text {
+        text: String,
+        at: [Comp; 2],
+        height: Option<String>,
+        angle: Option<String>,
+        align: Option<String>,
+        font: Option<String>,
+        bold: bool,
+        italic: bool,
+    },
     /// `dim [type] a [-> b] = expr`
     Dim {
         kind: Option<String>,

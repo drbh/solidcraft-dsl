@@ -29,6 +29,7 @@ enum Entity {
     Polygon { lines: Vec<String>, points: Vec<String>, circle: String },
     Slot { lines: [String; 2], arcs: [String; 2], points: [String; 4] },
     Spline { id: String, points: Vec<String> },
+    Ellipse { id: String, points: [String; 2] },
 }
 
 #[derive(Default)]
@@ -38,6 +39,7 @@ struct Counters {
     a: usize,
     p: usize,
     s: usize,
+    e: usize,
 }
 
 impl Counters {
@@ -75,6 +77,19 @@ impl SketchTable {
             return Err(err(line, format!("`{name}` is already defined in this sketch")));
         }
         Ok(())
+    }
+
+    /// Every curve of a compound entity named whole (`outline`, `r`, `s`), for `fix`.
+    fn curves_of(&self, r: &Ref) -> Option<Vec<String>> {
+        if !r.parts.is_empty() {
+            return None;
+        }
+        match self.names.get(&r.base)? {
+            Entity::Polyline { lines, .. } | Entity::Polygon { lines, .. } => Some(lines.clone()),
+            Entity::Rect { sides, arcs, .. } => Some(sides.iter().chain(arcs.iter().flatten()).cloned().collect()),
+            Entity::Slot { lines, arcs, .. } => Some(lines.iter().chain(arcs).cloned().collect()),
+            _ => None,
+        }
     }
 
     /// The engine id of a reference. `kind` says what the statement needs (a hint for errors).
@@ -193,6 +208,11 @@ impl SketchTable {
                 [s] if s.parse::<usize>().is_ok() => points.get(s.parse::<usize>().unwrap_or(0).wrapping_sub(1)).cloned().ok_or_else(bad),
                 _ => Err(bad()),
             },
+            Entity::Ellipse { id, points } => match parts.as_slice() {
+                [] => Ok(id.clone()),
+                ["center"] => Ok(points[0].clone()),
+                _ => Err(bad()),
+            },
         }
     }
 }
@@ -205,6 +225,7 @@ enum Kind {
     Circle,
     Arc,
     Spline,
+    Ellipse,
 }
 
 impl Kind {
@@ -217,6 +238,7 @@ impl Kind {
             Some(b'c') => Kind::Circle,
             Some(b'a') => Kind::Arc,
             Some(b's') => Kind::Spline,
+            Some(b'e') => Kind::Ellipse,
             // `l…` and the sketch axes `x`, `y`.
             _ => Kind::Line,
         }
@@ -228,6 +250,7 @@ impl Kind {
             Kind::Circle => "a circle",
             Kind::Arc => "an arc",
             Kind::Spline => "a spline",
+            Kind::Ellipse => "an ellipse",
         }
     }
     fn is_curve(self) -> bool {
@@ -449,8 +472,17 @@ fn compile_sketch(s: &Sketch, out: &mut Vec<Value>, lines: &mut Vec<usize>, dims
     lines.push(s.line);
     let mut t = SketchTable { names: HashMap::new(), axes_used: Vec::new(), counters: Counters::default() };
     let first = out.len();
+    let mut text_at = None;
     for st in &s.stmts {
         let line = st.line;
+        if let Some(t_line) = text_at
+            && !matches!(st.kind, SketchKind::Text { .. })
+        {
+            return Err(err(
+                line,
+                format!("text (line {t_line}) must come last in its sketch: the engine numbers its glyph curves unpredictably"),
+            ));
+        }
         match &st.kind {
             SketchKind::Dim { .. } => dims.push(Some(line)),
             SketchKind::Rect { kind: RectKind::Rounded(_), .. } | SketchKind::Fillet { .. } => dims.push(None),
@@ -591,6 +623,35 @@ fn compile_sketch(s: &Sketch, out: &mut Vec<Value>, lines: &mut Vec<usize>, dims
                 }
                 out.push(cmd("sketch.spline.fit_point", p));
             }
+            SketchKind::Ellipse { name, center, major, minor } => {
+                t.counters.e += 1;
+                let id = format!("e{}", t.counters.e);
+                let points = [t.counters.p(), t.counters.p()];
+                t.define(line, name, Entity::Ellipse { id, points })?;
+                out.push(cmd("sketch.ellipse", json!({"center": pt(center), "major": pt(major), "minor_radius": expr(minor)})));
+            }
+            SketchKind::Text { text, at, height, angle, align, font, bold, italic } => {
+                text_at = Some(line);
+                let mut p = json!({"text": text, "at": pt(at)});
+                for (k, v) in [("height", height), ("angle", angle), ("font", font)] {
+                    if let Some(v) = v {
+                        p[k] = expr(v);
+                    }
+                }
+                if let Some(a) = align {
+                    if !matches!(a.as_str(), "left" | "center" | "right") {
+                        return Err(err(line, format!("`align` is left, center or right, not `{a}`")));
+                    }
+                    p["align"] = json!(a);
+                }
+                if *bold {
+                    p["bold"] = json!(true);
+                }
+                if *italic {
+                    p["italic"] = json!(true);
+                }
+                out.push(cmd("sketch.text", p));
+            }
             SketchKind::Dim { kind, refs, value } => {
                 let ids: Vec<String> = refs.iter().map(|r| t.resolve(line, r)).collect::<R<_>>()?;
                 let kinds: Vec<Kind> = ids.iter().map(|i| Kind::of(i)).collect();
@@ -648,7 +709,14 @@ fn compile_sketch(s: &Sketch, out: &mut Vec<Value>, lines: &mut Vec<usize>, dims
                 out.push(c);
             }
             SketchKind::Fix { refs } => {
-                let ids: Vec<String> = refs.iter().map(|r| t.resolve(line, r)).collect::<R<_>>()?;
+                // A whole polyline, rectangle, slot or polygon fixes all of its curves.
+                let mut ids = Vec::new();
+                for r in refs {
+                    match t.curves_of(r) {
+                        Some(curves) => ids.extend(curves),
+                        None => ids.push(t.resolve(line, r)?),
+                    }
+                }
                 out.push(cmd("sketch.constraint.fix", json!({"entities": ids, "fixed": true})));
             }
             SketchKind::Fillet { point, radius } => {
@@ -1113,6 +1181,183 @@ fn compile_feature(f: &Feature, sketches: &mut HashMap<String, SketchTable>) -> 
             p["bodies"] = json!(o.list("bodies")?.ok_or_else(|| err(line, "`remove` needs `bodies A, B`"))?);
             "solid.remove"
         }
+        "loft" => {
+            let sections = o.list("sections")?.ok_or_else(|| err(line, "`loft` needs `sections A, B …` (sketch names, in order)"))?;
+            if sections.len() < 2 {
+                return Err(err(line, "`loft` needs at least two sections"));
+            }
+            for s in &sections {
+                if !sketches.contains_key(s) {
+                    return Err(err(line, format!("unknown sketch `{s}`")));
+                }
+            }
+            p["sections"] = json!(sections.iter().map(|s| json!({"sketch": s})).collect::<Vec<_>>());
+            operation(&mut o, &mut p)?;
+            "solid.loft"
+        }
+        "sweep" | "pipe" => {
+            if f.kind == "sweep" {
+                let sketch = o.ident("from")?.ok_or_else(|| err(line, "`sweep` needs `from <profile sketch>`"))?;
+                if !sketches.contains_key(&sketch) {
+                    return Err(err(line, format!("unknown sketch `{sketch}`")));
+                }
+                p["sketch"] = json!(sketch);
+                profiles(&mut o, &mut p)?;
+                for k in ["twist", "scale"] {
+                    if let Some(v) = o.expr(k)? {
+                        p[k] = v;
+                    }
+                }
+                if o.flag("parallel") {
+                    p["orientation"] = json!("parallel");
+                }
+            } else {
+                p["diameter"] = o.require("diameter")?;
+                if let Some(v) = o.expr("wall")? {
+                    p["wall"] = v;
+                }
+            }
+            let refs = o.list("path")?.ok_or_else(|| err(line, format!("`{}` needs `path Sketch.a, Sketch.b …` (curves in order)", f.kind)))?;
+            let mut path_sketch: Option<String> = None;
+            let mut curves = Vec::new();
+            for r in refs {
+                let Some((base, rest)) = r.split_once('.') else {
+                    return Err(err(line, format!("`path` takes sketch curves, `Sketch.curve`; `{r}` names no curve")));
+                };
+                let r = Ref { base: base.to_string(), parts: rest.split('.').map(str::to_string).collect() };
+                let (s, id) = sketch_ref(&r, None, sketches, line)?;
+                if !Kind::of(&id).is_curve() {
+                    return Err(err(line, format!("`path` takes curves; `{}` is {}", r.text(), Kind::of(&id).name())));
+                }
+                if path_sketch.as_ref().is_some_and(|x| *x != s) {
+                    return Err(err(line, "all path curves must be in one sketch"));
+                }
+                path_sketch = Some(s);
+                curves.push(id);
+            }
+            p["path_sketch"] = json!(path_sketch);
+            p["path"] = json!(curves);
+            operation(&mut o, &mut p)?;
+            if f.kind == "sweep" { "solid.sweep" } else { "solid.pipe" }
+        }
+        "thread" => {
+            p["face"] = o.tuple("face")?.ok_or_else(|| err(line, "`thread` needs `face (x,y,z)` on a cylindrical face"))?;
+            if let Some(d) = o.ident("designation")? {
+                p["designation"] = json!(d);
+            }
+            if let Some(v) = o.expr("length")? {
+                p["length"] = v;
+            }
+            if o.flag("modeled") {
+                p["modeled"] = json!(true);
+            }
+            "solid.thread"
+        }
+        "coil" => {
+            p["diameter"] = o.require("diameter")?;
+            let mut given = 0;
+            for k in ["turns", "height", "pitch"] {
+                if let Some(v) = o.expr(k)? {
+                    p[k] = v;
+                    given += 1;
+                }
+            }
+            if given != 2 {
+                return Err(err(line, "`coil` needs two of `turns`, `height` and `pitch`"));
+            }
+            p["section_size"] = o.require("section_size")?;
+            if o.flag("square") {
+                p["section"] = json!("square");
+            }
+            if let Some(v) = o.ident("section_position")? {
+                p["section_position"] = json!(v);
+            }
+            if let Some(t) = o.tuple("base")? {
+                p["base"] = t;
+            }
+            match o.take("axis") {
+                Some(Val::Ref(r)) if r.parts.is_empty() => p["axis"] = json!(r.base),
+                Some(Val::Tuples(t)) if t.len() == 1 => p["axis"] = comps(&t[0]),
+                Some(_) => return Err(err(line, "`axis` is X, Y, Z or `(x,y,z)`")),
+                None => {}
+            }
+            if let Some(v) = o.expr("start_angle")? {
+                p["start_angle"] = v;
+            }
+            if o.flag("clockwise") {
+                p["clockwise"] = json!(true);
+            }
+            operation(&mut o, &mut p)?;
+            "solid.coil"
+        }
+        "emboss" => {
+            let sketch = o.ident("from")?.ok_or_else(|| err(line, "`emboss` needs `from <sketch>`"))?;
+            if !sketches.contains_key(&sketch) {
+                return Err(err(line, format!("unknown sketch `{sketch}`")));
+            }
+            p["sketch"] = json!(sketch);
+            p["depth"] = o.require("depth")?;
+            p["mode"] = json!(if o.flag("deboss") { "deboss" } else { "emboss" });
+            profiles(&mut o, &mut p)?;
+            if let Some(t) = o.list("targets")? {
+                p["targets"] = json!(t);
+            }
+            if let Some(t) = o.tuple("face")? {
+                p["face"] = t;
+            }
+            "solid.emboss"
+        }
+        "sheet_rule" => {
+            for k in ["thickness", "bend_radius", "k_factor"] {
+                if let Some(v) = o.expr(k)? {
+                    p[k] = v;
+                }
+            }
+            p["active"] = json!(true);
+            let params = o.finish(p)?;
+            return Ok(cmd("sheet.manage_rules", params));
+        }
+        "flange" => {
+            if let Some(rule) = o.ident("rule")? {
+                p["rule"] = json!(rule);
+            }
+            if let Some(sketch) = o.ident("from")? {
+                // Base flange: a sheet from a sketch profile, its thickness from the rule.
+                if !sketches.contains_key(&sketch) {
+                    return Err(err(line, format!("unknown sketch `{sketch}`")));
+                }
+                p["type"] = json!("base");
+                p["sketch"] = json!(sketch);
+                profiles(&mut o, &mut p)?;
+                if o.flag("flip") {
+                    p["flip"] = json!(true);
+                }
+                if let Some(b) = o.ident("body")? {
+                    p["body_name"] = json!(b);
+                }
+            } else {
+                // Edge flanges: bent up from the picked edges of a sheet body.
+                p["type"] = json!("edge");
+                p["edges"] = json!(o.tuples("edges")?.ok_or_else(|| err(line, "`flange` needs `from <sketch>` or `edges (x,y,z) …`"))?);
+                p["height"] = o.require("height")?;
+                if let Some(v) = o.expr("angle")? {
+                    p["angle"] = v;
+                }
+                if let Some(v) = o.expr("radius")? {
+                    p["radius"] = v;
+                }
+                if let Some(pos) = o.one_of(&["inside", "outside"])? {
+                    p["position"] = json!(pos);
+                }
+                if o.flag("flip") {
+                    p["flip"] = json!(true);
+                }
+                if let Some(b) = o.ident("body")? {
+                    p["body"] = json!(b);
+                }
+            }
+            "sheet.flange"
+        }
         other => return Err(err(line, format!("`{other}` is not supported yet"))),
     };
     let params = o.finish(p)?;
@@ -1200,6 +1445,44 @@ mod tests {
         // The `y` axis took l4, p1, p2; the point is p3.
         assert_eq!(cmds[7]["params"]["entities"], json!(["origin", "p3"]));
         assert_eq!(cmds[5]["params"], json!({"a": "c1", "b": "c2", "line": "y"}));
+    }
+
+    #[test]
+    fn loft_sweep_and_sheet_features() {
+        let cmds = script(
+            "sketch A on XY {\n circle a = (0,0) radius 5\n}\nsketch B on XY offset 10 {\n rect center b = (0,0) (4,4)\n}\nloft L sections A, B -> body Lb\n\
+             sketch P on XZ {\n line a = (0,0) (0,-20)\n arc k = start a.end through (2,-25) end (8,-28)\n}\n\
+             sweep S from A path P.a, P.k new -> body Sb\npipe Q path P.a, P.k diameter 3 wall 0.5 new -> body Qb\n\
+             thread T face (5,0,5) designation M10 modeled\ncoil C diameter 10 turns 3 pitch 2 section_size 1 square new -> body Cb\n\
+             sheet_rule Steel thickness 1.5 bend_radius 1\nsketch F on XY {\n rect f = (0,0) (20,10)\n}\nflange Base from F rule Steel -> body Sheet\n\
+             flange Up edges (10,0,0) height 15 flip body Sheet\n",
+        );
+        let find = |c: &str| cmds.iter().find(|x| x["command"] == c).unwrap()["params"].clone();
+        assert_eq!(find("solid.loft")["sections"], json!([{"sketch": "A"}, {"sketch": "B"}]));
+        let sweep = find("solid.sweep");
+        assert_eq!((sweep["sketch"].clone(), sweep["path_sketch"].clone(), sweep["path"].clone()), (json!("A"), json!("P"), json!(["l1", "a1"])));
+        assert_eq!(find("solid.pipe")["wall"], json!(0.5));
+        assert_eq!(find("solid.thread")["designation"], json!("M10"));
+        assert_eq!(find("solid.coil")["section"], json!("square"));
+        assert_eq!(find("sheet.manage_rules")["active"], json!(true));
+        let flanges: Vec<&Value> = cmds.iter().filter(|c| c["command"] == "sheet.flange").collect();
+        assert_eq!(flanges[0]["params"]["type"], json!("base"));
+        assert_eq!(flanges[1]["params"]["body"], json!("Sheet"));
+        let e = fails("sketch P on XY {\n point p = (0,0)\n}\npipe Q path P.p diameter 3");
+        assert!(e.contains("`path` takes curves; `P.p` is a point"), "{e}");
+        let e = fails("sketch A on XY {\n circle a = (0,0) radius 5\n}\nloft L sections A");
+        assert!(e.contains("at least two sections"), "{e}");
+    }
+
+    #[test]
+    fn ellipse_ids_and_text_comes_last() {
+        let cmds = script("sketch S on XY {\n ellipse e = (0,0) major (10,0) minor 4\n line l = (20,0) (30,0)\n dim e.center -> l.start = 20\n text \"HI\" at (0,-10) height 5 align center\n}\n");
+        assert_eq!(cmds[3]["params"]["entities"], json!(["p1", "l1.start"]));
+        assert_eq!(cmds[4]["params"]["align"], json!("center"));
+        let cmds = script("sketch S on XY {\n slot s = centers (0,0) (10,0) width 4\n polyline closed t = (0,0) (5,0) (0,5)\n fix s t\n}\n");
+        assert_eq!(cmds[3]["params"]["entities"], json!(["l1", "l2", "a1", "a2", "l3", "l4", "l5"]));
+        let e = fails("sketch S on XY {\n text \"HI\" at (0,0)\n circle c = (0,0) radius 1\n}\n");
+        assert!(e.contains("line 3") && e.contains("must come last"), "{e}");
     }
 
     #[test]

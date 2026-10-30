@@ -28,6 +28,16 @@ const EXPR_KEYS: &[&str] = &[
     "sides",
     "distance2",
     "size",
+    "designation",
+    "turns",
+    "pitch",
+    "section_size",
+    "twist",
+    "scale",
+    "wall",
+    "k_factor",
+    "bend_radius",
+    "start_angle",
 ];
 const TUPLE_KEYS: &[&str] = &[
     "profiles",
@@ -45,9 +55,11 @@ const TUPLE_KEYS: &[&str] = &[
     "position",
     "counterbore",
     "countersink",
+    "face",
 ];
-const LIST_KEYS: &[&str] = &["targets", "features", "bodies", "tools", "points"];
-const IDENT_KEYS: &[&str] = &["from", "body", "axis", "plane", "target", "sketch", "type", "direction", "alignment", "alignment2"];
+const LIST_KEYS: &[&str] = &["targets", "features", "bodies", "tools", "points", "sections"];
+const IDENT_KEYS: &[&str] =
+    &["from", "body", "axis", "plane", "target", "sketch", "type", "direction", "alignment", "alignment2", "rule", "section_position"];
 const FLAGS: &[&str] = &[
     "symmetric",
     "negative",
@@ -70,11 +82,16 @@ const FLAGS: &[&str] = &[
     "keep_tools",
     "flip",
     "chain",
+    "modeled",
+    "deboss",
+    "square",
+    "parallel",
+    "clockwise",
 ];
 
 const FEATURES: &[&str] = &[
     "extrude", "revolve", "hole", "box", "cylinder", "sphere", "torus", "fillet", "chamfer", "shell", "mirror", "pattern", "combine", "move",
-    "remove", "sweep", "loft",
+    "remove", "sweep", "loft", "pipe", "thread", "coil", "emboss", "sheet_rule", "flange",
 ];
 
 struct P<'a> {
@@ -655,6 +672,42 @@ fn parse_sketch_stmt(c: &mut Cur) -> R<SketchStmt> {
             let periodic = has("periodic") || c.eat_ident("periodic");
             SketchKind::Spline { name, pts, periodic }
         }
+        "ellipse" => {
+            let name = c.ident("the ellipse name")?;
+            c.expect_punct('=')?;
+            let center = c.point2()?;
+            if !c.eat_ident("major") {
+                return Err(err(line, "expected `major (x, y)`: the end of the major axis"));
+            }
+            let major = c.point2()?;
+            if !c.eat_ident("minor") {
+                return Err(err(line, "expected `minor <radius>`"));
+            }
+            SketchKind::Ellipse { name, center, major, minor: c.expr1("the minor radius")? }
+        }
+        "text" => {
+            let text = match c.next() {
+                Some(Tok::Str(s)) => s.clone(),
+                _ => return Err(err(line, "expected the text in quotes: `text \"LABEL\" at (x, y)`")),
+            };
+            if !c.eat_ident("at") {
+                return Err(err(line, "expected `at (x, y)`: the start of the baseline"));
+            }
+            let at = c.point2()?;
+            let (mut height, mut angle, mut align, mut font, mut bold, mut italic) = (None, None, None, None, false, false);
+            while !c.done() {
+                match c.ident("a text option")?.as_str() {
+                    "height" => height = Some(c.expr1("the height")?),
+                    "angle" => angle = Some(c.expr1("the angle")?),
+                    "align" => align = Some(c.ident("left, center or right")?),
+                    "font" => font = Some(c.expr1("the font")?),
+                    "bold" => bold = true,
+                    "italic" => italic = true,
+                    other => return Err(err(line, format!("unknown text option `{other}`"))),
+                }
+            }
+            SketchKind::Text { text, at, height, angle, align, font, bold, italic }
+        }
         "dim" => {
             let kind = match c.peek_ident() {
                 Some(k @ ("auto" | "distance" | "horizontal" | "vertical" | "length" | "radius" | "diameter" | "angle")) => {
@@ -748,9 +801,9 @@ fn parse_feature(c: &mut Cur, kind: &str) -> R<Feature> {
             let a = c.expr1("a diameter")?;
             let b = c.expr1(if k == "counterbore" { "a depth" } else { "an angle" })?;
             Val::List(vec![a, b])
-        } else if k == "at" {
-            // `at Sketch`, `at Sketch.a, Sketch.b`, `at (x,y,z)`
-            if c.peek() == Some(&Tok::Punct('(')) {
+        } else if k == "at" || k == "path" {
+            // `at Sketch`, `at Sketch.a, Sketch.b`, `at (x,y,z)`; `path Sketch.a, Sketch.b`
+            if k == "at" && c.peek() == Some(&Tok::Punct('(')) {
                 Val::Tuples(vec![c.tuple()?])
             } else {
                 let mut refs = vec![c.reference()?];

@@ -58,7 +58,7 @@ fn geometry(d: &Design, params: &[Param], scope: Option<&str>) -> R<Design> {
         if let Item::Feature(f) = item {
             for (k, v) in &f.opts {
                 if k == "body"
-                    && matches!(f.kind.as_str(), "extrude" | "revolve" | "box" | "cylinder" | "sphere" | "torus")
+                    && matches!(f.kind.as_str(), "extrude" | "revolve" | "box" | "cylinder" | "sphere" | "torus" | "loft" | "sweep" | "pipe" | "coil")
                     && let Val::Expr(n) = v
                 {
                     validate_name(n, f.line)?;

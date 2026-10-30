@@ -157,6 +157,12 @@ pub fn lower(d: &Design) -> R<Lowered> {
                         SketchKind::Point { p, bound, .. } => {
                             coords(p, &env, line, if *bound { "binding" } else { "seed" }, Kind::Length, *bound, &mut sites)?
                         }
+                        // The engine keeps text placement as expressions, like a bound point.
+                        SketchKind::Text { at, .. } => coords(at, &env, line, "placement", Kind::Length, true, &mut sites)?,
+                        SketchKind::Ellipse { center, major, .. } => {
+                            coords(center, &env, line, "seed", Kind::Length, false, &mut sites)?;
+                            coords(major, &env, line, "seed", Kind::Length, false, &mut sites)?;
+                        }
                         SketchKind::Polygon { center, sides, .. } => {
                             coords(center, &env, line, "seed", Kind::Length, false, &mut sites)?;
                             let n = env.number(sides, Kind::Unitless, line, "sides")?;
@@ -173,7 +179,8 @@ pub fn lower(d: &Design) -> R<Lowered> {
                     let seed_size = match &mut st.kind {
                         SketchKind::Circle { size: CircleSize::Radius(e) | CircleSize::Diameter(e), .. }
                         | SketchKind::Polygon { radius: e, .. }
-                        | SketchKind::Slot { width: e, .. } => Some(e),
+                        | SketchKind::Slot { width: e, .. }
+                        | SketchKind::Ellipse { minor: e, .. } => Some(e),
                         _ => None,
                     };
                     if let Some(e) = seed_size {
@@ -317,6 +324,17 @@ fn inline_helpers(d: &mut Design) -> R<()> {
                             expand(sides, &helpers)?;
                         }
                         SketchKind::Point { p, .. } => coords(p, &helpers)?,
+                        SketchKind::Text { at, height, angle, .. } => {
+                            coords(at, &helpers)?;
+                            for e in [height, angle].into_iter().flatten() {
+                                expand(e, &helpers)?;
+                            }
+                        }
+                        SketchKind::Ellipse { center, major, minor, .. } => {
+                            coords(center, &helpers)?;
+                            coords(major, &helpers)?;
+                            expand(minor, &helpers)?;
+                        }
                         SketchKind::Dim { value, .. } => expand(value, &helpers)?,
                         SketchKind::Fillet { radius, .. } => expand(radius, &helpers)?,
                         _ => {}
