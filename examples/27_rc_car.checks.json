@@ -1,0 +1,334 @@
+{
+  "version": 1,
+  "defaults": false,
+  "requests": [
+    {
+      "id": "straight",
+      "kind": "commands",
+      "commands": [
+        {
+          "command": "inspect.interference",
+          "params": {}
+        }
+      ]
+    },
+    {
+      "id": "steer_f20_r0",
+      "kind": "commands",
+      "commands": [
+        {
+          "command": "parameters.change",
+          "params": {
+            "name": "steer_front",
+            "expression": "20 deg"
+          }
+        },
+        {
+          "command": "parameters.change",
+          "params": {
+            "name": "steer_rear",
+            "expression": "0 deg"
+          }
+        },
+        {
+          "command": "inspect.interference",
+          "params": {}
+        }
+      ]
+    },
+    {
+      "id": "steer_fm20_r0",
+      "kind": "commands",
+      "commands": [
+        {
+          "command": "parameters.change",
+          "params": {
+            "name": "steer_front",
+            "expression": "-20 deg"
+          }
+        },
+        {
+          "command": "parameters.change",
+          "params": {
+            "name": "steer_rear",
+            "expression": "0 deg"
+          }
+        },
+        {
+          "command": "inspect.interference",
+          "params": {}
+        }
+      ]
+    },
+    {
+      "id": "steer_f0_r20",
+      "kind": "commands",
+      "commands": [
+        {
+          "command": "parameters.change",
+          "params": {
+            "name": "steer_front",
+            "expression": "0 deg"
+          }
+        },
+        {
+          "command": "parameters.change",
+          "params": {
+            "name": "steer_rear",
+            "expression": "20 deg"
+          }
+        },
+        {
+          "command": "inspect.interference",
+          "params": {}
+        }
+      ]
+    },
+    {
+      "id": "steer_f0_rm20",
+      "kind": "commands",
+      "commands": [
+        {
+          "command": "parameters.change",
+          "params": {
+            "name": "steer_front",
+            "expression": "0 deg"
+          }
+        },
+        {
+          "command": "parameters.change",
+          "params": {
+            "name": "steer_rear",
+            "expression": "-20 deg"
+          }
+        },
+        {
+          "command": "inspect.interference",
+          "params": {}
+        }
+      ]
+    },
+    {
+      "id": "steer_f20_rm20",
+      "kind": "commands",
+      "commands": [
+        {
+          "command": "parameters.change",
+          "params": {
+            "name": "steer_front",
+            "expression": "20 deg"
+          }
+        },
+        {
+          "command": "parameters.change",
+          "params": {
+            "name": "steer_rear",
+            "expression": "-20 deg"
+          }
+        },
+        {
+          "command": "inspect.interference",
+          "params": {}
+        }
+      ]
+    },
+    {
+      "id": "steer_fm20_r20",
+      "kind": "commands",
+      "commands": [
+        {
+          "command": "parameters.change",
+          "params": {
+            "name": "steer_front",
+            "expression": "-20 deg"
+          }
+        },
+        {
+          "command": "parameters.change",
+          "params": {
+            "name": "steer_rear",
+            "expression": "20 deg"
+          }
+        },
+        {
+          "command": "inspect.interference",
+          "params": {}
+        }
+      ]
+    },
+    {
+      "id": "steer_f20_r20",
+      "kind": "commands",
+      "commands": [
+        {
+          "command": "parameters.change",
+          "params": {
+            "name": "steer_front",
+            "expression": "20 deg"
+          }
+        },
+        {
+          "command": "parameters.change",
+          "params": {
+            "name": "steer_rear",
+            "expression": "20 deg"
+          }
+        },
+        {
+          "command": "inspect.interference",
+          "params": {}
+        }
+      ]
+    },
+    {
+      "id": "steer_fm20_rm20",
+      "kind": "commands",
+      "commands": [
+        {
+          "command": "parameters.change",
+          "params": {
+            "name": "steer_front",
+            "expression": "-20 deg"
+          }
+        },
+        {
+          "command": "parameters.change",
+          "params": {
+            "name": "steer_rear",
+            "expression": "-20 deg"
+          }
+        },
+        {
+          "command": "inspect.interference",
+          "params": {}
+        }
+      ]
+    },
+    {
+      "id": "steer_f10_rm10",
+      "kind": "commands",
+      "commands": [
+        {
+          "command": "parameters.change",
+          "params": {
+            "name": "steer_front",
+            "expression": "10 deg"
+          }
+        },
+        {
+          "command": "parameters.change",
+          "params": {
+            "name": "steer_rear",
+            "expression": "-10 deg"
+          }
+        },
+        {
+          "command": "inspect.interference",
+          "params": {}
+        }
+      ]
+    },
+    {
+      "id": "mesh_1",
+      "kind": "commands",
+      "commands": [
+        {
+          "command": "parameters.change",
+          "params": {
+            "name": "gear_turn",
+            "expression": "1.3 deg"
+          }
+        },
+        {
+          "command": "inspect.interference",
+          "params": {}
+        }
+      ]
+    },
+    {
+      "id": "mesh_2",
+      "kind": "commands",
+      "commands": [
+        {
+          "command": "parameters.change",
+          "params": {
+            "name": "gear_turn",
+            "expression": "2.61 deg"
+          }
+        },
+        {
+          "command": "inspect.interference",
+          "params": {}
+        }
+      ]
+    },
+    {
+      "id": "mesh_3",
+      "kind": "commands",
+      "commands": [
+        {
+          "command": "parameters.change",
+          "params": {
+            "name": "gear_turn",
+            "expression": "3.91 deg"
+          }
+        },
+        {
+          "command": "inspect.interference",
+          "params": {}
+        }
+      ]
+    },
+    {
+      "id": "mesh_4",
+      "kind": "commands",
+      "commands": [
+        {
+          "command": "parameters.change",
+          "params": {
+            "name": "gear_turn",
+            "expression": "5.22 deg"
+          }
+        },
+        {
+          "command": "inspect.interference",
+          "params": {}
+        }
+      ]
+    },
+    {
+      "id": "mesh_5",
+      "kind": "commands",
+      "commands": [
+        {
+          "command": "parameters.change",
+          "params": {
+            "name": "gear_turn",
+            "expression": "6.52 deg"
+          }
+        },
+        {
+          "command": "inspect.interference",
+          "params": {}
+        }
+      ]
+    },
+    {
+      "id": "mesh_6",
+      "kind": "commands",
+      "commands": [
+        {
+          "command": "parameters.change",
+          "params": {
+            "name": "gear_turn",
+            "expression": "7.83 deg"
+          }
+        },
+        {
+          "command": "inspect.interference",
+          "params": {}
+        }
+      ]
+    }
+  ]
+}

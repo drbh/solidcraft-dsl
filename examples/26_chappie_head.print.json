@@ -1,0 +1,798 @@
+{
+  "version": 1,
+  "defaults": false,
+  "requests": [
+    {
+      "id": "ring_left-3mf",
+      "kind": "export",
+      "format": "3mf",
+      "layout": "ring_left"
+    },
+    {
+      "id": "ring_left-top",
+      "kind": "snapshot",
+      "layout": "ring_left",
+      "options": {
+        "view": "top"
+      }
+    },
+    {
+      "id": "ring_left-iso",
+      "kind": "snapshot",
+      "layout": "ring_left",
+      "options": {
+        "view": "iso"
+      }
+    },
+    {
+      "id": "ring_left-check",
+      "kind": "commands",
+      "layout": "ring_left",
+      "commands": [
+        {
+          "command": "inspect.interference",
+          "params": {}
+        },
+        {
+          "command": "inspect.measure",
+          "params": {}
+        }
+      ]
+    },
+    {
+      "id": "ring_right-3mf",
+      "kind": "export",
+      "format": "3mf",
+      "layout": "ring_right"
+    },
+    {
+      "id": "ring_right-top",
+      "kind": "snapshot",
+      "layout": "ring_right",
+      "options": {
+        "view": "top"
+      }
+    },
+    {
+      "id": "ring_right-iso",
+      "kind": "snapshot",
+      "layout": "ring_right",
+      "options": {
+        "view": "iso"
+      }
+    },
+    {
+      "id": "ring_right-check",
+      "kind": "commands",
+      "layout": "ring_right",
+      "commands": [
+        {
+          "command": "inspect.interference",
+          "params": {}
+        },
+        {
+          "command": "inspect.measure",
+          "params": {}
+        }
+      ]
+    },
+    {
+      "id": "cap_left-3mf",
+      "kind": "export",
+      "format": "3mf",
+      "layout": "cap_left"
+    },
+    {
+      "id": "cap_left-top",
+      "kind": "snapshot",
+      "layout": "cap_left",
+      "options": {
+        "view": "top"
+      }
+    },
+    {
+      "id": "cap_left-iso",
+      "kind": "snapshot",
+      "layout": "cap_left",
+      "options": {
+        "view": "iso"
+      }
+    },
+    {
+      "id": "cap_left-check",
+      "kind": "commands",
+      "layout": "cap_left",
+      "commands": [
+        {
+          "command": "inspect.interference",
+          "params": {}
+        },
+        {
+          "command": "inspect.measure",
+          "params": {}
+        }
+      ]
+    },
+    {
+      "id": "cap_right-3mf",
+      "kind": "export",
+      "format": "3mf",
+      "layout": "cap_right"
+    },
+    {
+      "id": "cap_right-top",
+      "kind": "snapshot",
+      "layout": "cap_right",
+      "options": {
+        "view": "top"
+      }
+    },
+    {
+      "id": "cap_right-iso",
+      "kind": "snapshot",
+      "layout": "cap_right",
+      "options": {
+        "view": "iso"
+      }
+    },
+    {
+      "id": "cap_right-check",
+      "kind": "commands",
+      "layout": "cap_right",
+      "commands": [
+        {
+          "command": "inspect.interference",
+          "params": {}
+        },
+        {
+          "command": "inspect.measure",
+          "params": {}
+        }
+      ]
+    },
+    {
+      "id": "screen-3mf",
+      "kind": "export",
+      "format": "3mf",
+      "layout": "screen"
+    },
+    {
+      "id": "screen-top",
+      "kind": "snapshot",
+      "layout": "screen",
+      "options": {
+        "view": "top"
+      }
+    },
+    {
+      "id": "screen-iso",
+      "kind": "snapshot",
+      "layout": "screen",
+      "options": {
+        "view": "iso"
+      }
+    },
+    {
+      "id": "screen-check",
+      "kind": "commands",
+      "layout": "screen",
+      "commands": [
+        {
+          "command": "inspect.interference",
+          "params": {}
+        },
+        {
+          "command": "inspect.measure",
+          "params": {}
+        }
+      ]
+    },
+    {
+      "id": "stand-3mf",
+      "kind": "export",
+      "format": "3mf",
+      "layout": "stand"
+    },
+    {
+      "id": "stand-top",
+      "kind": "snapshot",
+      "layout": "stand",
+      "options": {
+        "view": "top"
+      }
+    },
+    {
+      "id": "stand-iso",
+      "kind": "snapshot",
+      "layout": "stand",
+      "options": {
+        "view": "iso"
+      }
+    },
+    {
+      "id": "stand-check",
+      "kind": "commands",
+      "layout": "stand",
+      "commands": [
+        {
+          "command": "inspect.interference",
+          "params": {}
+        },
+        {
+          "command": "inspect.measure",
+          "params": {}
+        }
+      ]
+    },
+    {
+      "id": "parts_right-3mf",
+      "kind": "export",
+      "format": "3mf",
+      "layout": "parts_right"
+    },
+    {
+      "id": "parts_right-top",
+      "kind": "snapshot",
+      "layout": "parts_right",
+      "options": {
+        "view": "top"
+      }
+    },
+    {
+      "id": "parts_right-iso",
+      "kind": "snapshot",
+      "layout": "parts_right",
+      "options": {
+        "view": "iso"
+      }
+    },
+    {
+      "id": "parts_right-check",
+      "kind": "commands",
+      "layout": "parts_right",
+      "commands": [
+        {
+          "command": "inspect.interference",
+          "params": {}
+        },
+        {
+          "command": "inspect.measure",
+          "params": {}
+        }
+      ]
+    },
+    {
+      "id": "parts_left-3mf",
+      "kind": "export",
+      "format": "3mf",
+      "layout": "parts_left"
+    },
+    {
+      "id": "parts_left-top",
+      "kind": "snapshot",
+      "layout": "parts_left",
+      "options": {
+        "view": "top"
+      }
+    },
+    {
+      "id": "parts_left-iso",
+      "kind": "snapshot",
+      "layout": "parts_left",
+      "options": {
+        "view": "iso"
+      }
+    },
+    {
+      "id": "parts_left-check",
+      "kind": "commands",
+      "layout": "parts_left",
+      "commands": [
+        {
+          "command": "inspect.interference",
+          "params": {}
+        },
+        {
+          "command": "inspect.measure",
+          "params": {}
+        }
+      ]
+    },
+    {
+      "id": "fit_test-3mf",
+      "kind": "export",
+      "format": "3mf",
+      "layout": "fit_test"
+    },
+    {
+      "id": "fit_test-top",
+      "kind": "snapshot",
+      "layout": "fit_test",
+      "options": {
+        "view": "top"
+      }
+    },
+    {
+      "id": "fit_test-iso",
+      "kind": "snapshot",
+      "layout": "fit_test",
+      "options": {
+        "view": "iso"
+      }
+    },
+    {
+      "id": "fit_test-check",
+      "kind": "commands",
+      "layout": "fit_test",
+      "commands": [
+        {
+          "command": "inspect.interference",
+          "params": {}
+        },
+        {
+          "command": "inspect.measure",
+          "params": {}
+        }
+      ]
+    }
+  ],
+  "layouts": {
+    "ring_left": {
+      "bed": [
+        256,
+        256
+      ],
+      "spacing": "6 mm",
+      "parts": [
+        {
+          "id": "ring_left",
+          "select": {
+            "bodies": [
+              "HeadRingLeft"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                0,
+                1,
+                0
+              ],
+              "angle": "90 deg"
+            }
+          ]
+        }
+      ]
+    },
+    "ring_right": {
+      "bed": [
+        256,
+        256
+      ],
+      "spacing": "6 mm",
+      "parts": [
+        {
+          "id": "ring_right",
+          "select": {
+            "bodies": [
+              "HeadRingLeft (2)"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                0,
+                1,
+                0
+              ],
+              "angle": "-90 deg"
+            }
+          ]
+        }
+      ]
+    },
+    "cap_left": {
+      "bed": [
+        256,
+        256
+      ],
+      "spacing": "6 mm",
+      "parts": [
+        {
+          "id": "cap_left",
+          "select": {
+            "bodies": [
+              "HeadCapLeft"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                0,
+                1,
+                0
+              ],
+              "angle": "90 deg"
+            }
+          ]
+        }
+      ]
+    },
+    "cap_right": {
+      "bed": [
+        256,
+        256
+      ],
+      "spacing": "6 mm",
+      "parts": [
+        {
+          "id": "cap_right",
+          "select": {
+            "bodies": [
+              "HeadCapLeft (2)"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                0,
+                1,
+                0
+              ],
+              "angle": "-90 deg"
+            }
+          ]
+        }
+      ]
+    },
+    "screen": {
+      "bed": [
+        256,
+        256
+      ],
+      "spacing": "6 mm",
+      "parts": [
+        {
+          "id": "screen",
+          "select": {
+            "bodies": [
+              "Screen"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                1,
+                0,
+                0
+              ],
+              "angle": "90 deg"
+            }
+          ]
+        }
+      ]
+    },
+    "stand": {
+      "bed": [
+        256,
+        256
+      ],
+      "spacing": "6 mm",
+      "parts": [
+        {
+          "id": "stand",
+          "select": {
+            "bodies": [
+              "Stand"
+            ]
+          }
+        },
+        {
+          "id": "board_cradle",
+          "select": {
+            "bodies": [
+              "BoardCradle"
+            ]
+          }
+        }
+      ]
+    },
+    "parts_right": {
+      "bed": [
+        256,
+        256
+      ],
+      "spacing": "6 mm",
+      "parts": [
+        {
+          "id": "ear_right",
+          "select": {
+            "bodies": [
+              "EarRight"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                0,
+                1,
+                0
+              ],
+              "angle": "90 deg"
+            }
+          ]
+        },
+        {
+          "id": "brow_right",
+          "select": {
+            "bodies": [
+              "BrowLoopRight"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                0,
+                1,
+                0
+              ],
+              "angle": "90 deg"
+            }
+          ]
+        },
+        {
+          "id": "chin_right",
+          "select": {
+            "bodies": [
+              "ChinLoopRight"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                0,
+                1,
+                0
+              ],
+              "angle": "90 deg"
+            }
+          ]
+        },
+        {
+          "id": "plug_chin",
+          "select": {
+            "bodies": [
+              "PivotPlugChin"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                0,
+                1,
+                0
+              ],
+              "angle": "-90 deg"
+            }
+          ]
+        }
+      ]
+    },
+    "parts_left": {
+      "bed": [
+        256,
+        256
+      ],
+      "spacing": "6 mm",
+      "parts": [
+        {
+          "id": "ear_left",
+          "select": {
+            "bodies": [
+              "EarLeft"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                0,
+                1,
+                0
+              ],
+              "angle": "-90 deg"
+            }
+          ]
+        },
+        {
+          "id": "brow_left",
+          "select": {
+            "bodies": [
+              "BrowLoopLeft"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                0,
+                1,
+                0
+              ],
+              "angle": "-90 deg"
+            }
+          ]
+        },
+        {
+          "id": "chin_left",
+          "select": {
+            "bodies": [
+              "ChinLoopLeft"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                0,
+                1,
+                0
+              ],
+              "angle": "-90 deg"
+            }
+          ]
+        },
+        {
+          "id": "plug_brow",
+          "select": {
+            "bodies": [
+              "PivotPlugBrow"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                0,
+                1,
+                0
+              ],
+              "angle": "90 deg"
+            }
+          ]
+        }
+      ]
+    },
+    "fit_test": {
+      "bed": [
+        256,
+        256
+      ],
+      "spacing": "5 mm",
+      "parts": [
+        {
+          "id": "FitTestPocket",
+          "select": {
+            "bodies": [
+              "FitTestPocket"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                0,
+                1,
+                0
+              ],
+              "angle": "-90 deg"
+            }
+          ]
+        },
+        {
+          "id": "FitTestHub",
+          "select": {
+            "bodies": [
+              "FitTestHub"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                0,
+                1,
+                0
+              ],
+              "angle": "-90 deg"
+            }
+          ]
+        },
+        {
+          "id": "FitTestPlugPin",
+          "select": {
+            "bodies": [
+              "FitTestPlugPin"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                0,
+                1,
+                0
+              ],
+              "angle": "-90 deg"
+            }
+          ]
+        },
+        {
+          "id": "FitTestMagnet",
+          "select": {
+            "bodies": [
+              "FitTestMagnet"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                0,
+                1,
+                0
+              ],
+              "angle": "-90 deg"
+            }
+          ]
+        },
+        {
+          "id": "FitTestLoopPin",
+          "select": {
+            "bodies": [
+              "FitTestLoopPin"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                0,
+                1,
+                0
+              ],
+              "angle": "-90 deg"
+            }
+          ]
+        },
+        {
+          "id": "FitTestSocket",
+          "select": {
+            "bodies": [
+              "FitTestSocket"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                0,
+                1,
+                0
+              ],
+              "angle": "-90 deg"
+            }
+          ]
+        },
+        {
+          "id": "FitTestPost",
+          "select": {
+            "bodies": [
+              "FitTestPost"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                0,
+                1,
+                0
+              ],
+              "angle": "-90 deg"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}
