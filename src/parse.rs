@@ -42,6 +42,8 @@ const EXPR_KEYS: &[&str] = &[
     "factor",
     "gap",
     "margin",
+    "top_radius",
+    "top_diameter",
 ];
 const TUPLE_KEYS: &[&str] = &[
     "profiles",
@@ -142,6 +144,7 @@ const FEATURES: &[&str] = &[
     "offset_faces",
     "scale",
     "hem",
+    "cone",
     "perforate",
 ];
 

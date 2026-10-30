@@ -86,6 +86,17 @@ A plane can be used by name wherever a plane is taken: in `sketch … on`, in an
 `plane … on`, and in a mirror's `plane`. Offsets and angles stay live. See
 `53_desk_name_plate`, where the lettering follows the slope parameter.
 
+## Cones
+
+```sc
+cone Tip radius 10 mm height 20 mm -> body Tip                      // to an apex
+cone Funnel radius 15 mm top_radius 5 mm height 30 mm base (40,0,0) axis X -> body Funnel
+```
+
+`cone` uses the engine's `solid.cone`, added in 0.27. An older engine refuses the design up
+front, with a message naming the missing `solid_cone` capability. On those engines, revolve a
+triangle or trapezoid instead.
+
 ## Shaping and splitting solids
 
 ```sc

@@ -24,7 +24,7 @@ syn keyword scKey       plane axis count count2 spacing spacing2 dir dir2 offset
 syn keyword scKey       taper angle clearance thread depth height width length major minor
 syn keyword scKey       thickness fit sides size corner center base normal to position
 syn keyword scKey       counterbore countersink features bodies tools points target type
-syn keyword scKey       direction alignment alignment2 face start through end between fraction side curves neutral pull factor factors gap margin pitch
+syn keyword scKey       direction alignment alignment2 face start through end between fraction side curves neutral pull factor factors gap margin pitch top_radius top_diameter
 syn match   scKey       "\<origin\ze\s*("
 " modifiers (bare words that take no value)
 syn keyword scModifier  closed infer construction rounded periodic inscribed circumscribed
@@ -65,8 +65,8 @@ syn match   scDesignName  "\%(^\s*design\s\+\)\@<=\h\w*"
 syn match   scParamName   "\%(^\s*\%(param\|let\)\s\+\)\@<=\h\w*"
 syn match   scSketchName  '\%(^\s*sketch\s\+\)\@<=\%(\h\w*\|"[^"]*"\)'
 
-syn match   scFeature     "^\s*\%(extrude\|revolve\|hole\|box\|cylinder\|sphere\|torus\|fillet\|chamfer\|shell\|mirror\|pattern\|combine\|move\|remove\|sweep\|loft\|pipe\|thread\|coil\|emboss\|sheet_rule\|flange\|plane\|split\|rib\|web\|draft\|offset_faces\|scale\|hem\|perforate\)\>"
-syn match   scFeatureName '\%(^\s*\%(extrude\|revolve\|hole\|box\|cylinder\|sphere\|torus\|fillet\|chamfer\|shell\|mirror\|pattern\|combine\|move\|remove\|sweep\|loft\|pipe\|thread\|coil\|emboss\|sheet_rule\|flange\|plane\|split\|rib\|web\|draft\|offset_faces\|scale\|hem\|perforate\)\s\+\%(circular\s\+\)\?\)\@<=\%(\h\w*\|"[^"]*"\)'
+syn match   scFeature     "^\s*\%(extrude\|revolve\|hole\|box\|cylinder\|sphere\|torus\|fillet\|chamfer\|shell\|mirror\|pattern\|combine\|move\|remove\|sweep\|loft\|pipe\|thread\|coil\|emboss\|sheet_rule\|flange\|plane\|split\|rib\|web\|draft\|offset_faces\|scale\|hem\|perforate\|cone\)\>"
+syn match   scFeatureName '\%(^\s*\%(extrude\|revolve\|hole\|box\|cylinder\|sphere\|torus\|fillet\|chamfer\|shell\|mirror\|pattern\|combine\|move\|remove\|sweep\|loft\|pipe\|thread\|coil\|emboss\|sheet_rule\|flange\|plane\|split\|rib\|web\|draft\|offset_faces\|scale\|hem\|perforate\|cone\)\s\+\%(circular\s\+\)\?\)\@<=\%(\h\w*\|"[^"]*"\)'
 
 " ---- inside a sketch block ---------------------------------------------------------------
 

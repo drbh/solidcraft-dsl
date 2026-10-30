@@ -33,6 +33,8 @@ const LENGTH_KEYS: &[&str] = &[
     "thickness",
     "spacing",
     "spacing2",
+    "top_radius",
+    "top_diameter",
 ];
 /// Feature options that take an angle.
 const ANGLE_KEYS: &[&str] = &["angle", "taper"];
@@ -41,7 +43,7 @@ const COUNT_KEYS: &[(&str, f64)] = &[("count", 1.0), ("count2", 1.0), ("sides", 
 /// Options whose literal value must be positive.
 const POSITIVE_KEYS: &[&str] = &["diameter", "radius", "depth", "height", "width", "length", "major", "minor", "thickness", "spacing", "spacing2"];
 /// Features whose `body` option names the body they create (`-> body NAME`), not an existing one.
-const CREATORS: &[&str] = &["extrude", "revolve", "box", "cylinder", "sphere", "torus", "loft", "sweep", "pipe", "coil"];
+const CREATORS: &[&str] = &["extrude", "revolve", "box", "cylinder", "sphere", "torus", "loft", "sweep", "pipe", "coil", "cone"];
 
 /// Does `f` create the body its `body` option names? A flange does when it is a base flange
 /// (`from <sketch>`); edge flanges name the sheet they bend. A split names the piece it cuts off.

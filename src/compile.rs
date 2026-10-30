@@ -471,7 +471,16 @@ pub(crate) fn compile_geometry(d: &Design) -> R<Compiled> {
         features,
         lines,
         dims,
-        expressions: lowered.explanation,
+        expressions: {
+            let mut e = lowered.explanation;
+            // Primitives newer engines add, refused up front by older ones.
+            if d.items.iter().any(|i| matches!(i, Item::Feature(f) if f.kind == "cone"))
+                && let Some(r) = e["requires"].as_array_mut()
+            {
+                r.push(json!("solid_cone"));
+            }
+            e
+        },
         links: vec![],
         checks: vec![],
         print_layout: None,
@@ -1126,6 +1135,32 @@ fn compile_feature(f: &Feature, sketches: &mut HashMap<String, SketchTable>) -> 
             }
             operation(&mut o, &mut p)?;
             "solid.cylinder"
+        }
+        // Needs an engine with `solid.cone` (0.27 or later); see the `solid_cone` capability.
+        "cone" => {
+            match (o.expr("radius")?, o.expr("diameter")?) {
+                (Some(r), None) => p["radius"] = r,
+                (None, Some(d)) => p["diameter"] = d,
+                _ => return Err(err(line, "`cone` needs `radius` or `diameter` (the base)")),
+            }
+            match (o.expr("top_radius")?, o.expr("top_diameter")?) {
+                (Some(r), None) => p["top_radius"] = r,
+                (None, Some(d)) => p["top_diameter"] = d,
+                (None, None) => {}
+                _ => return Err(err(line, "give `top_radius` or `top_diameter`, not both")),
+            }
+            p["height"] = o.require("height")?;
+            if let Some(t) = o.tuple("base")? {
+                p["base"] = t;
+            }
+            match o.take("axis") {
+                Some(Val::Ref(r)) if r.parts.is_empty() => p["axis"] = json!(r.base),
+                Some(Val::Tuples(t)) if t.len() == 1 => p["axis"] = comps(&t[0]),
+                Some(_) => return Err(err(line, "`axis` is X, Y, Z or `(x,y,z)`")),
+                None => {}
+            }
+            operation(&mut o, &mut p)?;
+            "solid.cone"
         }
         "sphere" => {
             match (o.expr("radius")?, o.expr("diameter")?) {
@@ -1880,6 +1915,22 @@ mod tests {
         // Bare numbers are millimetres; an angle is not a coordinate.
         assert!(fails("sketch S on XY {\n curve c = (t, t) t from 0 deg to 90 deg\n}\n").contains("must be a length"));
         assert!(fails("sketch S on XY {\n curve c = (t*1 mm, 0) t from 0 to 1 points 2\n}\n").contains("3 through 200"));
+    }
+
+    #[test]
+    fn cones_need_an_engine_with_solid_cone() {
+        let d = parse("param r = 10 mm\ncone Tip radius r top_radius 2 mm height 20 mm base (1,2,3) axis X -> body Tip\n").unwrap();
+        let c = compile(&d).unwrap();
+        assert_eq!(
+            c.script["commands"][1]["params"],
+            json!({"radius": "r", "top_radius": "2 mm", "height": "20 mm", "base": [1.0, 2.0, 3.0], "axis": "X", "body_name": "Tip", "name": "Tip"})
+        );
+        assert_eq!(c.expressions["requires"], json!(["solid_cone"]));
+        let old = json!([{"id": "solid.box", "params": "length"}]);
+        assert!(crate::assembly::check_capabilities(&c, &old).unwrap_err().contains("solid_cone"));
+        let new = json!([{"id": "solid.cone", "params": "radius | diameter, height; top_radius?"}]);
+        crate::assembly::check_capabilities(&c, &new).unwrap();
+        assert!(fails("cone C height 2\n").contains("needs `radius` or `diameter`"));
     }
 
     #[test]

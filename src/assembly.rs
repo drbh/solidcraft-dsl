@@ -58,7 +58,10 @@ fn geometry(d: &Design, params: &[Param], scope: Option<&str>) -> R<Design> {
         if let Item::Feature(f) = item {
             for (k, v) in &f.opts {
                 if k == "body"
-                    && matches!(f.kind.as_str(), "extrude" | "revolve" | "box" | "cylinder" | "sphere" | "torus" | "loft" | "sweep" | "pipe" | "coil")
+                    && matches!(
+                        f.kind.as_str(),
+                        "extrude" | "revolve" | "box" | "cylinder" | "sphere" | "torus" | "loft" | "sweep" | "pipe" | "coil" | "cone"
+                    )
                     && let Val::Expr(n) = v
                 {
                     validate_name(n, f.line)?;
@@ -480,6 +483,7 @@ pub fn check_capabilities(c: &Compiled, commands: &Value) -> R<()> {
             Some("persistent_sketch_point_expressions") => &[("sketch.point", "expression")],
             Some("authored_occurrence_names") => &[("component.create", "occurrence_name"), ("occurrence.copy", "occurrence_name")],
             Some("linked_occurrence_names") => &[("component.insert_design", "occurrence_name")],
+            Some("solid_cone") => &[("solid.cone", "top_radius")],
             _ => return Err(format!("unknown required engine capability {required}")),
         };
         for (id, field) in specs {
