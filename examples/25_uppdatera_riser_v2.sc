@@ -124,7 +124,8 @@ sketch FootSk on XY offset lift {
 }
 extrude FootPocket from FootSk distance (foot_h+1 mm) cut targets Riser
 sketch PocketSk on XY offset (lift+foot_h) {
-  rect rounded p = (p_in,p_in) (far,far) radius (box_r+fit)
+  // Past `far`, so its far corner arcs miss the foot pocket's: coincident curved faces fail newer engines
+  rect rounded p = (p_in,p_in) (far+1 mm,far+1 mm) radius (box_r+fit)
   fix p.bottom p.right p.top p.left p.arc1 p.arc2 p.arc3 p.arc4
 }
 extrude Pocket from PocketSk distance (pocket_h-foot_h+1 mm) cut targets Riser

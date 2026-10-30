@@ -7,10 +7,11 @@
 // 233 mm chin to crown without the ears), so the servos fit inside.
 // Printed (no supports):
 // - The head: 2.5 mm shells split down the middle; two pairs of bar magnets in the cut faces hold
-//   the halves together, so the head opens for access. Each half is two pieces glued together:
-//   HeadRingLeft (the walls, printed on the cut face; inside: the LED shelf, the board pocket) and
-//   HeadCapLeft (the side wall with the pods, bars and the servo pockets, printed on its flat
-//   inner face). The right half's are their mirrors, "HeadRingLeft (2)" and "HeadCapLeft (2)".
+//   the halves together, so the head opens for access. Each half is three pieces glued together:
+//   HeadRingLeft (the walls, printed on the cut face; inside: the board pocket), LedShelfLeft (the
+//   LED strip's shelf, glued to the cap's shelf stub) and HeadCapLeft (the side wall with the pods,
+//   bars and the servo pockets, printed on its flat inner face). The right half's are their
+//   mirrors, "HeadRingLeft (2)", "LedShelfLeft (2)" and "HeadCapLeft (2)".
 // - BrowLoop*/ChinLoop* halves: the moving loops, each side a flat arm with its pivot hub, printed
 //   on its outer face. The halves of each loop meet at the middle on 1.75 mm filament pins
 //   (2.1 mm holes); glue each pin into one half only, so the loops part when the head opens.
@@ -83,8 +84,10 @@ extrude Ex23 from Sk22 distance 38.30 mm cut targets HeadRingLeft
 box Bx24 size 38.30 mm 46.10 mm 23.65 mm corner ((-38.30 mm),(-122.00 mm),(-30.65 mm)) cut targets HeadRingLeft
 box Bx25 size 38.30 mm 3.00 mm 25.20 mm corner ((-38.30 mm),(-128.50 mm),(-31.35 mm)) cut targets HeadRingLeft
 box Bx26 size 38.30 mm 5.50 mm 22.20 mm corner ((-38.30 mm),(-126.50 mm),(-29.85 mm)) cut targets HeadRingLeft
-// LED shelf: a plate 12 mm behind the diffuser for the strip, across the visor
-box Bx27 size 38.30 mm 2.00 mm 16.00 mm corner ((-38.30 mm),(-113.50 mm),(-26.83 mm)) join targets HeadRingLeft
+// LED shelf: a plate 12 mm behind the diffuser for the strip, across the visor. Nothing in the ring
+// holds it (the visor pocket opens into the skull), so it is a part of its own, glued to the cap's
+// shelf stub (Bx74) at x = -38.30.
+box Bx27 size 38.30 mm 2.00 mm 16.00 mm corner ((-38.30 mm),(-113.50 mm),(-26.83 mm)) new -> body LedShelfLeft
 // servo mounts: each servo's top sits in a pocket in the side wall with its tabs flat on the
 // inner face (riveted with 1.75 mm filament through the tab holes into 2.0 mm holes), under a housing bump outside; its boss
 // comes out through the bump. Ear, brow and chin positions (the mirror gives the right half
@@ -205,6 +208,7 @@ cylinder Cy92 radius 1.00 mm height 5.10 mm base ((-43.40 mm),(-61.85 mm),(-80.7
 // neck socket for the stand's post (and the USB-C plug inside it)
 // ==== the right half: both pieces mirrored (named "HeadRingLeft (2)" and "HeadCapLeft (2)")
 mirror RingMirror bodies HeadRingLeft plane YZ
+mirror ShelfMirror bodies LedShelfLeft plane YZ
 mirror CapMirror bodies HeadCapLeft plane YZ
 // ---- BrowLoopRight
 cylinder Cy93 radius 12.90 mm height 11.10 mm base (47.40 mm,(-86.55 mm),3.90 mm) axis X new -> body BrowLoopRight

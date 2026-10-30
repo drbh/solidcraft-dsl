@@ -188,6 +188,8 @@ pub fn clearance_command(c: &Check) -> Value {
 pub struct Outcome {
     pub entry: Value,
     pub failure: Option<String>,
+    /// The failure rests on an approximate measurement, so it is reported as a warning.
+    pub approximate: bool,
 }
 
 /// What the engine told us about the built design.
@@ -244,6 +246,7 @@ pub fn verify(checks: &[Check], ev: &Evidence) -> Vec<Outcome> {
         }
         let passed = shells == 1.0;
         out.push(Outcome {
+            approximate: false,
             entry: json!({"statement": format!("check {name} shells == 1"), "implied": true, "body": name, "quantity": "shells", "op": "==", "expected": 1, "actual": shells, "passed": passed}),
             failure: (!passed).then(|| {
                 format!(
@@ -324,7 +327,11 @@ fn outcome(c: &Check, statement: &str, actual: Result<f64, String>, mut detail: 
     detail["unit"] = json!(c.unit());
     detail["actual"] = actual;
     detail["passed"] = json!(passed);
-    Outcome { entry: detail, failure }
+    // A failure the engine could only measure on the meshes may be the meshes' error.
+    let approximate = failure.is_some() && detail["exact"] == false;
+    let failure = failure
+        .map(|f| if approximate { format!("{f} (measured on the meshes, not exactly: check this fit by hand or with a test print)") } else { f });
+    Outcome { entry: detail, failure, approximate }
 }
 
 /// Smallest distance between the two bodies; 0 (and `overlap_mm3`) when they overlap.
@@ -346,6 +353,10 @@ fn clearance(c: &Check, reply: &Value, detail: &mut Value) -> Result<f64, String
             if let Some(n) = near {
                 detail["from"] = n["from"].clone();
                 detail["to"] = n["to"].clone();
+                // Measured on the meshes when the engine couldn't do it exactly.
+                if n["exact"] == false {
+                    detail["exact"] = json!(false);
+                }
             }
             Ok(d)
         }
@@ -625,6 +636,22 @@ mod tests {
         let twice = crate::parse("design T units mm\nbox A size 1 1 1 -> body H\nprint H up X\nprint H up Y\n").unwrap();
         assert!(crate::check(&twice).unwrap_err().contains("`H` already has a print orientation (line 3)"));
         assert!(crate::parse("design T units mm\nprint H\n").is_err());
+    }
+
+    #[test]
+    fn clearances_measured_on_meshes_only_warn() {
+        let bodies = [json!({"name": "A", "kernel": {"shells": 1}}), json!({"name": "B", "kernel": {"shells": 1}})];
+        let none = |_: &str| -> Result<Vec<u8>, String> { Err("no mesh".into()) };
+        let reply = |exact: bool| json!({"overlaps": [], "near": [{"a": "A", "b": "B", "distance_mm": 0.08, "exact": exact, "from": [0, 0, 0], "to": [0, 0, 0.08]}]});
+        let d = crate::parse("design T units mm\ncheck A clearance B >= 0.4 mm\n").unwrap();
+        let checks = lower(&d).unwrap();
+        for (exact, approximate) in [(false, true), (true, false)] {
+            let replies = [reply(exact)];
+            let out = verify(&checks, &Evidence { bodies: &bodies, clearances: &replies, mesh: &none });
+            assert!(out[0].failure.is_some());
+            assert_eq!(out[0].approximate, approximate);
+            assert_eq!(out[0].failure.as_ref().unwrap().contains("measured on the meshes"), approximate);
+        }
     }
 
     #[test]

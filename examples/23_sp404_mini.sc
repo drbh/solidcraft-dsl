@@ -256,3 +256,6 @@ param foot_h = 2 mm
 param foot_in = 8 mm
 cylinder Foot radius foot_r height foot_h base (x0+foot_in,y0+foot_in,-foot_h) new -> body Feet
 pattern FeetGrid bodies Feet dir (1,0,0) count 2 spacing (x1-x0-2*foot_in) dir2 (0,1,0) count2 2 spacing2 (y1-y0-2*foot_in)
+
+// The stand-ins for the board's parts (module, jacks, USB-C, card slot) are separate pieces of one body.
+check BottomParts shells == 5

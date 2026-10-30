@@ -188,6 +188,20 @@
       ]
     },
     {
+      "id": "led_shelves-3mf",
+      "kind": "export",
+      "format": "3mf",
+      "layout": "led_shelves"
+    },
+    {
+      "id": "led_shelves-iso",
+      "kind": "snapshot",
+      "layout": "led_shelves",
+      "options": {
+        "view": "iso"
+      }
+    },
+    {
       "id": "stand-3mf",
       "kind": "export",
       "format": "3mf",
@@ -791,6 +805,26 @@
               "angle": "-90 deg"
             }
           ]
+        }
+      ]
+    },
+    "led_shelves": {
+      "parts": [
+        {
+          "id": "led_shelf_left",
+          "select": {
+            "bodies": [
+              "LedShelfLeft"
+            ]
+          }
+        },
+        {
+          "id": "led_shelf_right",
+          "select": {
+            "bodies": [
+              "LedShelfLeft (2)"
+            ]
+          }
         }
       ]
     }

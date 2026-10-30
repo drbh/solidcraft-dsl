@@ -359,7 +359,11 @@ fn design_checks(
     for o in &outcomes {
         if let Some(message) = &o.failure {
             let line = o.entry["line"].as_u64().map(|n| n as usize).or_else(|| o.entry["body"].as_str().and_then(|b| body_line(source, b)));
-            diagnostics.push(diagnostic("check", message, line, source));
+            let mut d = diagnostic("check", message, line, source);
+            if o.approximate {
+                d["severity"] = json!("warning");
+            }
+            diagnostics.push(d);
         }
     }
     report["design_checks"] = json!(outcomes.into_iter().map(|o| o.entry).collect::<Vec<_>>());
