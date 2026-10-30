@@ -79,6 +79,18 @@ impl SketchTable {
         Ok(())
     }
 
+    /// The ids of the entities named: every curve of a compound entity named whole, else the one.
+    fn curves(&mut self, line: usize, refs: &[Ref]) -> R<Vec<String>> {
+        let mut ids = Vec::new();
+        for r in refs {
+            match self.curves_of(r) {
+                Some(curves) => ids.extend(curves),
+                None => ids.push(self.resolve(line, r)?),
+            }
+        }
+        Ok(ids)
+    }
+
     /// Every curve of a compound entity named whole (`outline`, `r`, `s`), for `fix`.
     fn curves_of(&self, r: &Ref) -> Option<Vec<String>> {
         if !r.parts.is_empty() {
@@ -475,17 +487,36 @@ fn compile_sketch(s: &Sketch, out: &mut Vec<Value>, lines: &mut Vec<usize>, dims
     lines.push(s.line);
     let mut t = SketchTable { names: HashMap::new(), axes_used: Vec::new(), counters: Counters::default() };
     let first = out.len();
-    let mut text_at = None;
+    // Text, offsets, mirrors and patterns make curves whose number depends on what they copy, so
+    // only more of them, and constraints, may follow: nothing whose ids must be predicted.
+    let mut tail: Option<(usize, &str)> = None;
     for st in &s.stmts {
         let line = st.line;
-        if let Some(t_line) = text_at
-            && !matches!(st.kind, SketchKind::Text { .. })
+        let derived = match &st.kind {
+            SketchKind::Text { .. } => Some("text"),
+            SketchKind::Offset { .. } => Some("an offset"),
+            SketchKind::Mirror { .. } => Some("a mirror"),
+            SketchKind::Pattern { .. } => Some("a pattern"),
+            _ => None,
+        };
+        let constraint = matches!(st.kind, SketchKind::Dim { .. } | SketchKind::Constraint { .. } | SketchKind::Fix { .. });
+        if let Some((at, what)) = tail
+            && derived.is_none()
+            && !constraint
         {
-            return Err(err(line, format!("text (line {t_line}) must come last in its sketch: the engine numbers its glyph curves unpredictably")));
+            return Err(err(
+                line,
+                format!("{what} (line {at}) must come after the sketch's drawn entities: the engine numbers the curves it makes by what it copies"),
+            ));
+        }
+        if tail.is_none()
+            && let Some(what) = derived
+        {
+            tail = Some((line, what));
         }
         match &st.kind {
             SketchKind::Dim { .. } => dims.push(Some(line)),
-            SketchKind::Rect { kind: RectKind::Rounded(_), .. } | SketchKind::Fillet { .. } => dims.push(None),
+            SketchKind::Rect { kind: RectKind::Rounded(_), .. } | SketchKind::Fillet { .. } | SketchKind::Offset { .. } => dims.push(None),
             _ => {}
         }
         let before = out.len();
@@ -631,7 +662,6 @@ fn compile_sketch(s: &Sketch, out: &mut Vec<Value>, lines: &mut Vec<usize>, dims
                 out.push(cmd("sketch.ellipse", json!({"center": pt(center), "major": pt(major), "minor_radius": expr(minor)})));
             }
             SketchKind::Text { text, at, height, angle, align, font, bold, italic } => {
-                text_at = Some(line);
                 let mut p = json!({"text": text, "at": pt(at)});
                 for (k, v) in [("height", height), ("angle", angle), ("font", font)] {
                     if let Some(v) = v {
@@ -708,15 +738,51 @@ fn compile_sketch(s: &Sketch, out: &mut Vec<Value>, lines: &mut Vec<usize>, dims
                 };
                 out.push(c);
             }
+            SketchKind::Offset { refs, distance, side, symmetric } => {
+                let mut p = json!({"curves": t.curves(line, refs)?, "distance": expr(distance)});
+                if let Some(side) = side {
+                    p["side"] = pt(side);
+                }
+                if *symmetric {
+                    p["direction"] = json!("symmetric");
+                }
+                out.push(cmd("sketch.offset", p));
+            }
+            SketchKind::Mirror { refs, about } => {
+                let line_id = t.resolve(line, about)?;
+                if Kind::of(&line_id) != Kind::Line {
+                    return Err(err(line, format!("mirror about a line, not {}", Kind::of(&line_id).name())));
+                }
+                out.push(cmd("sketch.mirror", json!({"entities": t.curves(line, refs)?, "line": line_id})));
+            }
+            SketchKind::Pattern { refs, circular, count, center, angle, spacing, dir, count2, spacing2, dir2 } => {
+                let mut p = json!({"entities": t.curves(line, refs)?, "count": expr(count)});
+                if *circular {
+                    p["center"] = match center {
+                        Some(c) => ptv(&mut t, line, c)?,
+                        None => json!([0.0, 0.0]),
+                    };
+                    if let Some(a) = angle {
+                        p["angle"] = expr(a);
+                    }
+                    out.push(cmd("sketch.pattern.circular", p));
+                } else {
+                    for (k, v) in [("spacing", spacing), ("count2", count2), ("spacing2", spacing2)] {
+                        if let Some(v) = v {
+                            p[k] = expr(v);
+                        }
+                    }
+                    for (k, v) in [("dir", dir), ("dir2", dir2)] {
+                        if let Some(v) = v {
+                            p[k] = pt(v);
+                        }
+                    }
+                    out.push(cmd("sketch.pattern.rectangular", p));
+                }
+            }
             SketchKind::Fix { refs } => {
                 // A whole polyline, rectangle, slot or polygon fixes all of its curves.
-                let mut ids = Vec::new();
-                for r in refs {
-                    match t.curves_of(r) {
-                        Some(curves) => ids.extend(curves),
-                        None => ids.push(t.resolve(line, r)?),
-                    }
-                }
+                let ids = t.curves(line, refs)?;
                 out.push(cmd("sketch.constraint.fix", json!({"entities": ids, "fixed": true})));
             }
             SketchKind::Fillet { point, radius } => {
@@ -1240,6 +1306,53 @@ fn compile_feature(f: &Feature, sketches: &mut HashMap<String, SketchTable>) -> 
             operation(&mut o, &mut p)?;
             if f.kind == "sweep" { "solid.sweep" } else { "solid.pipe" }
         }
+        // A construction plane, for sketches (`sketch S on Name`) and features that take a plane.
+        "plane" => {
+            let base = |o: &mut Opts| -> R<Value> {
+                match (o.ident("on")?, o.tuple("face")?) {
+                    (Some(b), None) => Ok(json!(b)),
+                    (None, Some(f)) => Ok(json!({"face": f})),
+                    (None, None) => Ok(json!("XY")),
+                    _ => Err(err(line, "give the base plane `on <plane>` or `face (x,y,z)`, not both")),
+                }
+            };
+            if let Some(ts) = o.tuples("through")? {
+                let [a, b, c]: [Value; 3] = ts.try_into().map_err(|_| err(line, "`through` takes three points"))?;
+                for (k, v) in [("a", a), ("b", b), ("c", c)] {
+                    p[k] = json!({"point": v});
+                }
+                "construct.plane.three_points"
+            } else if let Some(planes) = o.list("between")? {
+                let [a, b]: [String; 2] = planes.try_into().map_err(|_| err(line, "`between` takes two planes"))?;
+                (p["a"], p["b"]) = (json!(a), json!(b));
+                "construct.plane.midplane"
+            } else if let Some(refs) = o.list("path")? {
+                let [r]: [String; 1] = refs.try_into().map_err(|_| err(line, "`path` takes one sketch curve"))?;
+                let Some((sk, rest)) = r.split_once('.') else {
+                    return Err(err(line, format!("`path` takes a sketch curve, `Sketch.curve`; `{r}` names no curve")));
+                };
+                let r = Ref { base: sk.to_string(), parts: rest.split('.').map(str::to_string).collect() };
+                let (sketch, curve) = sketch_ref(&r, None, sketches, line)?;
+                p["path"] = json!({"sketch": sketch, "curve": curve});
+                if let Some(t) = o.expr("fraction")? {
+                    p["t"] = t;
+                }
+                "construct.plane.along_path"
+            } else if let Some(angle) = o.expr("angle")? {
+                p["base"] = base(&mut o)?;
+                p["angle"] = angle;
+                p["axis"] = match o.take("axis") {
+                    Some(Val::Ref(r)) if r.parts.is_empty() && matches!(r.base.as_str(), "X" | "Y" | "Z") => json!(r.base),
+                    Some(Val::Tuples(t)) if t.len() == 1 => json!({"origin": o.tuple("origin")?.unwrap_or(json!([0, 0, 0])), "dir": comps(&t[0])}),
+                    _ => return Err(err(line, "a plane at an angle needs `axis X|Y|Z` or `axis (x,y,z)`, the hinge line")),
+                };
+                "construct.plane.at_angle"
+            } else {
+                p["base"] = base(&mut o)?;
+                p["offset"] = o.expr("offset")?.unwrap_or(json!(0));
+                "construct.plane.offset"
+            }
+        }
         "thread" => {
             p["face"] = o.tuple("face")?.ok_or_else(|| err(line, "`thread` needs `face (x,y,z)` on a cylindrical face"))?;
             if let Some(d) = o.ident("designation")? {
@@ -1484,7 +1597,50 @@ mod tests {
         let cmds = script("sketch S on XY {\n slot s = centers (0,0) (10,0) width 4\n polyline closed t = (0,0) (5,0) (0,5)\n fix s t\n}\n");
         assert_eq!(cmds[3]["params"]["entities"], json!(["l1", "l2", "a1", "a2", "l3", "l4", "l5"]));
         let e = fails("sketch S on XY {\n text \"HI\" at (0,0)\n circle c = (0,0) radius 1\n}\n");
-        assert!(e.contains("line 3") && e.contains("must come last"), "{e}");
+        assert!(e.contains("line 3") && e.contains("must come after the sketch's drawn entities"), "{e}");
+    }
+
+    #[test]
+    fn offset_mirror_and_pattern_copy_whole_entities() {
+        let cmds = script(
+            "param gap = 2 mm\nlet hole_r = 1 mm\nsketch S on XY {\n polyline closed o = (0,0) (20,0) (20,10) (0,10)\n circle c = (30,5) radius hole_r\n \
+             construction line m = (50,-10) (50,20)\n offset o distance (gap + 1 mm) side (10,5)\n mirror c about m\n \
+             pattern circular c count 4 center (40,5) angle 180 deg\n pattern rectangular c count 3 spacing (2*gap) dir (0,1) count2 2 spacing2 6 mm\n fix o\n}\n",
+        );
+        let by = |id: &str| cmds.iter().find(|c| c["command"] == id).unwrap()["params"].clone();
+        assert_eq!(by("sketch.offset"), json!({"curves": ["l1", "l2", "l3", "l4"], "distance": "gap + 1 mm", "side": [10.0, 5.0]}));
+        assert_eq!(by("sketch.mirror"), json!({"entities": ["c1"], "line": "l5"}));
+        assert_eq!(by("sketch.pattern.circular"), json!({"entities": ["c1"], "count": 4.0, "center": [40.0, 5.0], "angle": 180.0}));
+        assert_eq!(
+            by("sketch.pattern.rectangular"),
+            json!({"entities": ["c1"], "count": 3.0, "spacing": 4.0, "count2": 2.0, "spacing2": 6.0, "dir": [0.0, 1.0]})
+        );
+        let e = fails("sketch S on XY {\n circle c = (0,0) radius 1\n offset c distance 1\n circle d = (5,0) radius 1\n}\n");
+        assert!(e.contains("line 4") && e.contains("an offset (line 3) must come after"), "{e}");
+        let e = fails("sketch S on XY {\n circle c = (0,0) radius 1\n mirror c about c\n}\n");
+        assert!(e.contains("mirror about a line, not a circle"), "{e}");
+        assert!(fails("sketch S on XY {\n circle c = (0,0) radius 1\n pattern circular c count 1\n}\n").contains("2 through 500"));
+    }
+
+    #[test]
+    fn construction_planes() {
+        let cmds = script(
+            "plane Up on XY offset 20 mm\nplane Tilt on Up angle 30 deg axis X\nplane Hinge angle 10 deg axis (1,1,0) origin (5,0,0)\n\
+             plane Slope through (0,0,0) (10,0,5) (0,10,0)\nplane Mid between Up, Tilt\nsketch P on XZ {\n line l = (0,0) (10,-10)\n}\n\
+             plane Station path P.l fraction 0.25\nsketch S on Tilt {\n circle c = (0,0) radius 2\n}\n",
+        );
+        let p = |i: usize| (cmds[i]["command"].as_str().unwrap().to_string(), cmds[i]["params"].clone());
+        assert_eq!(p(0), ("construct.plane.offset".into(), json!({"base": "XY", "offset": "20 mm", "name": "Up"})));
+        assert_eq!(p(1), ("construct.plane.at_angle".into(), json!({"base": "Up", "angle": "30 deg", "axis": "X", "name": "Tilt"})));
+        assert_eq!(p(2).1["axis"], json!({"origin": [5.0, 0.0, 0.0], "dir": [1.0, 1.0, 0.0]}));
+        assert_eq!(p(3).1["b"], json!({"point": [10.0, 0.0, 5.0]}));
+        assert_eq!(p(4), ("construct.plane.midplane".into(), json!({"a": "Up", "b": "Tilt", "name": "Mid"})));
+        assert_eq!(p(8), ("construct.plane.along_path".into(), json!({"path": {"sketch": "P", "curve": "l1"}, "t": 0.25, "name": "Station"})));
+        assert_eq!(p(9).1["plane"], json!("Tilt"));
+        let checked = |src: &str| crate::check(&parse(src).unwrap()).unwrap_err();
+        let e = checked("sketch S on Tilt {\n circle c = (0,0) radius 2\n}\n");
+        assert!(e.contains("unknown plane `Tilt`; planes so far: XY, XZ, YZ"), "{e}");
+        assert!(checked("plane A on Nope offset 2 mm\n").contains("unknown plane `Nope`"));
     }
 
     #[test]

@@ -111,7 +111,7 @@
       }
     },
     "sketch-constraint": {
-      "match": "^\\s*(horizontal|vertical|coincident|tangent|equal|parallel|perpendicular|concentric|collinear|curvature|midpoint|symmetric|fix)\\b",
+      "match": "^\\s*(horizontal|vertical|coincident|tangent|equal|parallel|perpendicular|concentric|collinear|curvature|midpoint|symmetric|fix|offset|mirror|pattern)\\b",
       "captures": {
         "1": { "name": "support.function.constraint.solidcraft" }
       }
@@ -124,7 +124,7 @@
     },
 
     "feature": {
-      "match": "^\\s*(extrude|revolve|hole|box|cylinder|sphere|torus|fillet|chamfer|shell|mirror|pattern|combine|move|remove|sweep|loft|pipe|thread|coil|emboss|sheet_rule|flange)\\b(?:\\s+(circular)\\b)?\\s+(?:([A-Za-z_][A-Za-z0-9_]*)\\b|(\"[^\"]*\"))",
+      "match": "^\\s*(extrude|revolve|hole|box|cylinder|sphere|torus|fillet|chamfer|shell|mirror|pattern|combine|move|remove|sweep|loft|pipe|thread|coil|emboss|sheet_rule|flange|plane)\\b(?:\\s+(circular)\\b)?\\s+(?:([A-Za-z_][A-Za-z0-9_]*)\\b|(\"[^\"]*\"))",
       "captures": {
         "1": { "name": "storage.type.feature.solidcraft" },
         "2": { "name": "storage.modifier.solidcraft" },

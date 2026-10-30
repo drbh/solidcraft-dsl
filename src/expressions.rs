@@ -163,6 +163,36 @@ pub fn lower(d: &Design) -> R<Lowered> {
                             coords(center, &env, line, "seed", Kind::Length, false, &mut sites)?;
                             coords(major, &env, line, "seed", Kind::Length, false, &mut sites)?;
                         }
+                        SketchKind::Offset { side: Some(side), .. } => coords(side, &env, line, "seed", Kind::Length, false, &mut sites)?,
+                        // The engine takes a sketch pattern's counts, spacings and angle as numbers.
+                        SketchKind::Pattern { count, center, angle, spacing, dir, count2, spacing2, dir2, .. } => {
+                            if let Some(Pt::Xy(c)) = center {
+                                coords(c, &env, line, "seed", Kind::Length, false, &mut sites)?;
+                            }
+                            for c in [dir, dir2].into_iter().flatten() {
+                                coords(c, &env, line, "direction", Kind::Unitless, false, &mut sites)?;
+                            }
+                            for n in [Some(count), count2.as_mut()].into_iter().flatten() {
+                                let v = env.number(n, Kind::Unitless, line, "count")?;
+                                if v.fract() != 0. || !(2. ..=500.).contains(&v) {
+                                    return Err(error(line, "count", "must be a whole number from 2 through 500"));
+                                }
+                                sites.push(
+                                    json!({"line":line,"role":"topology","expression":n,"value":v,"persistent":false,"depends_on":references(n)}),
+                                );
+                                *n = (v as usize).to_string();
+                            }
+                            for e in [spacing, spacing2].into_iter().flatten() {
+                                let v = env.number(e, Kind::Length, line, "spacing")?;
+                                sites.push(json!({"line":line,"role":"seed","expression":e,"value":v,"unit":"mm","persistent":false,"depends_on":references(e)}));
+                                *e = v.to_string();
+                            }
+                            if let Some(a) = angle {
+                                let v = env.number(a, Kind::Angle, line, "angle")?.to_degrees();
+                                sites.push(json!({"line":line,"role":"seed","expression":a,"value":v,"unit":"deg","persistent":false,"depends_on":references(a)}));
+                                *a = v.to_string();
+                            }
+                        }
                         SketchKind::Polygon { center, sides, .. } => {
                             coords(center, &env, line, "seed", Kind::Length, false, &mut sites)?;
                             let n = env.number(sides, Kind::Unitless, line, "sides")?;
@@ -336,6 +366,20 @@ fn inline_helpers(d: &mut Design) -> R<()> {
                             expand(minor, &helpers)?;
                         }
                         SketchKind::Dim { value, .. } => expand(value, &helpers)?,
+                        SketchKind::Offset { distance, side, .. } => {
+                            expand(distance, &helpers)?;
+                            if let Some(side) = side {
+                                coords(side, &helpers)?;
+                            }
+                        }
+                        SketchKind::Pattern { center, dir, dir2, .. } => {
+                            if let Some(c) = center {
+                                point(c, &helpers)?;
+                            }
+                            for d in [dir, dir2].into_iter().flatten() {
+                                coords(d, &helpers)?;
+                            }
+                        }
                         SketchKind::Fillet { radius, .. } => expand(radius, &helpers)?,
                         _ => {}
                     }

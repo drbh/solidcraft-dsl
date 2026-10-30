@@ -166,6 +166,35 @@ pub enum SketchKind {
         bold: bool,
         italic: bool,
     },
+    /// `offset a b distance d [side (x,y)] [symmetric]`: an offset copy of whole entities or of
+    /// curves, kept at the distance (a live dimension) as they change.
+    Offset {
+        refs: Vec<Ref>,
+        distance: String,
+        side: Option<[Comp; 2]>,
+        symmetric: bool,
+    },
+    /// `mirror a b about l`: copies held symmetric to the originals about line `l`.
+    Mirror {
+        refs: Vec<Ref>,
+        about: Ref,
+    },
+    /// `pattern circular a count n [center (x,y) | center p] [angle a]`, or
+    /// `pattern rectangular a count n spacing s [dir (x,y)] [count2 m spacing2 t [dir2 (x,y)]]`.
+    /// Counts include the original.
+    Pattern {
+        refs: Vec<Ref>,
+        circular: bool,
+        count: String,
+        /// Coordinates make a free centre point; name a fixed point to hold the pattern still.
+        center: Option<Pt>,
+        angle: Option<String>,
+        spacing: Option<String>,
+        dir: Option<[Comp; 2]>,
+        count2: Option<String>,
+        spacing2: Option<String>,
+        dir2: Option<[Comp; 2]>,
+    },
     /// `dim [type] a [-> b] = expr`
     Dim {
         kind: Option<String>,

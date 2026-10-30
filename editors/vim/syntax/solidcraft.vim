@@ -24,7 +24,7 @@ syn keyword scKey       plane axis count count2 spacing spacing2 dir dir2 offset
 syn keyword scKey       taper angle clearance thread depth height width length major minor
 syn keyword scKey       thickness fit sides size corner center base normal to position
 syn keyword scKey       counterbore countersink features bodies tools points target type
-syn keyword scKey       direction alignment alignment2 face start through end
+syn keyword scKey       direction alignment alignment2 face start through end between fraction side
 syn match   scKey       "\<origin\ze\s*("
 " modifiers (bare words that take no value)
 syn keyword scModifier  closed infer construction rounded periodic inscribed circumscribed
@@ -65,8 +65,8 @@ syn match   scDesignName  "\%(^\s*design\s\+\)\@<=\h\w*"
 syn match   scParamName   "\%(^\s*\%(param\|let\)\s\+\)\@<=\h\w*"
 syn match   scSketchName  '\%(^\s*sketch\s\+\)\@<=\%(\h\w*\|"[^"]*"\)'
 
-syn match   scFeature     "^\s*\%(extrude\|revolve\|hole\|box\|cylinder\|sphere\|torus\|fillet\|chamfer\|shell\|mirror\|pattern\|combine\|move\|remove\|sweep\|loft\|pipe\|thread\|coil\|emboss\|sheet_rule\|flange\)\>"
-syn match   scFeatureName '\%(^\s*\%(extrude\|revolve\|hole\|box\|cylinder\|sphere\|torus\|fillet\|chamfer\|shell\|mirror\|pattern\|combine\|move\|remove\|sweep\|loft\|pipe\|thread\|coil\|emboss\|sheet_rule\|flange\)\s\+\%(circular\s\+\)\?\)\@<=\%(\h\w*\|"[^"]*"\)'
+syn match   scFeature     "^\s*\%(extrude\|revolve\|hole\|box\|cylinder\|sphere\|torus\|fillet\|chamfer\|shell\|mirror\|pattern\|combine\|move\|remove\|sweep\|loft\|pipe\|thread\|coil\|emboss\|sheet_rule\|flange\|plane\)\>"
+syn match   scFeatureName '\%(^\s*\%(extrude\|revolve\|hole\|box\|cylinder\|sphere\|torus\|fillet\|chamfer\|shell\|mirror\|pattern\|combine\|move\|remove\|sweep\|loft\|pipe\|thread\|coil\|emboss\|sheet_rule\|flange\|plane\)\s\+\%(circular\s\+\)\?\)\@<=\%(\h\w*\|"[^"]*"\)'
 
 " ---- inside a sketch block ---------------------------------------------------------------
 
@@ -80,7 +80,7 @@ syn match   scDim         "^\s*dim\>\%(\s\+\%(auto\|distance\|horizontal\|vertic
 syn keyword scDimWord     dim contained
 syn keyword scDimKind     auto distance horizontal vertical length radius diameter angle contained
 " constraints and the sketch fillet
-syn match   scConstraint  "^\s*\%(horizontal\|vertical\|coincident\|tangent\|equal\|parallel\|perpendicular\|concentric\|collinear\|curvature\|midpoint\|symmetric\|fix\|fillet\)\>" contained
+syn match   scConstraint  "^\s*\%(horizontal\|vertical\|coincident\|tangent\|equal\|parallel\|perpendicular\|concentric\|collinear\|curvature\|midpoint\|symmetric\|fix\|fillet\|offset\|mirror\|pattern\)\>" contained
 
 syn region  scSketchBlock matchgroup=scDelimiter start="{" end="}" fold
       \ contains=@scCommon,scSketchStmt,scEntityName,scDim,scConstraint

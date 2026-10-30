@@ -62,6 +62,8 @@ struct Checker {
     params: HashMap<String, solidcraft_expr::Value>,
     names: HashMap<String, Named>,
     bodies: Vec<String>,
+    /// Construction planes defined so far, after the origin planes.
+    planes: Vec<String>,
 }
 
 impl Checker {
@@ -138,6 +140,14 @@ impl Checker {
             }
         }
         Ok(())
+    }
+
+    /// A name given where a plane is expected: an origin plane or a `plane` defined above.
+    fn plane_ref(&self, line: usize, key: &str, name: &str) -> R<()> {
+        if self.planes.iter().any(|p| p == name) {
+            return Ok(());
+        }
+        Err(err(line, format!("`{key}`: unknown plane `{name}`; planes so far: {}", self.planes.join(", "))))
     }
 
     /// A name given where a body is expected.
@@ -283,19 +293,37 @@ pub fn check(d: &Design) -> R<()> {
 pub(crate) fn check_geometry(d: &Design) -> R<()> {
     let env = crate::expressions::Environment::new(d)?;
     crate::expressions::lower(d)?;
-    let mut c = Checker { params: env.values.into_iter().collect(), names: HashMap::new(), bodies: Vec::new() };
+    let mut c = Checker {
+        params: env.values.into_iter().collect(),
+        names: HashMap::new(),
+        bodies: Vec::new(),
+        planes: ["XY", "XZ", "YZ"].map(String::from).to_vec(),
+    };
     for p in &d.params {
         c.names.insert(p.name.clone(), Named::Param);
     }
     for item in &d.items {
         match item {
             Item::Sketch(s) => {
+                if let Plane::Named(n) = &s.plane {
+                    c.plane_ref(s.line, "on", n)?;
+                }
                 c.sketch(s)?;
                 c.names.insert(s.name.clone(), Named::Sketch);
             }
             Item::Feature(f) => {
+                for (k, v) in &f.opts {
+                    match (k.as_str(), v) {
+                        ("on" | "plane", Val::Expr(n)) => c.plane_ref(f.line, k, n)?,
+                        ("between", Val::List(ns)) => ns.iter().try_for_each(|n| c.plane_ref(f.line, k, n))?,
+                        _ => {}
+                    }
+                }
                 c.feature(f)?;
                 c.names.insert(f.name.clone(), Named::Feature);
+                if f.kind == "plane" {
+                    c.planes.push(f.name.clone());
+                }
             }
         }
     }

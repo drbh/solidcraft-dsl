@@ -38,6 +38,7 @@ const EXPR_KEYS: &[&str] = &[
     "k_factor",
     "bend_radius",
     "start_angle",
+    "fraction",
 ];
 const TUPLE_KEYS: &[&str] = &[
     "profiles",
@@ -56,10 +57,11 @@ const TUPLE_KEYS: &[&str] = &[
     "counterbore",
     "countersink",
     "face",
+    "through",
 ];
-const LIST_KEYS: &[&str] = &["targets", "features", "bodies", "tools", "points", "sections"];
+const LIST_KEYS: &[&str] = &["targets", "features", "bodies", "tools", "points", "sections", "between"];
 const IDENT_KEYS: &[&str] =
-    &["from", "body", "axis", "plane", "target", "sketch", "type", "direction", "alignment", "alignment2", "rule", "section_position"];
+    &["from", "body", "axis", "plane", "target", "sketch", "type", "direction", "alignment", "alignment2", "rule", "section_position", "on"];
 const FLAGS: &[&str] = &[
     "symmetric",
     "negative",
@@ -113,6 +115,7 @@ const FEATURES: &[&str] = &[
     "emboss",
     "sheet_rule",
     "flange",
+    "plane",
 ];
 
 struct P<'a> {
@@ -597,6 +600,24 @@ fn parse_points(c: &mut Cur, min: usize) -> R<Vec<Pt>> {
     Ok(pts)
 }
 
+/// The entities an offset, mirror or pattern copies: references, optionally comma-separated,
+/// up to the keyword that follows them.
+fn derived_refs(c: &mut Cur, line: usize, until: &[&str]) -> R<Vec<Ref>> {
+    let mut refs = Vec::new();
+    while !c.peek_ident().is_some_and(|w| until.contains(&w)) {
+        if c.done() {
+            return Err(err(line, format!("expected `{}` after the entities", until[0])));
+        }
+        refs.push(c.reference()?);
+        c.eat_punct(',');
+    }
+    c.i += 1;
+    if refs.is_empty() {
+        return Err(err(line, "name the entities to copy"));
+    }
+    Ok(refs)
+}
+
 fn parse_sketch_stmt(c: &mut Cur) -> R<SketchStmt> {
     let line = c.no;
     let mut construction = false;
@@ -804,6 +825,51 @@ fn parse_sketch_stmt(c: &mut Cur) -> R<SketchStmt> {
             }
             let value = c.rest_after_eq()?;
             SketchKind::Dim { kind, refs, value }
+        }
+        "offset" => {
+            let refs = derived_refs(c, line, &["distance"])?;
+            let distance = c.expr1("the offset distance")?;
+            let (mut side, mut symmetric) = (None, false);
+            while !c.done() {
+                match c.ident("an offset option: side or symmetric")?.as_str() {
+                    "side" => side = Some(c.point2()?),
+                    "symmetric" => symmetric = true,
+                    other => return Err(err(line, format!("unknown offset option `{other}`"))),
+                }
+            }
+            SketchKind::Offset { refs, distance, side, symmetric }
+        }
+        "mirror" => {
+            let refs = derived_refs(c, line, &["about"])?;
+            SketchKind::Mirror { refs, about: c.reference()? }
+        }
+        "pattern" => {
+            let circular = match c.ident("circular or rectangular")?.as_str() {
+                "circular" => true,
+                "rectangular" => false,
+                other => return Err(err(line, format!("expected `pattern circular` or `pattern rectangular`, found `{other}`"))),
+            };
+            let refs = derived_refs(c, line, &["count"])?;
+            let count = c.expr1("the count")?;
+            let (mut center, mut angle, mut spacing, mut dir, mut count2, mut spacing2, mut dir2) = (None, None, None, None, None, None, None);
+            while !c.done() {
+                match (c.ident("a pattern option")?.as_str(), circular) {
+                    ("center", true) => center = Some(if c.peek() == Some(&Tok::Punct('(')) { Pt::Xy(c.point2()?) } else { Pt::Ref(c.reference()?) }),
+                    ("angle", true) => angle = Some(c.expr1("the total angle")?),
+                    ("spacing", false) => spacing = Some(c.expr1("the spacing")?),
+                    ("dir", false) => dir = Some(c.point2()?),
+                    ("count2", false) => count2 = Some(c.expr1("the second count")?),
+                    ("spacing2", false) => spacing2 = Some(c.expr1("the second spacing")?),
+                    ("dir2", false) => dir2 = Some(c.point2()?),
+                    (other, _) => {
+                        return Err(err(line, format!("unknown {} pattern option `{other}`", if circular { "circular" } else { "rectangular" })));
+                    }
+                }
+            }
+            if !circular && (spacing.is_none() || count2.is_some() != spacing2.is_some()) {
+                return Err(err(line, "a rectangular pattern needs `spacing`, and `count2` goes with `spacing2`"));
+            }
+            SketchKind::Pattern { refs, circular, count, center, angle, spacing, dir, count2, spacing2, dir2 }
         }
         "fix" => {
             let mut refs = vec![c.reference()?];
