@@ -1,4 +1,4 @@
-# Reusing parts with `use`, and repeating with `for`
+# Reusing parts with `use`, repeating with `for`, choosing with `if`
 
 A part designed once, in a file of its own, can be placed in other designs:
 
@@ -51,3 +51,27 @@ expression stays live (`pin_d + 3*step`). Blocks nest, and a block can hold sket
 checks and `use`. The bounds are numbers, not parameters, because the repetition happens when
 compiling; a negative value can't go in a name. Errors point at the statement in the block. See
 `60_hole_fit_ladder`.
+
+## Choosing with `if`
+
+```sc
+param mount_ears = 1
+if mount_ears {
+  box EarL size ear (2*ear) ear_t corner (-ear, D/2 - ear, 0) join targets Box
+} else {
+  box Foot size 10 10 2 join targets Box
+}
+for k from 1 to 5 {
+  if k != 3 {
+    cylinder Hole{k} diameter 4 mm height 10 mm base (k*12 mm, 10, 0) cut targets Plate
+  }
+}
+```
+
+An `if` block keeps its statements when its condition holds; otherwise the `else` block's, if
+there is one. A condition is a comparison of two values (`==`, `!=`, `<`, `<=`, `>`, `>=`, with
+matching units), or a single value that holds unless it is zero. It uses the parameters' values
+and a `for` block's variable. In a used part, it sees the values that `with` gives the part.
+The choice is made when compiling: change the parameter and build again to switch a feature
+on or off. Editing the parameter in SolidCraft changes sizes but doesn't add or remove
+features. See `59_pcb_box` (`mount_ears`).

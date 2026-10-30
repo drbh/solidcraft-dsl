@@ -474,10 +474,16 @@ pub(crate) fn compile_geometry(d: &Design) -> R<Compiled> {
         expressions: {
             let mut e = lowered.explanation;
             // Primitives newer engines add, refused up front by older ones.
-            if d.items.iter().any(|i| matches!(i, Item::Feature(f) if f.kind == "cone"))
-                && let Some(r) = e["requires"].as_array_mut()
-            {
-                r.push(json!("solid_cone"));
+            let uses = |kind: &str, flag: Option<&str>| {
+                d.items.iter().any(|i| matches!(i, Item::Feature(f) if f.kind == kind && flag.is_none_or(|k| f.opts.iter().any(|(o, _)| o == k))))
+            };
+            if let Some(r) = e["requires"].as_array_mut() {
+                if uses("cone", None) {
+                    r.push(json!("solid_cone"));
+                }
+                if uses("thread", Some("left")) {
+                    r.push(json!("thread_handedness"));
+                }
             }
             e
         },
@@ -1538,6 +1544,10 @@ fn compile_feature(f: &Feature, sketches: &mut HashMap<String, SketchTable>) -> 
             if o.flag("modeled") {
                 p["modeled"] = json!(true);
             }
+            // Left-handed threads need an engine with thread handedness (0.27 or later).
+            if o.flag("left") {
+                p["handedness"] = json!("left");
+            }
             "solid.thread"
         }
         "coil" => {
@@ -1931,6 +1941,11 @@ mod tests {
         let new = json!([{"id": "solid.cone", "params": "radius | diameter, height; top_radius?"}]);
         crate::assembly::check_capabilities(&c, &new).unwrap();
         assert!(fails("cone C height 2\n").contains("needs `radius` or `diameter`"));
+        let left = compile(&parse("cylinder S radius 4 height 20 -> body B\nthread T face (4,0,10) designation M8 modeled left\n").unwrap()).unwrap();
+        assert_eq!(left.script["commands"][1]["params"]["handedness"], json!("left"));
+        assert_eq!(left.expressions["requires"], json!(["thread_handedness"]));
+        let right = compile(&parse("cylinder S radius 4 height 20 -> body B\nthread T face (4,0,10) designation M8\n").unwrap()).unwrap();
+        assert_eq!(right.expressions["requires"], json!([]));
     }
 
     #[test]

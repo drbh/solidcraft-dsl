@@ -8,6 +8,7 @@ use std::path::{Path, PathBuf};
 
 use crate::ast::Use;
 use crate::lex::{Tok, lex};
+use solidcraft_expr::{Value, eval_with};
 
 type R<T> = Result<T, String>;
 
@@ -60,10 +61,36 @@ fn located(file: &str, e: String) -> String {
 
 /// Expand every `use` in `src` (the design at `path`), recursively.
 pub fn expand(src: &str, path: &Path) -> R<Expanded> {
-    expand_inner(src, path, &mut vec![])
+    expand_inner(src, path, &mut vec![], &HashMap::new())
 }
 
-fn expand_inner(src: &str, path: &Path, stack: &mut Vec<PathBuf>) -> R<Expanded> {
+/// The design's parameter values (with `fixed` replacing some), for deciding `if` blocks.
+fn param_values(src: &str, fixed: &HashMap<String, Value>) -> R<HashMap<String, Value>> {
+    let mut defs = Vec::new();
+    let declarations = src.lines().filter(|l| matches!(l.split_whitespace().next(), Some("param" | "let")));
+    for l in declarations.map(lex).collect::<R<Vec<_>>>()?.into_iter().flatten() {
+        let (Some(Tok::Ident(name)), Some((_, expr))) = (l.toks.get(1), l.raw.split_once('=')) else { continue };
+        let expr = match fixed.get(name) {
+            Some(v) => literal(*v),
+            None => expr.trim().to_string(),
+        };
+        defs.push(solidcraft_expr::ParamDef { name: name.clone(), expr, unit: "auto".into() });
+    }
+    // Unevaluable parameters are left out; a condition that needs one says so.
+    Ok(solidcraft_expr::eval_params(&defs, 1.0).0.into_iter().collect())
+}
+
+/// A value as expression text: `12 mm`, `0.5 rad` or a number.
+fn literal(v: Value) -> String {
+    match (v.len, v.ang) {
+        (1, 0) => format!("{} mm", v.v),
+        (0, 1) => format!("{} rad", v.v),
+        _ => format!("{}", v.v),
+    }
+}
+
+fn expand_inner(src: &str, path: &Path, stack: &mut Vec<PathBuf>, fixed: &HashMap<String, Value>) -> R<Expanded> {
+    let params = param_values(src, fixed)?;
     let mut out = Expanded { text: String::new(), origin: vec![] };
     let push = |out: &mut Expanded, text: &str, origin: Origin| {
         out.text.push_str(text);
@@ -71,7 +98,7 @@ fn expand_inner(src: &str, path: &Path, stack: &mut Vec<PathBuf>) -> R<Expanded>
         out.origin.push(origin);
     };
     let numbered: Vec<(String, usize)> = src.lines().enumerate().map(|(i, t)| (t.to_string(), i + 1)).collect();
-    for (text, no) in unroll(&numbered)? {
+    for (text, no) in unroll(&numbered, &params)? {
         let first = lex(&text)?.into_iter().next();
         let Some(mut line) = first.filter(|l| matches!(l.toks.first(), Some(Tok::Ident(w)) if w == "use")) else {
             push(&mut out, &text, Origin::Here(no));
@@ -89,7 +116,14 @@ fn expand_inner(src: &str, path: &Path, stack: &mut Vec<PathBuf>) -> R<Expanded>
         }
         let part_src = std::fs::read_to_string(&file).map_err(|e| format!("line {no}: {}: {e}", file.display()))?;
         stack.push(canonical);
-        let part = expand_inner(&part_src, &file, stack).map_err(|e| format!("line {no}: {}", located(&file.display().to_string(), e)))?;
+        // The part decides its `if`s with the overridden values, evaluated here.
+        let mut values = HashMap::new();
+        for (name, expr) in &u.overrides {
+            let v = eval_with(expr, &|n| params.get(n).copied().ok_or_else(|| solidcraft_expr::Error(format!("unknown parameter `{n}`"))))
+                .map_err(|e| format!("line {no}: `{name} = {expr}`: {}", e.0))?;
+            values.insert(name.clone(), v);
+        }
+        let part = expand_inner(&part_src, &file, stack, &values).map_err(|e| format!("line {no}: {}", located(&file.display().to_string(), e)))?;
         stack.pop();
         let (body, origins) = instantiate(&part, &u, no).map_err(|e| format!("line {no}: {e}"))?;
         for (text, origin) in body.iter().zip(origins) {
@@ -105,24 +139,31 @@ fn expand_inner(src: &str, path: &Path, stack: &mut Vec<PathBuf>) -> R<Expanded>
 }
 
 /// Unroll `for v from a to b [step s] { … }` blocks: the body once for each value, with `{v}`
-/// (in names and strings) and the word `v` (in expressions) replaced by it. Lines keep their
-/// numbers in the original text.
-fn unroll(lines: &[(String, usize)]) -> R<Vec<(String, usize)>> {
+/// (in names and strings) and the word `v` (in expressions) replaced by it. Keep the statements
+/// of an `if <condition> { … } [else { … }]` block that the parameter values select. Lines keep
+/// their numbers in the original text.
+fn unroll(lines: &[(String, usize)], params: &HashMap<String, Value>) -> R<Vec<(String, usize)>> {
     let mut out = Vec::new();
     let mut i = 0;
     while i < lines.len() {
         let (text, no) = (&lines[i].0, lines[i].1);
-        let Some((var, values)) = for_head(text, no)? else {
+        let head = crate::lex::strip_comment(text).trim();
+        let is_if = head.starts_with("if ") && head.ends_with('{');
+        let for_head = if is_if { None } else { for_head(text, no)? };
+        if !is_if && for_head.is_none() {
             out.push(lines[i].clone());
             i += 1;
             continue;
-        };
-        // The body runs to the `}` that closes the `for`, past any blocks inside it.
+        }
+        // The block runs to its closing `}`, past any blocks inside it; `} else {` splits an `if`.
         let mut depth = 1;
         let mut j = i + 1;
+        let mut split = None;
         while j < lines.len() {
             let t = crate::lex::strip_comment(&lines[j].0).trim().to_string();
-            if t.ends_with('{') {
+            if t == "} else {" && depth == 1 && is_if && split.is_none() {
+                split = Some(j);
+            } else if t.ends_with('{') {
                 depth += 1;
             } else if t == "}" {
                 depth -= 1;
@@ -133,17 +174,51 @@ fn unroll(lines: &[(String, usize)]) -> R<Vec<(String, usize)>> {
             j += 1;
         }
         if j == lines.len() {
-            return Err(format!("line {no}: `for` block is never closed with `}}`"));
+            return Err(format!("line {no}: `{}` block is never closed with `}}`", if is_if { "if" } else { "for" }));
         }
-        let body = unroll(&lines[i + 1..j])?;
-        for v in values {
-            for (t, n) in &body {
-                out.push((substitute(t, &var, v), *n));
+        if let Some((var, values)) = for_head {
+            for v in values {
+                let body: Vec<(String, usize)> = lines[i + 1..j].iter().map(|(t, n)| (substitute(t, &var, v), *n)).collect();
+                out.extend(unroll(&body, params)?);
             }
+        } else {
+            let condition = head["if ".len()..head.len() - 1].trim();
+            let (then, otherwise) = match split {
+                Some(k) => (&lines[i + 1..k], &lines[k + 1..j]),
+                None => (&lines[i + 1..j], &lines[j..j]),
+            };
+            let chosen = if holds(condition, params).map_err(|e| format!("line {no}: if: {e}"))? { then } else { otherwise };
+            out.extend(unroll(chosen, params)?);
         }
         i = j + 1;
     }
     Ok(out)
+}
+
+/// `a <op> b` (==, !=, <=, >=, <, >) or a value that is true unless zero.
+fn holds(condition: &str, params: &HashMap<String, Value>) -> R<bool> {
+    let value = |e: &str| -> R<Value> {
+        eval_with(e.trim(), &|n| params.get(n).copied().ok_or_else(|| solidcraft_expr::Error(format!("unknown parameter `{n}`"))))
+            .map_err(|err| format!("`{}`: {}", e.trim(), err.0))
+    };
+    for op in ["==", "!=", "<=", ">=", "<", ">"] {
+        if let Some((a, b)) = condition.split_once(op) {
+            let (a, b) = (value(a)?, value(b)?);
+            if (a.len, a.ang) != (b.len, b.ang) && !(a.unitless() || b.unitless()) {
+                return Err(format!("`{condition}` compares different kinds of values"));
+            }
+            let eps = 1e-9 * a.v.abs().max(b.v.abs()).max(1.0);
+            return Ok(match op {
+                "==" => (a.v - b.v).abs() <= eps,
+                "!=" => (a.v - b.v).abs() > eps,
+                "<=" => a.v <= b.v + eps,
+                ">=" => a.v >= b.v - eps,
+                "<" => a.v < b.v - eps,
+                _ => a.v > b.v + eps,
+            });
+        }
+    }
+    Ok(value(condition)?.v != 0.0)
 }
 
 /// `for v from a to b [step s] {`: the variable and its values.
@@ -425,6 +500,39 @@ mod tests {
         assert!(e.starts_with("line 3:"), "{e}");
         assert!(crate::build("design L\nfor k from 1 to {\n}\n").unwrap_err().contains("expected `for v from"));
         assert!(crate::build("design L\nfor k from 1 to 3 {\n box B size 1 1 1\n").unwrap_err().contains("never closed"));
+    }
+
+    #[test]
+    fn if_blocks_keep_what_the_parameters_select() {
+        let src = "design T units mm\nparam lid = 1\nparam w = 40 mm\nlet half = w/2\nif lid {\n  box Lid size w 10 2 -> body Lid\n} else {\n  box NoLid size 1 1 1 -> body NoLid\n}\n\
+                   if half > 30 mm {\n  box Wide size 1 1 1 -> body Wide\n}\nfor k from 1 to 3 {\n  if k != 2 {\n    box P{k} size 1 1 1 corner (k*2, 0, 0) -> body P{k}\n  }\n}\n";
+        let c = crate::build(src).unwrap();
+        let features = |c: &crate::Compiled| -> Vec<String> {
+            c.script["commands"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .filter(|c| c["command"] != "parameters.add")
+                .filter_map(|c| c["params"]["name"].as_str().map(str::to_string))
+                .collect()
+        };
+        assert_eq!(features(&c), ["Lid", "P1", "P3"]);
+        assert!(
+            crate::build(&src.replace("param lid = 1", "param lid = 0")).unwrap().script["commands"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .any(|c| c["params"]["name"] == "NoLid")
+        );
+        assert!(crate::build("design T\nif nope {\n}\n").unwrap_err().contains("line 2: if: `nope`: unknown parameter `nope`"));
+        assert!(crate::build("design T\nparam a = 1 mm\nif a > 1 deg {\n}\n").unwrap_err().contains("different kinds"));
+        // A used part decides its `if`s with the values `with` gives it.
+        let part = "design Opt units mm\nparam tab = 0\nbox B size 2 2 2 -> body Base\nif tab {\n  box T size 1 1 4 join targets Base\n}\n";
+        let dir = files("if", &[("opt.sc", part)]);
+        let host = "design H units mm\nparam want = 1\nuse A from \"opt.sc\" -> body Plain\nuse B from \"opt.sc\" with (tab = want) -> body Tabbed\n";
+        let c = crate::build_file(host, &dir.join("h.sc")).unwrap();
+        assert_eq!(features(&c), ["A_B", "B_B", "B_T"]);
+        let _ = std::fs::remove_dir_all(&dir);
     }
 
     #[test]

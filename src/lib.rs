@@ -47,7 +47,7 @@ pub fn build_file(src: &str, path: &std::path::Path) -> Result<Compiled, String>
 fn build_at(src: &str, path: Option<&std::path::Path>) -> Result<Compiled, String> {
     let starts = |w: &str| src.lines().any(|l| l.trim_start().starts_with(w));
     // `use` needs the file's location; without it, parsing explains. `for` needs none.
-    if native::is_source(src) || !(starts("for ") || (path.is_some() && starts("use "))) {
+    if native::is_source(src) || !(starts("for ") || starts("if ") || (path.is_some() && starts("use "))) {
         return build_plain(src);
     }
     let x = reuse::expand(src, path.unwrap_or(std::path::Path::new("design.sc")))?;

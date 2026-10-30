@@ -53,7 +53,7 @@
       }
     },
     "assembly": {
-      "match": "\\b(component|instance|connector|ground|joint|check|color|material|print|use|with|for|step|between|and|rotate|value|values|limits|opposed)\\b",
+      "match": "\\b(component|instance|connector|ground|joint|check|color|material|print|use|with|for|step|if|else|between|and|rotate|value|values|limits|opposed)\\b",
       "name": "keyword.control.assembly.solidcraft"
     },
     "sketch-header": {

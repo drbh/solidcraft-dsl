@@ -484,6 +484,7 @@ pub fn check_capabilities(c: &Compiled, commands: &Value) -> R<()> {
             Some("authored_occurrence_names") => &[("component.create", "occurrence_name"), ("occurrence.copy", "occurrence_name")],
             Some("linked_occurrence_names") => &[("component.insert_design", "occurrence_name")],
             Some("solid_cone") => &[("solid.cone", "top_radius")],
+            Some("thread_handedness") => &[("solid.thread", "handedness")],
             _ => return Err(format!("unknown required engine capability {required}")),
         };
         for (id, field) in specs {

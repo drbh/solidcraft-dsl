@@ -130,7 +130,7 @@ material Shelf, ShelfLeft PLA
 loft Pot sections Base, Middle, Rim -> body Pot                 // 32_lofted_planter
 sweep Hook from Profile path Path.a, Path.k, Path.b new -> body Hook   // 33_swept_wall_hook
 pipe Tube path Path.a, Path.b diameter 6 wall 1 new -> body Tube
-thread NeckThread face (rn, 0, z) designation M28x2 modeled     // 49_bottle_and_cap
+thread NeckThread face (rn, 0, z) designation M28x2 modeled     // 49_bottle_and_cap; `left` for left-handed (engine 0.27+)
 coil Spring diameter 20 turns 5 pitch 4 section_size 1.5 base (0,0,0) new -> body Spring
 emboss Letters from Label depth 1 targets Tag                   // 50_name_tag (deboss to cut in)
 ```
