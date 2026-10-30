@@ -334,6 +334,15 @@ pub(crate) fn check_geometry(d: &Design) -> R<()> {
             c.body_ref(k.line, "check", body)?;
         }
     }
+    let mut printed = HashMap::new();
+    for p in &d.prints {
+        for body in &p.bodies {
+            c.body_ref(p.line, "print", body)?;
+            if let Some(first) = printed.insert(body.as_str(), p.line) {
+                return Err(err(p.line, format!("`{body}` already has a print orientation (line {first})")));
+            }
+        }
+    }
     Ok(())
 }
 

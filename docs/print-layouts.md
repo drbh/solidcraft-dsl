@@ -1,5 +1,20 @@
 # Reusable export and review layouts
 
+## Print orientation in the design
+
+```sc
+print Holder up X              // the side that faces away from the bed
+print RollerA, RollerB up Y    // bodies in one statement stay together
+print Lid up (0, 0, -1)
+print bed (250, 210)           // optional: fail if the plate overflows
+```
+
+`print` statements describe a layout named `print`: each group is turned so its `up` points
+away from the bed, and the groups are arranged automatically. Without a requests file,
+`evaluate` exports it as `print-3mf` and `print-glb`, with a `print-view` image. A recipe can
+use `"layout": "print"` too, unless it defines its own layout of that name. Overhang checks
+without `up` use the same orientation, so a part's print pose is stated once.
+
 A `.sc` file describes a design. A request recipe describes the outputs you want from that
 design, including optional manufacturing layouts. Keep authored `*.print.json` recipes beside
 the examples; put generated scripts, reports, meshes and images in the evaluation output folder.

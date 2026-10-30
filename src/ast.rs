@@ -146,6 +146,17 @@ pub enum SketchKind {
         pts: Vec<Pt>,
         periodic: bool,
     },
+    /// `curve c = (x(t), y(t)) t from a to b [points n] [closed]`: an equation curve, sampled when
+    /// compiling into a fit-point spline (lowered to `Spline` before compiling).
+    Curve {
+        name: String,
+        x: String,
+        y: String,
+        from: String,
+        to: String,
+        points: Option<String>,
+        closed: bool,
+    },
     /// `ellipse e = (cx,cy) major (x,y) minor r`: `major` is the end of the major axis.
     Ellipse {
         name: String,
@@ -194,6 +205,14 @@ pub enum SketchKind {
         count2: Option<String>,
         spacing2: Option<String>,
         dir2: Option<[Comp; 2]>,
+    },
+    /// `svg "file.svg" [at (x,y)] [scale s]` or `dxf "file.dxf" …`: curves drawn by another tool,
+    /// read relative to the design file when it is built.
+    Import {
+        format: String,
+        path: String,
+        at: Option<[Comp; 2]>,
+        scale: Option<String>,
     },
     /// `dim [type] a [-> b] = expr`
     Dim {
@@ -258,6 +277,19 @@ pub struct Design {
     pub grounds: Vec<(String, usize)>,
     pub joints: Vec<Joint>,
     pub checks: Vec<Check>,
+    /// `print A, B up X`: how bodies lie on the print bed.
+    pub prints: Vec<Print>,
+    /// `print bed (w, d)`
+    pub print_bed: Option<(Vec<Comp>, usize)>,
+}
+
+/// `print A, B up <direction>`: these bodies print together, `up` (in design coordinates)
+/// pointing away from the bed.
+#[derive(Debug, Clone)]
+pub struct Print {
+    pub bodies: Vec<String>,
+    pub up: Vec<Comp>,
+    pub line: usize,
 }
 
 /// `check Body quantity [Other] op value [unit] [up axis]`: a property of a built body that
@@ -273,7 +305,7 @@ pub struct Check {
     pub value: String,
     /// A unit the expression language has no word for: mm2, mm3, cm3, g or kg.
     pub unit: Option<String>,
-    /// The print direction of an overhang check.
+    /// The print direction of an overhang check; empty for the body's `print` direction, or Z.
     pub up: Vec<Comp>,
     /// The longest bridge an overhang check accepts.
     pub bridge: Option<String>,

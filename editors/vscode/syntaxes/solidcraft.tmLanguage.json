@@ -53,7 +53,7 @@
       }
     },
     "assembly": {
-      "match": "\\b(component|instance|connector|ground|joint|check|color|material|between|and|rotate|value|values|limits|opposed)\\b",
+      "match": "\\b(component|instance|connector|ground|joint|check|color|material|print|between|and|rotate|value|values|limits|opposed)\\b",
       "name": "keyword.control.assembly.solidcraft"
     },
     "sketch-header": {
@@ -90,7 +90,7 @@
     },
     "sketch-entity": {
       "comment": "line NAME = …, polyline closed infer NAME = …, rect center NAME = …, construction circle NAME = …",
-      "match": "^\\s*(?:(construction)\\s+)?(line|polyline|rect|circle|arc|point|polygon|slot|spline|ellipse)\\b((?:\\s+(?:closed|infer|center|rounded|periodic|inscribed|circumscribed|centers|ends)\\b)*)\\s+([A-Za-z_][A-Za-z0-9_]*)\\s*(=)",
+      "match": "^\\s*(?:(construction)\\s+)?(line|polyline|rect|circle|arc|point|polygon|slot|spline|ellipse|curve)\\b((?:\\s+(?:closed|infer|center|rounded|periodic|inscribed|circumscribed|centers|ends)\\b)*)\\s+([A-Za-z_][A-Za-z0-9_]*)\\s*(=)",
       "captures": {
         "1": { "name": "storage.modifier.construction.solidcraft" },
         "2": { "name": "support.function.entity.solidcraft" },
@@ -124,7 +124,7 @@
     },
 
     "feature": {
-      "match": "^\\s*(extrude|revolve|hole|box|cylinder|sphere|torus|fillet|chamfer|shell|mirror|pattern|combine|move|remove|sweep|loft|pipe|thread|coil|emboss|sheet_rule|flange|plane|split|rib|web|draft|offset_faces|scale)\\b(?:\\s+(circular)\\b)?\\s+(?:([A-Za-z_][A-Za-z0-9_]*)\\b|(\"[^\"]*\"))",
+      "match": "^\\s*(extrude|revolve|hole|box|cylinder|sphere|torus|fillet|chamfer|shell|mirror|pattern|combine|move|remove|sweep|loft|pipe|thread|coil|emboss|sheet_rule|flange|plane|split|rib|web|draft|offset_faces|scale|hem|perforate)\\b(?:\\s+(circular)\\b)?\\s+(?:([A-Za-z_][A-Za-z0-9_]*)\\b|(\"[^\"]*\"))",
       "captures": {
         "1": { "name": "storage.type.feature.solidcraft" },
         "2": { "name": "storage.modifier.solidcraft" },

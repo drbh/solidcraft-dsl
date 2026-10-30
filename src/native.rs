@@ -269,6 +269,7 @@ impl Native {
             dims: vec![],
             links: vec![],
             checks: vec![],
+            print_layout: None,
         }
     }
 }

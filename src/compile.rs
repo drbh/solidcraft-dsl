@@ -218,6 +218,8 @@ impl SketchTable {
             Entity::Spline { id, points } => match parts.as_slice() {
                 [] => Ok(id.clone()),
                 [s] if s.parse::<usize>().is_ok() => points.get(s.parse::<usize>().unwrap_or(0).wrapping_sub(1)).cloned().ok_or_else(bad),
+                ["start"] => points.first().cloned().ok_or_else(bad),
+                ["end"] => points.last().cloned().ok_or_else(bad),
                 _ => Err(bad()),
             },
             Entity::Ellipse { id, points } => match parts.as_slice() {
@@ -398,6 +400,8 @@ pub struct Compiled {
     pub links: Vec<Link>,
     /// `check` statements, verified by `evaluate` after the build.
     pub checks: Vec<crate::checks::Check>,
+    /// The layout `print` statements describe, for `evaluate`'s print requests.
+    pub print_layout: Option<Value>,
 }
 
 #[derive(Debug, Clone)]
@@ -470,6 +474,7 @@ pub(crate) fn compile_geometry(d: &Design) -> R<Compiled> {
         expressions: lowered.explanation,
         links: vec![],
         checks: vec![],
+        print_layout: None,
     })
 }
 
@@ -499,6 +504,7 @@ fn compile_sketch(s: &Sketch, out: &mut Vec<Value>, lines: &mut Vec<usize>, dims
             SketchKind::Offset { .. } => Some("an offset"),
             SketchKind::Mirror { .. } => Some("a mirror"),
             SketchKind::Pattern { .. } => Some("a pattern"),
+            SketchKind::Import { .. } => Some("an import"),
             _ => None,
         };
         let constraint = matches!(st.kind, SketchKind::Dim { .. } | SketchKind::Constraint { .. } | SketchKind::Fix { .. });
@@ -656,6 +662,7 @@ fn compile_sketch(s: &Sketch, out: &mut Vec<Value>, lines: &mut Vec<usize>, dims
                 }
                 out.push(cmd("sketch.spline.fit_point", p));
             }
+            SketchKind::Curve { .. } => return Err(err(line, "internal: an equation curve reached the compiler unsampled")),
             SketchKind::Ellipse { name, center, major, minor } => {
                 t.counters.e += 1;
                 let id = format!("e{}", t.counters.e);
@@ -781,6 +788,17 @@ fn compile_sketch(s: &Sketch, out: &mut Vec<Value>, lines: &mut Vec<usize>, dims
                     }
                     out.push(cmd("sketch.pattern.rectangular", p));
                 }
+            }
+            SketchKind::Import { format, path, at, scale } => {
+                // `run`, `evaluate` and `watch` replace the path with the file's text (link::inline_files).
+                let mut p = json!({"path": path});
+                if let Some(at) = at {
+                    p["at"] = pt(at);
+                }
+                if let Some(k) = scale {
+                    p["scale"] = expr(k);
+                }
+                out.push(cmd(&format!("sketch.insert_{format}"), p));
             }
             SketchKind::Fix { refs } => {
                 // A whole polyline, rectangle, slot or polygon fixes all of its curves.
@@ -1592,6 +1610,36 @@ fn compile_feature(f: &Feature, sketches: &mut HashMap<String, SketchTable>) -> 
             }
             "sheet.flange"
         }
+        // A sheet edge folded back on itself.
+        "hem" => {
+            p["edges"] = json!(o.tuples("edges")?.ok_or_else(|| err(line, "`hem` needs `edges (x,y,z) …` on sheet edges"))?);
+            p["length"] = o.require("length")?;
+            if let Some(g) = o.expr("gap")? {
+                p["gap"] = g;
+            }
+            if o.flag("flip") {
+                p["flip"] = json!(true);
+            }
+            if let Some(b) = o.ident("body")? {
+                p["body"] = json!(b);
+            }
+            "sheet.hem"
+        }
+        // A hole field over a flat sheet: in the flat pattern, the DXF and the mass, not the solid.
+        "perforate" => {
+            p["diameter"] = o.require("diameter")?;
+            p["pitch"] = o.require("pitch")?;
+            if let Some(m) = o.expr("margin")? {
+                p["margin"] = m;
+            }
+            if o.flag("square") {
+                p["pattern"] = json!("square");
+            }
+            if let Some(b) = o.ident("body")? {
+                p["body"] = json!(b);
+            }
+            "sheet.perforate"
+        }
         other => return Err(err(line, format!("`{other}` is not supported yet"))),
     };
     let params = o.finish(p)?;
@@ -1796,6 +1844,42 @@ mod tests {
         );
         // The piece a split names is a body afterwards.
         crate::check(&parse("box B size 10 10 10 -> body T\nsplit S target T plane YZ -> body U\ncolor U \"#000000\"\n").unwrap()).unwrap();
+    }
+
+    #[test]
+    fn equation_curves_imports_and_sheet_finishing() {
+        let cmds = script(
+            "param r = 10 mm\nsketch S on XY {\n curve c = (r*cos(t), r*sin(t)) t from 0 deg to 90 deg points 3\n \
+             curve o = (r*cos(t), r*sin(t)) t from 0 deg to 360 deg points 4 closed\n line l = (0,0) c.start\n line m = c.end (0,0)\n \
+             svg \"art/logo.svg\" at (1,2) scale 0.5\n}\nhem H edges (1,0,15) length 5 mm gap 0.5 mm body G\n\
+             perforate P diameter 4 mm pitch 6 mm margin 8 mm square body G\n",
+        );
+        let splines: Vec<&Value> = cmds.iter().filter(|c| c["command"] == "sketch.spline.fit_point").collect();
+        let pts = |i: usize| -> Vec<(i64, i64)> {
+            splines[i]["params"]["points"]
+                .as_array()
+                .unwrap()
+                .iter()
+                .map(|p| ((p[0].as_f64().unwrap() * 1e6).round() as i64, (p[1].as_f64().unwrap() * 1e6).round() as i64))
+                .collect()
+        };
+        // Three points from 0 to 90 deg; a closed curve leaves out its end (= its start).
+        let k = (10e6 * std::f64::consts::FRAC_1_SQRT_2).round() as i64;
+        assert_eq!(pts(0), [(10_000_000, 0), (k, k), (0, 10_000_000)]);
+        assert_eq!(pts(1), [(10_000_000, 0), (0, 10_000_000), (-10_000_000, 0), (0, -10_000_000)]);
+        assert_eq!(splines[1]["params"]["periodic"], json!(true));
+        // c's fit points are p1..p3 (o's p4..p7): the lines join its ends.
+        let lines: Vec<&Value> = cmds.iter().filter(|c| c["command"] == "sketch.line").collect();
+        assert_eq!((lines[0]["params"]["points"][1].clone(), lines[1]["params"]["points"][0].clone()), (json!("p1"), json!("p3")));
+        let by = |id: &str| cmds.iter().find(|c| c["command"] == id).unwrap()["params"].clone();
+        assert_eq!(by("sketch.insert_svg"), json!({"path": "art/logo.svg", "at": [1.0, 2.0], "scale": 0.5}));
+        assert_eq!(by("sheet.hem"), json!({"edges": [[1.0, 0.0, 15.0]], "length": "5 mm", "gap": "0.5 mm", "body": "G", "name": "H"}));
+        assert_eq!(by("sheet.perforate")["pattern"], json!("square"));
+        let e = fails("sketch S on XY {\n dxf \"a.dxf\"\n circle c = (0,0) radius 1\n}\n");
+        assert!(e.contains("an import (line 2) must come after"), "{e}");
+        // Bare numbers are millimetres; an angle is not a coordinate.
+        assert!(fails("sketch S on XY {\n curve c = (t, t) t from 0 deg to 90 deg\n}\n").contains("must be a length"));
+        assert!(fails("sketch S on XY {\n curve c = (t*1 mm, 0) t from 0 to 1 points 2\n}\n").contains("3 through 200"));
     }
 
     #[test]

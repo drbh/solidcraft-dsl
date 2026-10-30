@@ -46,10 +46,10 @@ is reported, so any lower bound fails. A failing check names the two closest poi
 
 ## Overhang
 
-`check Part overhang <= 45 deg up <direction>` checks that the body prints without supports
-when `up` points away from the bed. The default is `up Z`. Use the direction of the print
-recipe's orientation: a part rotated -90 deg about Y to print on its x = 0 end has `up X`. A
-direction can be a tuple, such as `up (0, 0, -1)`.
+`check Part overhang <= 45 deg [up <direction>]` checks that the body prints without supports
+when `up` points away from the bed. Without `up`, the check uses the body's `print` orientation
+(see [print layouts](print-layouts.md)), and otherwise `Z`. A part printed on its x = 0 end has
+`up X`. A direction can be a tuple, such as `up (0, 0, -1)`.
 
 The analysis uses the body's mesh. A face that points down more than the limit from vertical
 needs support, except in these cases:

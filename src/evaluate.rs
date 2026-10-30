@@ -134,7 +134,9 @@ fn build(
     report: &mut Value,
     diagnostics: &mut Vec<Value>,
 ) -> Result<(), String> {
-    let plan = match crate::artifacts::Plan::load(opts.requests.as_deref()) {
+    let plan = match crate::artifacts::Plan::load(opts.requests.as_deref())
+        .and_then(|p| p.with_print_layout(c.print_layout.as_ref(), opts.requests.is_some()))
+    {
         Ok(plan) => plan,
         Err(e) => {
             diagnostics.push(diagnostic("requests", e, None, source));
@@ -144,6 +146,10 @@ fn build(
     report["expressions"] = c.expressions.clone();
     crate::assembly::check_engine(&opts.cli, c)?;
     let mut script = if c.native.is_some() { json!({"commands":[]}) } else { c.script.clone() };
+    if let Err(e) = crate::link::inline_files(&mut script, &opts.source) {
+        diagnostics.push(diagnostic("compile", e, None, source));
+        return Ok(());
+    }
     if !c.links.is_empty() {
         // Parts are cached across attempts beside them, keyed by source hash.
         let mut parts = crate::link::Parts::new(&opts.cli, &dir.parent().unwrap_or(dir).join("parts"), crate::link::Naming::Cache);
@@ -238,8 +244,18 @@ fn build(
             diagnostics.push(diagnostic("measurement", e, None, source));
         }
     }
+    // Sketches with an imported drawing: its curves are free by design, the file is their source.
+    let mut imported = std::collections::HashSet::new();
+    let mut current = None;
+    for cmd in script["commands"].as_array().into_iter().flatten() {
+        match cmd["command"].as_str() {
+            Some("sketch.create") => current = cmd["params"]["name"].as_str(),
+            Some("sketch.insert_svg" | "sketch.insert_dxf") => imported.extend(current),
+            _ => {}
+        }
+    }
     for sketch in doc["sketches"].as_array().into_iter().flatten() {
-        if sketch["dof"].as_u64().is_some_and(|n| n > 0) {
+        if sketch["dof"].as_u64().is_some_and(|n| n > 0) && !sketch["name"].as_str().is_some_and(|n| imported.contains(n)) {
             let mut d = diagnostic(
                 "sketch",
                 format!("{} has {} degrees of freedom", sketch["name"], sketch["dof"]),

@@ -178,6 +178,7 @@ fn run(args: cli::Args) -> Result<(), String> {
         }
     }
     let mut script = c.script.clone();
+    solidcraft_dsl::link::inline_files(&mut script, std::path::Path::new(path)).map_err(|e| format!("{path}: {e}"))?;
     if !c.links.is_empty() && matches!(sub, "run" | "pack") {
         // A packed assembly links to part designs saved beside it; a plain run uses a cache.
         let (dir, naming) = match (sub, args.output.as_deref()) {

@@ -46,6 +46,7 @@ pub fn build(src: &str) -> Result<Compiled, String> {
     check(&d)?;
     let mut c = compile(&d)?;
     c.checks = checks::lower(&d)?;
+    c.print_layout = checks::print_layout(&d)?;
     Ok(c)
 }
 

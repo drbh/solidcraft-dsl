@@ -11,6 +11,24 @@ use sha2::{Digest, Sha256};
 
 use crate::compile::Link;
 
+/// Read the drawings a design imports (`svg "logo.svg"`) relative to its file, and put their
+/// text in the commands, so the script needs no files beside it.
+pub fn inline_files(script: &mut Value, source: &Path) -> Result<(), String> {
+    let dir = source.parent().unwrap_or(Path::new("."));
+    for c in script["commands"].as_array_mut().into_iter().flatten() {
+        if !matches!(c["command"].as_str(), Some("sketch.insert_svg" | "sketch.insert_dxf")) {
+            continue;
+        }
+        let Some(path) = c["params"]["path"].as_str().map(str::to_string) else { continue };
+        let file = dir.join(&path);
+        let text = std::fs::read_to_string(&file).map_err(|e| format!("{}: {e}", file.display()))?;
+        let params = c["params"].as_object_mut().ok_or("command params must be an object")?;
+        params.remove("path");
+        params.insert("text".into(), Value::String(text));
+    }
+    Ok(())
+}
+
 /// Where built part designs go.
 #[derive(Clone, Copy, PartialEq)]
 pub enum Naming {
@@ -152,5 +170,25 @@ impl<'a> Parts<'a> {
             }
         }
         std::fs::rename(&tmp, design).map_err(|e| format!("{}: {e}", design.display()))
+    }
+}
+
+#[cfg(test)]
+#[allow(clippy::unwrap_used)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn imported_drawings_are_inlined_relative_to_the_design() {
+        let dir = std::env::temp_dir().join(format!("sc-inline-{}", std::process::id()));
+        std::fs::create_dir_all(dir.join("art")).unwrap();
+        std::fs::write(dir.join("art/a.svg"), "<svg/>").unwrap();
+        let mut script = json!({"commands": [{"command": "sketch.insert_svg", "params": {"path": "art/a.svg", "at": [1, 2]}}]});
+        inline_files(&mut script, &dir.join("part.sc")).unwrap();
+        assert_eq!(script["commands"][0]["params"], json!({"at": [1, 2], "text": "<svg/>"}));
+        let mut missing = json!({"commands": [{"command": "sketch.insert_dxf", "params": {"path": "nope.dxf"}}]});
+        assert!(inline_files(&mut missing, &dir.join("part.sc")).unwrap_err().contains("nope.dxf"));
+        let _ = std::fs::remove_dir_all(&dir);
     }
 }

@@ -1,0 +1,13 @@
+{
+  "version": 1,
+  "defaults": false,
+  "requests": [
+    { "id": "flat-dxf", "kind": "commands", "extension": "dxf",
+      "commands": [ { "command": "sheet.export_dxf", "params": { "body": "Grille", "path": "$output", "bend_notes": true } } ] },
+    { "id": "flat-pattern", "kind": "commands",
+      "commands": [ { "command": "sheet.flat_pattern", "params": { "body": "Grille" } } ] },
+    { "id": "cad-step", "kind": "export", "format": "step", "params": { "bodies": ["Grille"] } },
+    { "id": "preview-glb", "kind": "export", "format": "glb" },
+    { "id": "view", "kind": "snapshot", "options": { "view": "iso" } }
+  ]
+}

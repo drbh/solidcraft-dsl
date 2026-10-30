@@ -100,6 +100,7 @@ impl Session {
         crate::check(&design)?;
         let c = crate::compile(&design)?;
         let mut script = c.script.clone();
+        crate::link::inline_files(&mut script, Path::new(&self.opts.path))?;
         if !c.links.is_empty() {
             let dir = std::env::temp_dir().join("solidcraft-dsl-parts");
             let mut parts = crate::link::Parts::new(&self.opts.cli, &dir, crate::link::Naming::Cache);

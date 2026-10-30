@@ -92,6 +92,52 @@ pub fn text(c: &Comp) -> &str {
     }
 }
 
+/// An equation curve's fit points: `t` runs evenly from `from` to `to` (a closed curve leaves out
+/// the end, which is its start), and `x`, `y` are lengths of `t` and the parameters.
+#[allow(clippy::too_many_arguments)]
+fn sample_curve(
+    env: &Environment,
+    line: usize,
+    name: &str,
+    x: &str,
+    y: &str,
+    from: &str,
+    to: &str,
+    points: Option<&str>,
+    closed: bool,
+) -> R<SketchKind> {
+    let (t0, t1) = (env.eval(from).map_err(|e| error(line, "curve start", e))?, env.eval(to).map_err(|e| error(line, "curve end", e))?);
+    if (t0.len, t0.ang) != (t1.len, t1.ang) {
+        return Err(error(line, "curve", "`t` must start and end in the same unit"));
+    }
+    let n = match points {
+        Some(p) => env.number(p, Kind::Unitless, line, "points")?,
+        None => 24.0,
+    };
+    if n.fract() != 0. || !(3. ..=200.).contains(&n) {
+        return Err(error(line, "points", "must be a whole number from 3 through 200"));
+    }
+    let n = n as usize;
+    let steps = if closed { n } else { n - 1 };
+    let mut pts = Vec::with_capacity(n);
+    for i in 0..n {
+        let t = Value { v: t0.v + (t1.v - t0.v) * i as f64 / steps as f64, ..t0 };
+        let lookup = |s: &str| {
+            if s == "t" {
+                return Ok(t);
+            }
+            env.values.get(s).copied().ok_or_else(|| solidcraft_expr::Error(format!("unknown parameter `{s}`")))
+        };
+        let coord = |e: &str| -> R<f64> {
+            let v = eval_with(e, &lookup).map_err(|err| error(line, "curve", format!("`{e}` at t = {}: {}", t.v, err.0)))?;
+            v.to_kind(Kind::Length).map_err(|_| error(line, "curve", format!("`{e}` must be a length")))
+        };
+        let p = [coord(x)?, coord(y)?];
+        pts.push(Pt::Xy(p.map(|v| Comp::Num(v, v.to_string()))));
+    }
+    Ok(SketchKind::Spline { name: name.to_string(), pts, periodic: closed })
+}
+
 pub struct Lowered {
     pub design: Design,
     pub explanation: Json,
@@ -127,6 +173,11 @@ pub fn lower(d: &Design) -> R<Lowered> {
                 }
                 for st in &mut s.stmts {
                     let line = st.line;
+                    if let SketchKind::Curve { name, x, y, from, to, points, closed } = &st.kind {
+                        let spline = sample_curve(&env, line, name, x, y, from, to, points.as_deref(), *closed)?;
+                        sites.push(json!({"line":line,"role":"seed","expression":format!("({x}, {y})"),"persistent":false,"depends_on":references(&format!("{x} {y} {from} {to}"))}));
+                        st.kind = spline;
+                    }
                     let mut point = |p: &mut Pt| -> R<()> {
                         if let Pt::Xy(c) = p {
                             coords(c, &env, line, "seed", Kind::Length, false, &mut sites)?;
@@ -164,6 +215,14 @@ pub fn lower(d: &Design) -> R<Lowered> {
                             coords(major, &env, line, "seed", Kind::Length, false, &mut sites)?;
                         }
                         SketchKind::Offset { side: Some(side), .. } => coords(side, &env, line, "seed", Kind::Length, false, &mut sites)?,
+                        SketchKind::Import { at, scale, .. } => {
+                            if let Some(at) = at {
+                                coords(at, &env, line, "seed", Kind::Length, false, &mut sites)?;
+                            }
+                            if let Some(k) = scale {
+                                *k = env.number(k, Kind::Unitless, line, "scale")?.to_string();
+                            }
+                        }
                         // The engine takes a sketch pattern's counts, spacings and angle as numbers.
                         SketchKind::Pattern { count, center, angle, spacing, dir, count2, spacing2, dir2, .. } => {
                             if let Some(Pt::Xy(c)) = center {

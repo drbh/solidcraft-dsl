@@ -149,6 +149,7 @@ sketch LabelSk on XY offset (rim_z+lid_t) {
 }
 emboss Label from LabelSk depth label_depth deboss targets Lid
 
-// Prints without supports, in the print recipe's orientation.
+// Print orientations (also used by the overhang checks); prints without supports.
 check Base overhang <= 45 deg
-check Lid overhang <= 45 deg up (0, 0, -1)
+print Lid up (0, 0, -1)
+check Lid overhang <= 45 deg

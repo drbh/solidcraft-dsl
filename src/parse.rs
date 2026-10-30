@@ -40,6 +40,8 @@ const EXPR_KEYS: &[&str] = &[
     "start_angle",
     "fraction",
     "factor",
+    "gap",
+    "margin",
 ];
 const TUPLE_KEYS: &[&str] = &[
     "profiles",
@@ -139,6 +141,8 @@ const FEATURES: &[&str] = &[
     "draft",
     "offset_faces",
     "scale",
+    "hem",
+    "perforate",
 ];
 
 struct P<'a> {
@@ -425,6 +429,31 @@ fn parse_design(p: &mut P, open: Option<usize>) -> R<Design> {
                 let opts = vec![("bodies".to_string(), Val::List(bodies)), ("value".to_string(), Val::Expr(value))];
                 d.items.push(Item::Feature(Feature { kind: head.clone(), name: format!("{head}@{}", l.no), opts, line: l.no }));
             }
+            // `print A, B up X` or `print bed (w, d)`
+            "print" => {
+                if open.is_some() {
+                    return Err(err(l.no, "print setup belongs at the top level"));
+                }
+                if c.eat_ident("bed") {
+                    let bed = c.tuple()?;
+                    if bed.len() != 2 {
+                        return Err(err(l.no, "`print bed (width, depth)`"));
+                    }
+                    c.end()?;
+                    d.print_bed = Some((bed, l.no));
+                } else {
+                    let mut bodies = vec![c.ident("a body name")?];
+                    while c.eat_punct(',') {
+                        bodies.push(c.ident("a body name")?);
+                    }
+                    if !c.eat_ident("up") {
+                        return Err(err(l.no, "expected `up X|Y|Z|(x,y,z)`: the direction that points away from the bed"));
+                    }
+                    let up = parse_axis(&mut c)?;
+                    c.end()?;
+                    d.prints.push(Print { bodies, up, line: l.no });
+                }
+            }
             "check" => {
                 if open.is_some() {
                     return Err(err(l.no, "checks belong at the top level"));
@@ -566,7 +595,7 @@ fn parse_check(c: &mut Cur, line: usize) -> R<Check> {
         }
         _ => None,
     };
-    let mut up = axis3("Z");
+    let mut up = Vec::new();
     let mut bridge = None;
     loop {
         if c.eat_ident("up") {
@@ -577,7 +606,7 @@ fn parse_check(c: &mut Cur, line: usize) -> R<Check> {
             break;
         }
     }
-    if quantity != "overhang" && (bridge.is_some() || up != axis3("Z")) {
+    if quantity != "overhang" && (bridge.is_some() || !up.is_empty()) {
         return Err(err(line, "`up` and `bridge` belong to overhang checks"));
     }
     c.end()?;
@@ -805,6 +834,47 @@ fn parse_sketch_stmt(c: &mut Cur) -> R<SketchStmt> {
             let pts = parse_points(c, 2)?;
             let periodic = has("periodic") || c.eat_ident("periodic");
             SketchKind::Spline { name, pts, periodic }
+        }
+        "svg" | "dxf" => {
+            let path = match c.next() {
+                Some(Tok::Str(s)) => s.clone(),
+                _ => return Err(err(line, format!("expected the file in quotes: `{head} \"drawing.{head}\"`"))),
+            };
+            let (mut at, mut scale) = (None, None);
+            while !c.done() {
+                match c.ident("an import option: at or scale")?.as_str() {
+                    "at" => at = Some(c.point2()?),
+                    "scale" => scale = Some(c.expr1("the scale")?),
+                    other => return Err(err(line, format!("unknown {head} option `{other}`"))),
+                }
+            }
+            SketchKind::Import { format: head.clone(), path, at, scale }
+        }
+        "curve" => {
+            let name = c.ident("the curve name")?;
+            c.expect_punct('=')?;
+            let xy = c.tuple()?;
+            let [x, y]: [Comp; 2] = xy.try_into().map_err(|_| err(line, "a curve is `(x(t), y(t))`"))?;
+            if !(c.eat_ident("t") && c.eat_ident("from")) {
+                return Err(err(line, "expected `t from <start> to <end>` after the curve's `(x(t), y(t))`"));
+            }
+            let from = c.expr1("the start of t")?;
+            if !c.eat_ident("to") {
+                return Err(err(line, "expected `to <end>`"));
+            }
+            let to = c.expr1("the end of t")?;
+            let (mut points, mut closed) = (None, false);
+            while !c.done() {
+                match c.ident("a curve option: points or closed")?.as_str() {
+                    "points" => points = Some(c.expr1("the number of points")?),
+                    "closed" => closed = true,
+                    other => return Err(err(line, format!("unknown curve option `{other}`"))),
+                }
+            }
+            let text = |c: Comp| match c {
+                Comp::Num(_, s) | Comp::Expr(s) => s,
+            };
+            SketchKind::Curve { name, x: text(x), y: text(y), from, to, points, closed }
         }
         "ellipse" => {
             let name = c.ident("the ellipse name")?;

@@ -78,5 +78,6 @@ sketch ToolTipSk on XY offset (height-arm_t-1 mm) {
 extrude ToolTip from ToolTipSk distance (arm_t+2 mm) cut targets Holder
 pattern ToolRow features ToolHole, ToolTip dir (0,1,0) count tool_count spacing tool_pitch
 
-// Prints without supports, in the print recipe's orientation.
-check Holder overhang <= 45 deg up X
+// Print orientations (also used by the overhang checks); prints without supports.
+print Holder up X
+check Holder overhang <= 45 deg

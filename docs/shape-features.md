@@ -1,4 +1,4 @@
-# Sketch copies, planes, shaping, lofts, sweeps, threads, text and sheet metal
+# Sketch copies, curves, imports, planes, shaping, lofts, sweeps, threads, text and sheet metal
 
 These statements map one to one onto SolidCraft engine commands. Each section names an example
 that uses it.
@@ -45,6 +45,29 @@ sketch Lid on XY {
   (`center ctr`) to hold the pattern still.
 - Copies, like text, come after the drawn entities. Only more copies, text and constraints can
   follow, because the engine numbers what it makes by what it copies. See `52_vented_lid`.
+
+## Equation curves and imported drawings
+
+```sc
+sketch Flank on XY {
+  curve inv = (rb*(cos(t*1 rad) + t*sin(t*1 rad)), rb*(sin(t*1 rad) - t*cos(t*1 rad))) t from 0 to 0.8 points 12
+  curve cam = ((r0 + lift*(1 - cos(t))/2)*cos(t), (r0 + lift*(1 - cos(t))/2)*sin(t)) t from 0 deg to 360 deg closed
+  line l = (0,0) inv.start                      // also inv.end, inv.1, inv.2, …
+  fix inv cam l
+}
+sketch Logo on XY offset 3 mm {
+  svg "art/logo.svg" at (-22,13)                 // also: scale 0.5; dxf "outline.dxf"
+}
+```
+
+- A `curve` is sampled when compiling, at `points` evenly spaced values of `t` (24 by default,
+  3 through 200), into a fit-point spline. `closed` makes it periodic. `t` keeps its unit, so it
+  can run over angles. The curve follows parameters when rebuilt, but it isn't a live engine
+  equation. See the involute flanks of `37_involute_gears`.
+- `svg` and `dxf` read the file relative to the design file when it is built, and put its
+  text into the script. SVG measures y downwards, so `at` places the drawing's top-left corner.
+  Imported curves stay unconstrained, and `evaluate` does not warn about them. An import, like
+  text, comes after the sketch's drawn entities. See `58_logo_coaster`.
 
 ## Construction planes
 
@@ -115,6 +138,15 @@ sheet_rule Steel thickness 1.5 mm bend_radius 1.5 mm k_factor 0.44   // becomes 
 flange Wall from WallBlank profiles (2 mm, 2 mm) rule Steel -> body Bracket   // base flange
 flange Shelf edges (W/2, 0, 0) height 80 mm flip body Bracket     // edge flange, bent from that edge
 ```
+
+```sc
+hem Safe edges (80,0,15) length 5 mm body Grille            // also: gap, flip
+perforate Holes diameter 4 mm pitch 6.5 mm margin 8 mm body Grille   // staggered; or square
+```
+
+A hem folds an edge back on itself. A perforation is a hole field over the flat sheet: it is in
+the flat pattern, the DXF (layer PERFORATION) and the mass, but is not cut into the solid. See
+`57_perforated_grille`.
 
 Holes in a sheet must be straight extrude cuts square to the face, so that they survive in the flat
 pattern. A `cylinder … cut` is refused. Export the flat pattern from a requests file:

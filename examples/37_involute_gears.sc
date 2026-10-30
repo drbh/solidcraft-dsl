@@ -3,9 +3,9 @@
 // Z is up; both gears lie flat on z = 0 with their axes along Z, the 15-tooth pinion at the
 // origin and the 30-tooth gear at the standard centre distance a = m(z1 + z2)/2 = 45 mm on +X.
 // Unlike examples 13 and 14, whose teeth are straight-flank trapezoids or polylines, each flank
-// here is a sketch spline through six points of the involute of the base circle, computed with
-// `let` expressions (x = rb(cos t + t sin t), y = rb(sin t - t cos t), rotated into place), so
-// changing the module, tooth counts or pressure angle regenerates the true profile. Each tooth
+// here is an equation curve: the involute of the base circle, x = rb(cos t + t sin t),
+// y = rb(sin t - t cos t), rotated into place and sampled at 12 points, so changing the module,
+// tooth counts or pressure angle regenerates the true profile. Each tooth
 // space is cut from a tip-diameter blank: the two involute flanks, radial flanks below the base
 // circle, a root arc at the dedendum (1.25 m, giving 0.25 m tip clearance) and root fillets
 // where the radial flank meets the root, then the space is patterned around the gear. Backlash
@@ -61,59 +61,17 @@ let g1_cr = cos(0 deg)
 let g1_sr = sin(0 deg)
 let g1_cq = cos(0 deg + 360 deg/z1)
 let g1_sq = sin(0 deg + 360 deg/z1)
-let g1_t0 = g1_tmax*0/5
-let g1_a0 = cos(g1_t0*1 rad) + g1_t0*sin(g1_t0*1 rad)
-let g1_c0 = g1_t0*cos(g1_t0*1 rad) - sin(g1_t0*1 rad)
-let g1_x0 = g1_rb*(g1_a0*g1_cp - g1_c0*g1_sp)
-let g1_y0 = g1_rb*(g1_a0*g1_sp + g1_c0*g1_cp)
-let g1_t1 = g1_tmax*1/5
-let g1_a1 = cos(g1_t1*1 rad) + g1_t1*sin(g1_t1*1 rad)
-let g1_c1 = g1_t1*cos(g1_t1*1 rad) - sin(g1_t1*1 rad)
-let g1_x1 = g1_rb*(g1_a1*g1_cp - g1_c1*g1_sp)
-let g1_y1 = g1_rb*(g1_a1*g1_sp + g1_c1*g1_cp)
-let g1_t2 = g1_tmax*2/5
-let g1_a2 = cos(g1_t2*1 rad) + g1_t2*sin(g1_t2*1 rad)
-let g1_c2 = g1_t2*cos(g1_t2*1 rad) - sin(g1_t2*1 rad)
-let g1_x2 = g1_rb*(g1_a2*g1_cp - g1_c2*g1_sp)
-let g1_y2 = g1_rb*(g1_a2*g1_sp + g1_c2*g1_cp)
-let g1_t3 = g1_tmax*3/5
-let g1_a3 = cos(g1_t3*1 rad) + g1_t3*sin(g1_t3*1 rad)
-let g1_c3 = g1_t3*cos(g1_t3*1 rad) - sin(g1_t3*1 rad)
-let g1_x3 = g1_rb*(g1_a3*g1_cp - g1_c3*g1_sp)
-let g1_y3 = g1_rb*(g1_a3*g1_sp + g1_c3*g1_cp)
-let g1_t4 = g1_tmax*4/5
-let g1_a4 = cos(g1_t4*1 rad) + g1_t4*sin(g1_t4*1 rad)
-let g1_c4 = g1_t4*cos(g1_t4*1 rad) - sin(g1_t4*1 rad)
-let g1_x4 = g1_rb*(g1_a4*g1_cp - g1_c4*g1_sp)
-let g1_y4 = g1_rb*(g1_a4*g1_sp + g1_c4*g1_cp)
-let g1_t5 = g1_tmax*5/5
-let g1_a5 = cos(g1_t5*1 rad) + g1_t5*sin(g1_t5*1 rad)
-let g1_c5 = g1_t5*cos(g1_t5*1 rad) - sin(g1_t5*1 rad)
-let g1_x5 = g1_rb*(g1_a5*g1_cp - g1_c5*g1_sp)
-let g1_y5 = g1_rb*(g1_a5*g1_sp + g1_c5*g1_cp)
 cylinder PinionBlank radius g1_ra height face base (0,0,0) new -> body Pinion
 sketch PinionSpaceSk on XY offset (-1 mm) {
   point rlo = (0+(g1_rf*g1_cp)*g1_cr-(g1_rf*g1_sp)*g1_sr,(g1_rf*g1_cp)*g1_sr+(g1_rf*g1_sp)*g1_cr)
   point rhi = (0+(g1_rf*g1_cp)*g1_cq+(g1_rf*g1_sp)*g1_sq,(g1_rf*g1_cp)*g1_sq-(g1_rf*g1_sp)*g1_cq)
-  point l0 = (0+(g1_x0)*g1_cr-(g1_y0)*g1_sr,(g1_x0)*g1_sr+(g1_y0)*g1_cr)
-  point l1 = (0+(g1_x1)*g1_cr-(g1_y1)*g1_sr,(g1_x1)*g1_sr+(g1_y1)*g1_cr)
-  point l2 = (0+(g1_x2)*g1_cr-(g1_y2)*g1_sr,(g1_x2)*g1_sr+(g1_y2)*g1_cr)
-  point l3 = (0+(g1_x3)*g1_cr-(g1_y3)*g1_sr,(g1_x3)*g1_sr+(g1_y3)*g1_cr)
-  point l4 = (0+(g1_x4)*g1_cr-(g1_y4)*g1_sr,(g1_x4)*g1_sr+(g1_y4)*g1_cr)
-  point l5 = (0+(g1_x5)*g1_cr-(g1_y5)*g1_sr,(g1_x5)*g1_sr+(g1_y5)*g1_cr)
-  point h0 = (0+(g1_x0)*g1_cq+(g1_y0)*g1_sq,(g1_x0)*g1_sq-(g1_y0)*g1_cq)
-  point h1 = (0+(g1_x1)*g1_cq+(g1_y1)*g1_sq,(g1_x1)*g1_sq-(g1_y1)*g1_cq)
-  point h2 = (0+(g1_x2)*g1_cq+(g1_y2)*g1_sq,(g1_x2)*g1_sq-(g1_y2)*g1_cq)
-  point h3 = (0+(g1_x3)*g1_cq+(g1_y3)*g1_sq,(g1_x3)*g1_sq-(g1_y3)*g1_cq)
-  point h4 = (0+(g1_x4)*g1_cq+(g1_y4)*g1_sq,(g1_x4)*g1_sq-(g1_y4)*g1_cq)
-  point h5 = (0+(g1_x5)*g1_cq+(g1_y5)*g1_sq,(g1_x5)*g1_sq-(g1_y5)*g1_cq)
-  line rl = rlo l0
-  spline lo = l0 l1 l2 l3 l4 l5
-  line top = l5 h5
-  spline hi = h5 h4 h3 h2 h1 h0
-  line rh = h0 rhi
+  curve lo = (0 + (g1_rb*((cos(t*1 rad) + t*sin(t*1 rad))*g1_cp - (t*cos(t*1 rad) - sin(t*1 rad))*g1_sp))*g1_cr - (g1_rb*((cos(t*1 rad) + t*sin(t*1 rad))*g1_sp + (t*cos(t*1 rad) - sin(t*1 rad))*g1_cp))*g1_sr, (g1_rb*((cos(t*1 rad) + t*sin(t*1 rad))*g1_cp - (t*cos(t*1 rad) - sin(t*1 rad))*g1_sp))*g1_sr + (g1_rb*((cos(t*1 rad) + t*sin(t*1 rad))*g1_sp + (t*cos(t*1 rad) - sin(t*1 rad))*g1_cp))*g1_cr) t from 0 to g1_tmax points 12
+  curve hi = (0 + (g1_rb*((cos(t*1 rad) + t*sin(t*1 rad))*g1_cp - (t*cos(t*1 rad) - sin(t*1 rad))*g1_sp))*g1_cq + (g1_rb*((cos(t*1 rad) + t*sin(t*1 rad))*g1_sp + (t*cos(t*1 rad) - sin(t*1 rad))*g1_cp))*g1_sq, (g1_rb*((cos(t*1 rad) + t*sin(t*1 rad))*g1_cp - (t*cos(t*1 rad) - sin(t*1 rad))*g1_sp))*g1_sq - (g1_rb*((cos(t*1 rad) + t*sin(t*1 rad))*g1_sp + (t*cos(t*1 rad) - sin(t*1 rad))*g1_cp))*g1_cq) t from g1_tmax to 0 points 12
+  line rl = rlo lo.start
+  line top = lo.end hi.start
+  line rh = hi.end rhi
   arc root = center (0,0) start rlo end rhi
-  fix rlo rhi l0 l1 l2 l3 l4 l5 h0 h1 h2 h3 h4 h5 root.center
+  fix rlo rhi lo hi root.center
   fillet rlo radius root_r
   fillet rhi radius root_r
 }
@@ -139,59 +97,17 @@ let g2_cr = cos((180 deg - 180 deg/z2))
 let g2_sr = sin((180 deg - 180 deg/z2))
 let g2_cq = cos((180 deg - 180 deg/z2) + 360 deg/z2)
 let g2_sq = sin((180 deg - 180 deg/z2) + 360 deg/z2)
-let g2_t0 = g2_tmax*0/5
-let g2_a0 = cos(g2_t0*1 rad) + g2_t0*sin(g2_t0*1 rad)
-let g2_c0 = g2_t0*cos(g2_t0*1 rad) - sin(g2_t0*1 rad)
-let g2_x0 = g2_rb*(g2_a0*g2_cp - g2_c0*g2_sp)
-let g2_y0 = g2_rb*(g2_a0*g2_sp + g2_c0*g2_cp)
-let g2_t1 = g2_tmax*1/5
-let g2_a1 = cos(g2_t1*1 rad) + g2_t1*sin(g2_t1*1 rad)
-let g2_c1 = g2_t1*cos(g2_t1*1 rad) - sin(g2_t1*1 rad)
-let g2_x1 = g2_rb*(g2_a1*g2_cp - g2_c1*g2_sp)
-let g2_y1 = g2_rb*(g2_a1*g2_sp + g2_c1*g2_cp)
-let g2_t2 = g2_tmax*2/5
-let g2_a2 = cos(g2_t2*1 rad) + g2_t2*sin(g2_t2*1 rad)
-let g2_c2 = g2_t2*cos(g2_t2*1 rad) - sin(g2_t2*1 rad)
-let g2_x2 = g2_rb*(g2_a2*g2_cp - g2_c2*g2_sp)
-let g2_y2 = g2_rb*(g2_a2*g2_sp + g2_c2*g2_cp)
-let g2_t3 = g2_tmax*3/5
-let g2_a3 = cos(g2_t3*1 rad) + g2_t3*sin(g2_t3*1 rad)
-let g2_c3 = g2_t3*cos(g2_t3*1 rad) - sin(g2_t3*1 rad)
-let g2_x3 = g2_rb*(g2_a3*g2_cp - g2_c3*g2_sp)
-let g2_y3 = g2_rb*(g2_a3*g2_sp + g2_c3*g2_cp)
-let g2_t4 = g2_tmax*4/5
-let g2_a4 = cos(g2_t4*1 rad) + g2_t4*sin(g2_t4*1 rad)
-let g2_c4 = g2_t4*cos(g2_t4*1 rad) - sin(g2_t4*1 rad)
-let g2_x4 = g2_rb*(g2_a4*g2_cp - g2_c4*g2_sp)
-let g2_y4 = g2_rb*(g2_a4*g2_sp + g2_c4*g2_cp)
-let g2_t5 = g2_tmax*5/5
-let g2_a5 = cos(g2_t5*1 rad) + g2_t5*sin(g2_t5*1 rad)
-let g2_c5 = g2_t5*cos(g2_t5*1 rad) - sin(g2_t5*1 rad)
-let g2_x5 = g2_rb*(g2_a5*g2_cp - g2_c5*g2_sp)
-let g2_y5 = g2_rb*(g2_a5*g2_sp + g2_c5*g2_cp)
 cylinder GearBlank radius g2_ra height face base (center_d,0,0) new -> body Gear
 sketch GearSpaceSk on XY offset (-1 mm) {
   point rlo = (center_d+(g2_rf*g2_cp)*g2_cr-(g2_rf*g2_sp)*g2_sr,(g2_rf*g2_cp)*g2_sr+(g2_rf*g2_sp)*g2_cr)
   point rhi = (center_d+(g2_rf*g2_cp)*g2_cq+(g2_rf*g2_sp)*g2_sq,(g2_rf*g2_cp)*g2_sq-(g2_rf*g2_sp)*g2_cq)
-  point l0 = (center_d+(g2_x0)*g2_cr-(g2_y0)*g2_sr,(g2_x0)*g2_sr+(g2_y0)*g2_cr)
-  point l1 = (center_d+(g2_x1)*g2_cr-(g2_y1)*g2_sr,(g2_x1)*g2_sr+(g2_y1)*g2_cr)
-  point l2 = (center_d+(g2_x2)*g2_cr-(g2_y2)*g2_sr,(g2_x2)*g2_sr+(g2_y2)*g2_cr)
-  point l3 = (center_d+(g2_x3)*g2_cr-(g2_y3)*g2_sr,(g2_x3)*g2_sr+(g2_y3)*g2_cr)
-  point l4 = (center_d+(g2_x4)*g2_cr-(g2_y4)*g2_sr,(g2_x4)*g2_sr+(g2_y4)*g2_cr)
-  point l5 = (center_d+(g2_x5)*g2_cr-(g2_y5)*g2_sr,(g2_x5)*g2_sr+(g2_y5)*g2_cr)
-  point h0 = (center_d+(g2_x0)*g2_cq+(g2_y0)*g2_sq,(g2_x0)*g2_sq-(g2_y0)*g2_cq)
-  point h1 = (center_d+(g2_x1)*g2_cq+(g2_y1)*g2_sq,(g2_x1)*g2_sq-(g2_y1)*g2_cq)
-  point h2 = (center_d+(g2_x2)*g2_cq+(g2_y2)*g2_sq,(g2_x2)*g2_sq-(g2_y2)*g2_cq)
-  point h3 = (center_d+(g2_x3)*g2_cq+(g2_y3)*g2_sq,(g2_x3)*g2_sq-(g2_y3)*g2_cq)
-  point h4 = (center_d+(g2_x4)*g2_cq+(g2_y4)*g2_sq,(g2_x4)*g2_sq-(g2_y4)*g2_cq)
-  point h5 = (center_d+(g2_x5)*g2_cq+(g2_y5)*g2_sq,(g2_x5)*g2_sq-(g2_y5)*g2_cq)
-  line rl = rlo l0
-  spline lo = l0 l1 l2 l3 l4 l5
-  line top = l5 h5
-  spline hi = h5 h4 h3 h2 h1 h0
-  line rh = h0 rhi
+  curve lo = (center_d + (g2_rb*((cos(t*1 rad) + t*sin(t*1 rad))*g2_cp - (t*cos(t*1 rad) - sin(t*1 rad))*g2_sp))*g2_cr - (g2_rb*((cos(t*1 rad) + t*sin(t*1 rad))*g2_sp + (t*cos(t*1 rad) - sin(t*1 rad))*g2_cp))*g2_sr, (g2_rb*((cos(t*1 rad) + t*sin(t*1 rad))*g2_cp - (t*cos(t*1 rad) - sin(t*1 rad))*g2_sp))*g2_sr + (g2_rb*((cos(t*1 rad) + t*sin(t*1 rad))*g2_sp + (t*cos(t*1 rad) - sin(t*1 rad))*g2_cp))*g2_cr) t from 0 to g2_tmax points 12
+  curve hi = (center_d + (g2_rb*((cos(t*1 rad) + t*sin(t*1 rad))*g2_cp - (t*cos(t*1 rad) - sin(t*1 rad))*g2_sp))*g2_cq + (g2_rb*((cos(t*1 rad) + t*sin(t*1 rad))*g2_sp + (t*cos(t*1 rad) - sin(t*1 rad))*g2_cp))*g2_sq, (g2_rb*((cos(t*1 rad) + t*sin(t*1 rad))*g2_cp - (t*cos(t*1 rad) - sin(t*1 rad))*g2_sp))*g2_sq - (g2_rb*((cos(t*1 rad) + t*sin(t*1 rad))*g2_sp + (t*cos(t*1 rad) - sin(t*1 rad))*g2_cp))*g2_cq) t from g2_tmax to 0 points 12
+  line rl = rlo lo.start
+  line top = lo.end hi.start
+  line rh = hi.end rhi
   arc root = center (center_d,0) start rlo end rhi
-  fix rlo rhi l0 l1 l2 l3 l4 l5 h0 h1 h2 h3 h4 h5 root.center
+  fix rlo rhi lo hi root.center
   fillet rlo radius root_r
   fillet rhi radius root_r
 }

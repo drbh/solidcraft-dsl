@@ -10,7 +10,7 @@
 //! Every body also gets an implied `check <body> shells == 1`: a join that doesn't touch the
 //! body, or a cut that slices it in two, leaves it in several pieces without an engine error.
 //! A body with a sealed void has two shells too, so it states `check Body shells == 2`.
-use crate::ast::{Check as Stmt, Design};
+use crate::ast::{Check as Stmt, Comp, Design};
 use crate::expressions::{Environment, text};
 use serde_json::{Value, json};
 use solidcraft_expr::Kind;
@@ -79,10 +79,10 @@ pub fn lower(d: &Design) -> Result<Vec<Check>, String> {
         return Ok(vec![]);
     }
     let env = Environment::new(d)?;
-    d.checks.iter().map(|s| lower_one(s, &env)).collect()
+    d.checks.iter().map(|s| lower_one(s, &env, d)).collect()
 }
 
-fn lower_one(s: &Stmt, env: &Environment) -> Result<Check, String> {
+fn lower_one(s: &Stmt, env: &Environment, d: &Design) -> Result<Check, String> {
     let fail = |e: String| format!("line {}: check: {e}", s.line);
     let v = env.eval(&s.value).map_err(|e| fail(format!("`{}`: {e}", s.value)))?;
     let wrong = |want: &str| fail(format!("{} takes {want}, not `{}`", s.quantity, s.value));
@@ -110,14 +110,14 @@ fn lower_one(s: &Stmt, env: &Environment) -> Result<Check, String> {
     if s.quantity == "overhang" && !matches!(s.op.as_str(), "<=" | "<") {
         return Err(fail("an overhang check sets a limit: `overhang <= 45 deg`".into()));
     }
-    let mut up = [0.0; 3];
-    for (i, c) in s.up.iter().enumerate().take(3) {
-        up[i] = env.eval(text(c)).ok().filter(|v| v.unitless()).ok_or_else(|| fail("`up` takes X, Y, Z or a direction (x,y,z)".into()))?.v;
-    }
-    let n = up.iter().map(|x| x * x).sum::<f64>().sqrt();
-    if s.up.len() != 3 || n < 1e-9 {
-        return Err(fail("`up` takes X, Y, Z or a direction (x,y,z)".into()));
-    }
+    // An overhang check without `up` prints the way its body's `print` says, else Z up.
+    let up = if !s.up.is_empty() {
+        direction(&s.up, env).ok_or_else(|| fail("`up` takes X, Y, Z or a direction (x,y,z)".into()))?
+    } else if let Some(p) = d.prints.iter().find(|p| p.bodies.contains(&s.body)) {
+        direction(&p.up, env).ok_or_else(|| format!("line {}: print: `up` takes X, Y, Z or a direction (x,y,z)", p.line))?
+    } else {
+        [0.0, 0.0, 1.0]
+    };
     Ok(Check {
         line: s.line,
         body: s.body.clone(),
@@ -125,12 +125,57 @@ fn lower_one(s: &Stmt, env: &Environment) -> Result<Check, String> {
         other: s.other.clone(),
         op: s.op.clone(),
         value,
-        up: up.map(|x| x / n),
+        up,
         bridge: match &s.bridge {
             Some(b) => env.number(b, Kind::Length, s.line, "check: bridge")?,
             None => DEFAULT_BRIDGE,
         },
     })
+}
+
+/// A unit direction from `X`/`Y`/`Z` or `(x, y, z)` components, evaluated with the parameters.
+pub fn direction(comps: &[Comp], env: &Environment) -> Option<[f64; 3]> {
+    if comps.len() != 3 {
+        return None;
+    }
+    let mut v = [0.0; 3];
+    for (i, c) in comps.iter().enumerate() {
+        v[i] = env.eval(text(c)).ok().filter(|v| v.unitless())?.v;
+    }
+    let n = v.iter().map(|x| x * x).sum::<f64>().sqrt();
+    (n > 1e-9).then(|| v.map(|x| x / n))
+}
+
+/// The print layout the design's `print` statements describe: each group turned so its `up`
+/// points away from the bed, then arranged automatically.
+pub fn print_layout(d: &Design) -> Result<Option<Value>, String> {
+    if d.prints.is_empty() {
+        return Ok(None);
+    }
+    let env = Environment::new(d)?;
+    let mut parts = Vec::new();
+    for p in &d.prints {
+        let up = direction(&p.up, &env).ok_or_else(|| format!("line {}: print: `up` takes X, Y, Z or a direction (x,y,z)", p.line))?;
+        // The rotation taking `up` to +Z: about up × Z by the angle between them.
+        let rotate = if up[2] > 1.0 - 1e-12 {
+            vec![]
+        } else if up[2] < -1.0 + 1e-12 {
+            vec![json!({"axis": [1, 0, 0], "angle": "180 deg"})]
+        } else {
+            let axis = [up[1], -up[0], 0.0];
+            vec![json!({"axis": axis.map(round), "angle": format!("{} deg", round(up[2].acos().to_degrees()))})]
+        };
+        parts.push(json!({"id": p.bodies.join("-"), "select": {"bodies": p.bodies}, "rotate": rotate}));
+    }
+    let mut layout = json!({"parts": parts});
+    if let Some((bed, line)) = &d.print_bed {
+        let mut size = Vec::new();
+        for c in bed {
+            size.push(env.number(text(c), Kind::Length, *line, "print bed")?);
+        }
+        layout["bed"] = json!(size);
+    }
+    Ok(Some(layout))
 }
 
 /// The engine query answering a clearance check. Pairs nearer than `clearance` come back with
@@ -561,6 +606,25 @@ mod tests {
         ] {
             assert!(crate::parse(&format!("design T units mm\n{bad}\n")).is_err(), "{bad}");
         }
+    }
+
+    #[test]
+    fn print_statements_orient_the_layout_and_overhang_checks() {
+        let d = crate::parse(
+            "design T units mm\nbox A size 1 1 1 -> body H\nbox B size 1 1 1 -> body L\nbox C size 1 1 1 -> body F\n\
+             print H up X\nprint L up (0, 0, -1)\nprint F up Z\nprint bed (250, 210 mm)\ncheck H overhang <= 45 deg\ncheck F overhang <= 45 deg up Y\n",
+        )
+        .unwrap();
+        let layout = print_layout(&d).unwrap().unwrap();
+        assert_eq!(layout["parts"][0], json!({"id": "H", "select": {"bodies": ["H"]}, "rotate": [{"axis": [0.0, -1.0, 0.0], "angle": "90 deg"}]}));
+        assert_eq!(layout["parts"][1]["rotate"], json!([{"axis": [1, 0, 0], "angle": "180 deg"}]));
+        assert_eq!(layout["parts"][2]["rotate"], json!([]));
+        assert_eq!(layout["bed"], json!([250.0, 210.0]));
+        let c = lower(&d).unwrap();
+        assert_eq!((c[0].up, c[1].up), ([1.0, 0.0, 0.0], [0.0, 1.0, 0.0]));
+        let twice = crate::parse("design T units mm\nbox A size 1 1 1 -> body H\nprint H up X\nprint H up Y\n").unwrap();
+        assert!(crate::check(&twice).unwrap_err().contains("`H` already has a print orientation (line 3)"));
+        assert!(crate::parse("design T units mm\nprint H\n").is_err());
     }
 
     #[test]

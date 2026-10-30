@@ -164,6 +164,27 @@ impl Plan {
         plan.validate()?;
         Ok(plan)
     }
+    /// Add the layout a design's `print` statements describe as `print`, unless the recipe has
+    /// its own. With no recipe, also add the requests that use it: a 3MF and a GLB of the plate,
+    /// and a view of it.
+    pub fn with_print_layout(mut self, layout: Option<&Value>, recipe: bool) -> Result<Self, String> {
+        let Some(layout) = layout else { return Ok(self) };
+        if !self.layouts.contains_key("print") {
+            let layout = serde_json::from_value(layout.clone()).map_err(|e| format!("print layout: {e}"))?;
+            self.layouts.insert("print".into(), layout);
+        }
+        if !recipe {
+            let requests = json!([
+                {"id": "print-3mf", "kind": "export", "format": "3mf", "layout": "print"},
+                {"id": "print-glb", "kind": "export", "format": "glb", "layout": "print"},
+                {"id": "print-view", "kind": "snapshot", "layout": "print", "options": {"view": "iso"}}
+            ]);
+            let requests: Vec<Request> = serde_json::from_value(requests).map_err(|e| format!("print requests: {e}"))?;
+            self.requests.extend(requests);
+        }
+        self.validate()?;
+        Ok(self)
+    }
     pub fn validate(&self) -> Result<(), String> {
         if self.version != 1 {
             return Err("unsupported request version; expected 1".into());

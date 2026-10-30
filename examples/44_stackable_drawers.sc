@@ -76,6 +76,7 @@ sketch PullSk on YZ offset (W/2 - pull_w/2) {
 extrude Pull from PullSk distance pull_w join targets Drawer
 fillet PullEdges edges (W/2, -pull_out, pull_top) radius 1 mm body Drawer
 
-// Prints without supports, in the print recipe's orientation.
-check Cabinet overhang <= 45 deg up (0, -1, 0)
+// Print orientations (also used by the overhang checks); prints without supports.
+print Cabinet up (0, -1, 0)
+check Cabinet overhang <= 45 deg
 check Drawer overhang <= 45 deg

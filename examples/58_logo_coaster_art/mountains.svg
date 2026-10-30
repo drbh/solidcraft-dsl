@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="44mm" height="26mm" viewBox="0 0 44 26">
+  <!-- Two peaks and a sun: drawn once here, placed and raised by 58_logo_coaster.sc -->
+  <path d="M0 26 L13 6 L19 14 L28 0 L44 26 Z"/>
+  <circle cx="36" cy="7" r="3.5"/>
+</svg>
