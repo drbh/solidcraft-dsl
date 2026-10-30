@@ -8,6 +8,9 @@
 //! Until the app emits change events, this polls `document.inspect`: the user parameters and
 //! the model dimensions `d1`, `d2`, … (numbered in creation order, which is the file's order of
 //! dimension statements) are compared with the values recorded right after the last apply.
+//!
+//! Linked parts (`component Name from "part.sc"`) are built headlessly with `cli` and their
+//! files are watched too: saving a part rebuilds the assembly with the new part.
 
 use std::collections::BTreeMap;
 use std::path::Path;
@@ -24,6 +27,8 @@ pub struct Options {
     pub interval: Duration,
     /// Apply once and exit (no polling).
     pub once: bool,
+    /// The headless engine that builds linked parts.
+    pub cli: String,
 }
 
 /// What the app held right after the file was applied.
@@ -32,6 +37,10 @@ struct Baseline {
     params: BTreeMap<String, (String, usize)>,
     /// Model dimension `dN` → expression, with the file line of the statement that made it.
     dims: Vec<(String, String, Option<usize>)>,
+}
+
+fn mtime_of(path: &Path) -> Option<SystemTime> {
+    std::fs::metadata(path).and_then(|m| m.modified()).ok()
 }
 
 fn mtime(path: &str) -> Option<SystemTime> {
@@ -71,6 +80,8 @@ struct Session {
     ctl: Control,
     baseline: Option<Baseline>,
     seen: Option<SystemTime>,
+    /// Linked part files and their modification times when last applied.
+    parts: Vec<(std::path::PathBuf, Option<SystemTime>)>,
 }
 
 impl Session {
@@ -88,11 +99,20 @@ impl Session {
         let design = crate::parse(&src)?;
         crate::check(&design)?;
         let c = crate::compile(&design)?;
+        let mut script = c.script.clone();
+        if !c.links.is_empty() {
+            let dir = std::env::temp_dir().join("solidcraft-dsl-parts");
+            let mut parts = crate::link::Parts::new(&self.opts.cli, &dir, crate::link::Naming::Cache);
+            let built = parts.prepare(&mut script, &c.links, Path::new(&self.opts.path));
+            // Watch every part the last attempt reached, so fixing a broken part retries.
+            self.parts = parts.parts().into_iter().map(|p| (p.source.clone(), mtime_of(&p.source))).collect();
+            built?;
+        }
         if c.expressions["requires"].as_array().is_some_and(|r| !r.is_empty()) {
             let capabilities = self.ctl.call("engine.commands", json!({}))?;
             crate::assembly::check_capabilities(&c, &capabilities)?;
         }
-        let commands = c.script["commands"].clone();
+        let commands = script["commands"].clone();
         let n = commands.as_array().map_or(0, Vec::len);
         self.ctl.call("engine.execute", json!({"command": "file.new", "params": {}}))?;
         let r = self.ctl.call("engine.batch", json!({"commands": commands, "rollback": false}))?;
@@ -212,7 +232,7 @@ pub fn watch(opts: Options) -> Result<(), String> {
         None => crate::control::find_token(&opts.addr)?,
     };
     let ctl = Control::connect(&opts.addr, Some(token))?;
-    let mut s = Session { opts, ctl, baseline: None, seen: None };
+    let mut s = Session { opts, ctl, baseline: None, seen: None, parts: vec![] };
     s.seen = mtime(&s.opts.path);
     if let Err(e) = s.apply() {
         if s.opts.once {
@@ -227,7 +247,8 @@ pub fn watch(opts: Options) -> Result<(), String> {
     loop {
         std::thread::sleep(s.opts.interval);
         let now = mtime(&s.opts.path);
-        if now != s.seen {
+        let part_changed = s.parts.iter().any(|(p, t)| mtime_of(p) != *t);
+        if now != s.seen || part_changed {
             s.seen = now;
             if let Err(e) = s.apply() {
                 s.say(&format!("error: {e}"));

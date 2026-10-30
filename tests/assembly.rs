@@ -199,3 +199,85 @@ fn engine_shared_instances_joint_parameter_edits_and_native_roundtrip() {
     assert_eq!(report["ok"], false, "conflicting grounded hinge must fail: {report}");
     let _ = std::fs::remove_dir_all(dir);
 }
+
+const LINKED: &str = "design Pair units mm\ncomponent Pin from \"pin.sc\" {\n  connector top at (0,0,10)\n}\ninstance a = Pin\ninstance b = Pin at (20,0,0)\nground a\n";
+const PIN: &str = "design Pin units mm\nparam r = 5 mm\ncylinder Body radius r height 10 -> body Pin\n";
+
+#[test]
+fn linked_parts_insert_their_design_once_and_copy_it_after() {
+    let c = build(LINKED).unwrap();
+    let commands = c.script["commands"].as_array().unwrap();
+    let inserts: Vec<_> = commands.iter().filter(|c| c["command"] == "component.insert_design").collect();
+    assert_eq!(inserts.len(), 1);
+    assert_eq!(inserts[0]["params"], json!({"path":"pin.sc","name":"Pin","occurrence_name":"a","parent":"root"}));
+    assert!(commands.iter().any(|c| c["command"] == "occurrence.copy" && c["params"]["occurrence_name"] == "b"));
+    assert!(!commands.iter().any(|c| c["command"] == "component.create" || c["command"] == "solid.cylinder"));
+    assert_eq!(c.links.len(), 1);
+    assert_eq!(c.links[0].source, "pin.sc");
+    assert_eq!(commands[c.links[0].command]["command"], "component.insert_design");
+    let e = solidcraft_dsl::assembly::check_capabilities(
+        &c,
+        &json!([
+            {"id":"component.create","params":"occurrence_name"},
+            {"id":"occurrence.copy","params":"occurrence_name"},
+            {"id":"component.insert_design","params":"path, name?"}
+        ]),
+    )
+    .unwrap_err();
+    assert!(e.contains("linked_occurrence_names"), "{e}");
+    for (src, message) in [
+        ("component P from \"p.sc\" {\nbox B size 1 1 1\n}\ninstance p = P", "connectors only"),
+        ("component P from \"p.sc\" {\ninstance q = P\n}", "connectors only"),
+        ("component P from p {\n}", "quoted part file"),
+    ] {
+        let e = build(src).unwrap_err();
+        assert!(e.contains(message), "{src}: {e}");
+    }
+}
+
+#[test]
+fn engine_links_parts_and_reports_their_errors_and_cycles() {
+    let Some(cli) = engine() else { return };
+    if solidcraft_dsl::assembly::check_engine(&cli, &build(LINKED).unwrap()).is_err() {
+        eprintln!("installed engine lacks linked occurrence names: skipped engine test");
+        return;
+    }
+    let dir = std::env::temp_dir().join(format!("sc-linked-test-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let source = dir.join("pair.sc");
+    std::fs::write(&source, LINKED).unwrap();
+    std::fs::write(dir.join("pin.sc"), PIN).unwrap();
+    let evaluate = || {
+        solidcraft_dsl::evaluate::evaluate(&solidcraft_dsl::evaluate::Options {
+            source: source.clone(),
+            output: dir.join("review"),
+            cli: cli.clone(),
+            previews: false,
+            expectations: None,
+            requests: None,
+        })
+        .unwrap()
+    };
+    let report = evaluate();
+    assert_eq!(report["ok"], true, "{report}");
+    let bodies = report["measurements"]["bodies"].as_array().unwrap();
+    assert_eq!(bodies.len(), 2);
+    let max_x: Vec<f64> = bodies.iter().map(|b| b["bbox"]["max"][0].as_f64().unwrap()).collect();
+    assert!(max_x.iter().any(|x| (x - 5.0).abs() < 1e-6) && max_x.iter().any(|x| (x - 25.0).abs() < 1e-6), "{max_x:?}");
+    let first = report["parts"][0]["design"].as_str().unwrap().to_string();
+    // An unchanged part is reused; an edited one is rebuilt.
+    assert_eq!(evaluate()["parts"][0]["design"], first.as_str());
+    std::fs::write(dir.join("pin.sc"), PIN.replace("5 mm", "6 mm")).unwrap();
+    let report = evaluate();
+    assert_ne!(report["parts"][0]["design"], first.as_str());
+    assert!(report["measurements"]["bodies"][0]["bbox"]["max"][0].as_f64().unwrap() > 5.5);
+    // A part that fails names its own line; a cycle names the files.
+    std::fs::write(dir.join("pin.sc"), "design Pin units mm\nbox B size 2 2 2 -> body Pin\nfillet F edges (9,9,9) radius 1 body Pin\n").unwrap();
+    let report = evaluate();
+    let message = report["diagnostics"][0]["message"].as_str().unwrap();
+    assert!(message.contains("pin.sc: line 3"), "{message}");
+    std::fs::write(dir.join("pin.sc"), "design Pin\ncomponent Back from \"pair.sc\" {\n}\ninstance x = Back\n").unwrap();
+    let message = evaluate()["diagnostics"][0]["message"].as_str().unwrap().to_string();
+    assert!(message.contains("cycle: pair.sc -> pin.sc -> pair.sc"), "{message}");
+    let _ = std::fs::remove_dir_all(&dir);
+}

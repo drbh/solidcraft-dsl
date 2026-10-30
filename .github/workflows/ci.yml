@@ -76,6 +76,7 @@ jobs:
           cargo build --locked -p solidcraft-cli --bin solidcraft-cli
           cargo test --locked -p solidcraft-engine --lib cmd::component::properties::tests
           cargo test --locked -p solidcraft-engine authored_occurrence_names
+          cargo test --locked -p solidcraft-engine inserted_designs_take_authored_occurrence_names
       - name: Verify every DSL capability and run the complete suite
         run: ci/check-compatibility.sh
         env:

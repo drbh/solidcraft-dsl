@@ -218,7 +218,23 @@ impl Builder<'_> {
             if self.visiting.contains(&definition.name) {
                 return Err(error(instance.line, format!("cyclic component instances: {} -> {}", self.visiting.join(" -> "), definition.name)));
             }
-            if self.built.insert(definition.name.clone()) {
+            if !self.built.insert(definition.name.clone()) {
+                self.emit(
+                    "occurrence.copy",
+                    json!({"component":definition.name,"occurrence_name":occurrence,"parent":scope.unwrap_or("root")}),
+                    instance.line,
+                );
+            } else if let Some(source) = &definition.source {
+                // A linked part: the engine reads its bodies from the part's own design, which
+                // link::prepare builds from `source` and substitutes for this path.
+                let command = self.compiled.lines.len();
+                self.emit(
+                    "component.insert_design",
+                    json!({"path":source,"name":definition.name,"occurrence_name":occurrence,"parent":scope.unwrap_or("root")}),
+                    instance.line,
+                );
+                self.compiled.links.push(crate::compile::Link { command, source: source.clone(), line: definition.line });
+            } else {
                 self.emit(
                     "component.create",
                     json!({"name":definition.name,"occurrence_name":occurrence,"parent":scope.unwrap_or("root")}),
@@ -242,12 +258,6 @@ impl Builder<'_> {
                 self.visiting.push(definition.name.clone());
                 self.scope(&definition.design, Some(&definition.name), depth + 1)?;
                 self.visiting.pop();
-            } else {
-                self.emit(
-                    "occurrence.copy",
-                    json!({"component":definition.name,"occurrence_name":occurrence,"parent":scope.unwrap_or("root")}),
-                    instance.line,
-                );
             }
             self.moves.push((occurrence, transform, instance.line));
             if scope.is_none() {
@@ -456,6 +466,9 @@ pub fn compile(d: &Design) -> R<Compiled> {
     b.compiled.expressions["assembly"] = json!({"definitions":b.built.len(),"instances":b.moves.len(),"joints":d.joints.len()});
     if let Some(requires) = b.compiled.expressions["requires"].as_array_mut() {
         requires.push(json!("authored_occurrence_names"));
+        if !b.compiled.links.is_empty() {
+            requires.push(json!("linked_occurrence_names"));
+        }
     }
     Ok(b.compiled)
 }
@@ -466,6 +479,7 @@ pub fn check_capabilities(c: &Compiled, commands: &Value) -> R<()> {
         let specs: &[(&str, &str)] = match required.as_str() {
             Some("persistent_sketch_point_expressions") => &[("sketch.point", "expression")],
             Some("authored_occurrence_names") => &[("component.create", "occurrence_name"), ("occurrence.copy", "occurrence_name")],
+            Some("linked_occurrence_names") => &[("component.insert_design", "occurrence_name")],
             _ => return Err(format!("unknown required engine capability {required}")),
         };
         for (id, field) in specs {

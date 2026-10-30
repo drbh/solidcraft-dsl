@@ -21,6 +21,7 @@ pub mod expressions;
 mod glb;
 pub mod layout;
 pub mod lex;
+pub mod link;
 pub mod native;
 pub mod parse;
 pub mod units;

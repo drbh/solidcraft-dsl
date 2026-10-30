@@ -358,6 +358,18 @@ pub struct Compiled {
     /// its model parameters `d1`, `d2`, …: `dim` statements, and `None` for a `rect rounded` or
     /// sketch `fillet` (each makes one radius dimension the file holds as an option, not a value).
     pub dims: Vec<Option<usize>>,
+    /// Linked parts (`component Name from "part.sc"`), whose `component.insert_design` commands
+    /// name the part's source until `link::prepare` builds it and points them at the design.
+    pub links: Vec<Link>,
+}
+
+#[derive(Debug, Clone)]
+pub struct Link {
+    /// Index of the `component.insert_design` command in `script.commands`.
+    pub command: usize,
+    /// The part file as written in the source.
+    pub source: String,
+    pub line: usize,
 }
 
 pub fn compile(d: &Design) -> R<Compiled> {
@@ -409,7 +421,16 @@ pub(crate) fn compile_geometry(d: &Design) -> R<Compiled> {
             }
         }
     }
-    Ok(Compiled { native: None, script: json!({"commands": out}), sketches: sketches.len(), features, lines, dims, expressions: lowered.explanation })
+    Ok(Compiled {
+        native: None,
+        script: json!({"commands": out}),
+        sketches: sketches.len(),
+        features,
+        lines,
+        dims,
+        expressions: lowered.explanation,
+        links: vec![],
+    })
 }
 
 fn compile_sketch(s: &Sketch, out: &mut Vec<Value>, lines: &mut Vec<usize>, dims: &mut Vec<Option<usize>>) -> R<SketchTable> {

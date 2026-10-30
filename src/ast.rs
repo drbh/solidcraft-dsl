@@ -215,6 +215,9 @@ pub struct Component {
     pub name: String,
     pub design: Design,
     pub line: usize,
+    /// `component Name from "part.sc"`: the part file whose design this component links to,
+    /// as written (relative to the file that names it). Its block holds connectors only.
+    pub source: Option<String>,
 }
 
 #[derive(Debug, Clone)]

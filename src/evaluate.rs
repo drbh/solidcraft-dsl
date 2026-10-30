@@ -144,6 +144,16 @@ fn build(
     report["expressions"] = c.expressions.clone();
     crate::assembly::check_engine(&opts.cli, c)?;
     let mut script = if c.native.is_some() { json!({"commands":[]}) } else { c.script.clone() };
+    if !c.links.is_empty() {
+        // Parts are cached across attempts beside them, keyed by source hash.
+        let mut parts = crate::link::Parts::new(&opts.cli, &dir.parent().unwrap_or(dir).join("parts"), crate::link::Naming::Cache);
+        if let Err(e) = parts.prepare(&mut script, &c.links, &opts.source) {
+            diagnostics.push(diagnostic("parts", &e, compile_line(&e), source));
+            return Ok(());
+        }
+        report["parts"] =
+            json!(parts.parts().iter().map(|p| json!({"source": p.source, "design": p.design, "sha256": p.sha256})).collect::<Vec<_>>());
+    }
     let cmds = script["commands"].as_array_mut().ok_or("compiler did not emit commands")?;
     let count = cmds.len();
     let assembly = c.expressions["assembly"].is_object() || c.native.as_ref().is_some_and(|n| n.document["assembly"].is_object());

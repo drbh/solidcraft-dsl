@@ -298,10 +298,21 @@ fn parse_design(p: &mut P, open: Option<usize>) -> R<Design> {
                     return Err(err(l.no, "define components at the top level; nest them with instances"));
                 }
                 let name = c.ident("the component name")?;
+                let source = if c.eat_ident("from") {
+                    match c.next() {
+                        Some(Tok::Str(s)) if !s.trim().is_empty() => Some(s.clone()),
+                        _ => return Err(err(l.no, "expected a quoted part file after `from`, e.g. `from \"wheel.sc\"`")),
+                    }
+                } else {
+                    None
+                };
                 c.expect_punct('{')?;
                 c.end()?;
                 let design = parse_design(p, Some(l.no))?;
-                d.components.push(Component { name, design, line: l.no });
+                if source.is_some() && (!design.items.is_empty() || !design.instances.is_empty()) {
+                    return Err(err(l.no, "a component linked `from` a part file holds connectors only; its geometry is the part's"));
+                }
+                d.components.push(Component { name, design, line: l.no, source });
             }
             "instance" => {
                 let name = c.ident("the instance name")?;

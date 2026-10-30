@@ -150,3 +150,67 @@ index d5bdfd9d..31260519 100644
 +        assert_eq!(serde_json::to_value(&s.doc).unwrap(), before);
 +    }
 +}
+diff --git a/crates/engine/src/cmd/component_link.rs b/crates/engine/src/cmd/component_link.rs
+index 95f029e3..bd35d860 100644
+--- a/crates/engine/src/cmd/component_link.rs
++++ b/crates/engine/src/cmd/component_link.rs
+@@ -23,8 +23,8 @@ mod relink_tests;
+ pub static COMMANDS: &[CommandSpec] = &[
+     CommandSpec::new("component.insert_design", "Insert Design", insert_design).at("SOLID", "ASSEMBLE").icon("component").params(
+         "path: a .solidcraft design → a new component linked to it, holding its solid bodies as placed in that design; \
+-         name? (default: the design's name); parent?: component id or name (default: the active one); translate?: [x,y,z]; \
+-         reuse?: bool (default false): insert another occurrence of an existing link to the same file",
++         name? (default: the design's name); occurrence_name?: unique nonnumeric name for the new instance; \
++         parent?: component id or name (default: the active one); translate?: [x,y,z]; reuse?: bool (default false): insert another occurrence of an existing link to the same file",
+     ),
+     CommandSpec::new("component.update_links", "Update Links", update_links).icon("update").params(
+         "component?: id or name (default: every linked component) — reads the linked designs again and replaces their bodies where they changed",
+@@ -155,7 +155,11 @@ fn insert_design(s: &mut Session, p: &Value) -> Result<Value> {
+         let existing = s.doc.links.iter().find(|(_, link)| absolute(&resolve(s.path.as_deref(), &link.path)) == file).map(|(id, _)| *id);
+         if let Some(component) = existing {
+             let parent = p.get("parent").cloned().unwrap_or_else(|| json!(s.active_component));
+-            return super::component::copy_occurrence(s, &json!({"component": component, "parent": parent, "translate": translate}));
++            let mut copy = json!({"component": component, "parent": parent, "translate": translate});
++            if let Some(name) = p.get("occurrence_name") {
++                copy["occurrence_name"] = name.clone();
++            }
++            return super::component::copy_occurrence(s, &copy);
+         }
+     }
+     let (design_name, sf) = linked_bodies(&file, s.path.as_deref())?;
+@@ -164,6 +168,9 @@ fn insert_design(s: &mut Session, p: &Value) -> Result<Value> {
+     if let Some(parent) = p.get("parent") {
+         create["parent"] = parent.clone();
+     }
++    if let Some(name) = p.get("occurrence_name") {
++        create["occurrence_name"] = name.clone();
++    }
+     let made = super::component::new_component(s, &create)?;
+     let comp = made["component"].as_u64().ok_or_else(|| bad(cmd, "the component was not created"))?;
+     let occ = made["occurrence"].as_u64();
+@@ -398,6 +405,25 @@ mod tests {
+         let _ = std::fs::remove_dir_all(&dir);
+     }
+ 
++    #[test]
++    fn inserted_designs_take_authored_occurrence_names() {
++        let dir = std::env::temp_dir().join(format!("solidcraft-link-named-{}", std::process::id()));
++        std::fs::create_dir_all(&dir).unwrap();
++        let part = dir.join("plate.solidcraft");
++        save_box(&part, 30.0);
++        let mut s = Session::default();
++        let first = run(&mut s, "component.insert_design", json!({"path": part, "occurrence_name": "left"}));
++        let second = run(&mut s, "component.insert_design", json!({"path": part, "reuse": true, "occurrence_name": "right"}));
++        let name = |id: &Value| s.doc.occurrences.iter().find(|o| Some(o.id) == id.as_u64()).map(|o| o.name.clone());
++        assert_eq!(name(&first["occurrence"]).as_deref(), Some("left"));
++        assert_eq!(name(&second["occurrence"]).as_deref(), Some("right"));
++        // A taken name is refused and changes nothing.
++        let before = s.doc.occurrences.len();
++        assert!(s.execute("component.insert_design", &json!({"path": part, "occurrence_name": "left"})).is_err());
++        assert_eq!(s.doc.occurrences.len(), before);
++        let _ = std::fs::remove_dir_all(&dir);
++    }
++
+     #[test]
+     fn inserting_a_missing_file_or_bad_parameters_changes_nothing() {
+         let mut s = Session::default();

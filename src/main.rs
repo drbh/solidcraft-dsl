@@ -150,6 +150,7 @@ fn run(args: cli::Args) -> Result<(), String> {
             token: args.token,
             interval: Duration::from_millis(args.interval),
             once: args.once,
+            cli: solidcraft_cli(),
         });
     }
     let src = read(path)?;
@@ -176,7 +177,25 @@ fn run(args: cli::Args) -> Result<(), String> {
             _ => {}
         }
     }
-    let text = serde_json::to_string_pretty(&c.script).map_err(|e| e.to_string())?;
+    let mut script = c.script.clone();
+    if !c.links.is_empty() && matches!(sub, "run" | "pack") {
+        // A packed assembly links to part designs saved beside it; a plain run uses a cache.
+        let (dir, naming) = match (sub, args.output.as_deref()) {
+            ("pack", Some(out)) => {
+                (std::path::Path::new(out).parent().map(std::path::Path::to_path_buf).unwrap_or_default(), solidcraft_dsl::link::Naming::Beside)
+            }
+            _ => (std::env::temp_dir().join("solidcraft-dsl-parts"), solidcraft_dsl::link::Naming::Cache),
+        };
+        let cli = solidcraft_cli();
+        // Refuse an engine that can't link before spending time building parts.
+        solidcraft_dsl::assembly::check_engine(&cli, &c)?;
+        let mut parts = solidcraft_dsl::link::Parts::new(&cli, &dir, naming);
+        parts.prepare(&mut script, &c.links, std::path::Path::new(path)).map_err(|e| format!("{path}:{}", e.strip_prefix("line ").unwrap_or(&e)))?;
+        for part in parts.parts() {
+            eprintln!("part {} -> {}", part.source.display(), part.design.display());
+        }
+    }
+    let text = serde_json::to_string_pretty(&script).map_err(|e| e.to_string())?;
     match sub {
         "explain" => {
             println!("{}", serde_json::to_string_pretty(&c.expressions).map_err(|e| e.to_string())?);

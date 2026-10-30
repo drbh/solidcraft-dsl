@@ -106,10 +106,54 @@ outside the concise assembly grammar. `decompile --readable` is still a limited 
 reconstruction, not an assembly reconstruction. `watch` reflects parameter/dimension edits;
 arbitrary browser moves and joint edits are not written back into concise source.
 
+## Linked parts: one file per part
+
+A component can come from another `.sc` file instead of its own block, so each part is designed
+and built on its own and an assembly file places them:
+
+```sc
+design BalanceBot units mm
+component Wheel from "wheel.sc" {
+  connector axle at (0,0,0) axis Z
+}
+component Leg from "lower_leg.sc" {
+  connector hub at (69,63.02,0) axis Z
+}
+instance leg = Leg
+ground leg
+instance wheel = Wheel at (69,63.02,3.9)
+joint spin revolute between leg.hub and wheel.axle
+```
+
+This is SolidCraft's Insert Design: the part is built into its own `.solidcraft` design and
+the assembly holds a component linked to it (`component.insert_design`), as a Fusion assembly
+holds linked designs. Further instances copy that component, and placements, grounding,
+connectors and joints work as for any component. The `from` path is relative to the file that
+names it; a part may itself link parts, and cycles are reported with the files involved.
+
+- The block holds connectors only: the geometry, parameters and timeline stay in the part
+  file. Parameters are not shared, so a part and an assembly can each have their own `L`.
+- A part file is one component. Parts that move independently (the links of a mechanism)
+  need one file each.
+- `run`, `evaluate` and `watch` build parts into a cache keyed by a hash of the part's source
+  and the parts it links (`<output-dir>/parts/` for `evaluate`, the system temporary
+  directory otherwise), so an unchanged part is not rebuilt. `evaluate` lists them under
+  `parts` in its report.
+- `pack -o asm.solidcraft` saves each part as `<part>.solidcraft` beside the assembly and
+  links to it by relative path. Open the assembly in SolidCraft and use **Update Links** after
+  editing a part, or pack again.
+- `watch` watches the part files too, and rebuilds the assembly when one is saved.
+- `compile` emits `component.insert_design` with the part's `.sc` path; a raw script replay
+  needs the parts built first, so use `run`, `pack` or `evaluate` for linked assemblies.
+- Errors in a part name the part and its line: `robot.sc:6: wheel.sc: line 12: …`.
+
+Linking needs `component.insert_design` to accept `occurrence_name` (the
+`linked_occurrence_names` capability), which the compatible engine build below adds.
+
 ## Engine compatibility
 
-This implementation adds optional `occurrence_name` arguments to engine `component.create`
-and `occurrence.copy` in the compatible SolidCraft build. This addresses occurrences by authored
+This implementation adds optional `occurrence_name` arguments to engine `component.create`,
+`occurrence.copy` and `component.insert_design` in the compatible SolidCraft build. This addresses occurrences by authored
 names without guessing global IDs. The arguments use the existing saved name field; no file
 schema change is needed. Names must be unique, nonnumeric, and different from `root`.
 
@@ -132,5 +176,5 @@ cargo run -- explain examples/assembly_hinge.sc --json
 
 The patch also exposes `world_name` in occurrence properties so layouts can select repeated
 instances precisely. It changes no saved-document fields. This is upstream SolidCraft plus
-two local API additions, not an unmodified release. The `full-engine` CI job builds this exact
+three local API additions, not an unmodified release. The `full-engine` CI job builds this exact
 revision and patch; the release jobs separately test the stock binary.

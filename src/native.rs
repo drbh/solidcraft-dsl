@@ -259,7 +259,16 @@ impl Native {
     pub fn compiled(self) -> crate::Compiled {
         let sketches = self.document["features"].as_array().into_iter().flatten().filter(|f| f["type"] == "sketch").count();
         let features = self.document["features"].as_array().map_or(0, Vec::len).saturating_sub(sketches);
-        crate::Compiled { expressions: self.coverage(), native: Some(self), script: Value::Null, sketches, features, lines: vec![], dims: vec![] }
+        crate::Compiled {
+            expressions: self.coverage(),
+            native: Some(self),
+            script: Value::Null,
+            sketches,
+            features,
+            lines: vec![],
+            dims: vec![],
+            links: vec![],
+        }
     }
 }
 
