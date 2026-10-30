@@ -25,6 +25,7 @@ pub mod lex;
 pub mod link;
 pub mod native;
 pub mod parse;
+pub mod reuse;
 pub mod units;
 pub mod watch;
 
@@ -36,6 +37,32 @@ pub fn decompile(design: &serde_json::Value) -> Result<String, String> {
     native::Native::from_document(design.clone())?.to_source()
 }
 pub use parse::parse;
+
+/// Build the design in the file at `path` (whose text is `src`): like `build`, after expanding
+/// the parts it `use`s, with lines and errors mapped back to the original files.
+pub fn build_file(src: &str, path: &std::path::Path) -> Result<Compiled, String> {
+    if native::is_source(src) || !src.lines().any(|l| l.trim_start().starts_with("use ")) {
+        return build(src);
+    }
+    let x = reuse::expand(src, path)?;
+    let mut c = build(&x.text).map_err(|e| x.error(e))?;
+    let line = |n: usize| x.origin.get(n.wrapping_sub(1)).map(reuse::Origin::line).unwrap_or(n);
+    for n in c.lines.iter_mut() {
+        *n = line(*n);
+    }
+    for n in c.dims.iter_mut().flatten() {
+        *n = line(*n);
+    }
+    for k in c.checks.iter_mut() {
+        k.line = line(k.line);
+    }
+    for site in c.expressions["sites"].as_array_mut().into_iter().flatten() {
+        if let Some(n) = site["line"].as_u64() {
+            site["line"] = serde_json::json!(line(n as usize));
+        }
+    }
+    Ok(c)
+}
 
 /// Parse, check and compile a `.sc` source.
 pub fn build(src: &str) -> Result<Compiled, String> {

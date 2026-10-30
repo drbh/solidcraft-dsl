@@ -109,7 +109,7 @@ impl<'a> Parts<'a> {
             return Err("parts are linked more than 32 levels deep".into());
         }
         let src = std::fs::read_to_string(&path).map_err(|e| format!("{}: {e}", path.display()))?;
-        let mut c = crate::build(&src)?;
+        let mut c = crate::build_file(&src, &path)?;
         self.stack.push(path.clone());
         let nested = self.prepare(&mut c.script, &c.links.clone(), &path);
         self.stack.pop();

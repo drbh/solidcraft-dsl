@@ -18,13 +18,13 @@ syn iskeyword @,48-57,_
 
 " option keys (from, distance, radius, at, edges, …)
 syn keyword scKey       between and rotate value values limits opposed
-syn keyword scStatement component instance connector ground joint check color material print
+syn keyword scStatement component instance connector ground joint check color material print use
 syn keyword scKey       from distance distance2 radius diameter at edges faces profiles targets body
 syn keyword scKey       plane axis count count2 spacing spacing2 dir dir2 offset units on about
 syn keyword scKey       taper angle clearance thread depth height width length major minor
 syn keyword scKey       thickness fit sides size corner center base normal to position
 syn keyword scKey       counterbore countersink features bodies tools points target type
-syn keyword scKey       direction alignment alignment2 face start through end between fraction side curves neutral pull factor factors gap margin pitch top_radius top_diameter
+syn keyword scKey       direction alignment alignment2 face start through end between fraction side curves neutral pull factor factors gap margin pitch top_radius top_diameter with join
 syn match   scKey       "\<origin\ze\s*("
 " modifiers (bare words that take no value)
 syn keyword scModifier  closed infer construction rounded periodic inscribed circumscribed

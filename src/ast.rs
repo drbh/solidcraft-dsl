@@ -283,6 +283,19 @@ pub struct Design {
     pub print_bed: Option<(Vec<Comp>, usize)>,
 }
 
+/// `use Alias from "part.sc" [with (p = expr, …)] [rotate X|Y|Z|(x,y,z) <angle>] [at (x,y,z)]
+/// [join targets A | -> body Name]`: another design's geometry, expanded into this one.
+#[derive(Debug, Clone)]
+pub struct Use {
+    pub alias: String,
+    pub file: String,
+    pub overrides: Vec<(String, String)>,
+    pub rotate: Option<(Vec<Comp>, String)>,
+    pub at: Option<Vec<Comp>>,
+    pub join: Option<Vec<String>>,
+    pub body: Option<String>,
+}
+
 /// `print A, B up <direction>`: these bodies print together, `up` (in design coordinates)
 /// pointing away from the bed.
 #[derive(Debug, Clone)]

@@ -99,7 +99,7 @@ pub fn evaluate(opts: &Options) -> Result<Value, String> {
         Err(e) => diagnostics.push(diagnostic("expectations", e, None, &source)),
         Ok(checks) => {
             write_json(&dir.join("expectations.json"), &checks)?;
-            match crate::build(&source) {
+            match crate::build_file(&source, &opts.source) {
                 Err(e) => diagnostics.push(diagnostic("compile", &e, compile_line(&e), &source)),
                 Ok(c) => {
                     if let Err(e) = build(opts, &dir, &source, &c, &checks, &mut report, &mut diagnostics) {

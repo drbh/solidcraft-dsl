@@ -344,6 +344,96 @@ fn tok_text(t: &Tok) -> String {
     }
 }
 
+/// One `use` line (see `ast::Use`); `reuse::expand` replaces it with the other design.
+pub fn parse_use(line: &Line) -> R<Use> {
+    let mut c = Cur::new(line);
+    if c.ident("`use`")? != "use" {
+        return Err(err(line.no, "expected `use`"));
+    }
+    let alias = c.ident("the name for the part's copy")?;
+    if !c.eat_ident("from") {
+        return Err(err(line.no, "expected `from \"part.sc\"`"));
+    }
+    let file = match c.next() {
+        Some(Tok::Str(s)) if !s.trim().is_empty() => s.clone(),
+        _ => return Err(err(line.no, "expected the part file in quotes: `from \"part.sc\"`")),
+    };
+    let mut u = Use { alias, file, overrides: vec![], rotate: None, at: None, join: None, body: None };
+    while !c.done() {
+        if c.peek() == Some(&Tok::Arrow) {
+            c.i += 1;
+            if !c.eat_ident("body") {
+                return Err(err(line.no, "expected `-> body <name>`"));
+            }
+            u.body = Some(c.ident("the body name")?);
+            continue;
+        }
+        match c.ident("a use option: with, rotate, at, join or -> body")?.as_str() {
+            "with" => {
+                c.expect_punct('(')?;
+                loop {
+                    let name = c.ident("a parameter of the part")?;
+                    c.expect_punct('=')?;
+                    // Up to the next top-level `,` or the closing `)`.
+                    let mut depth = 0;
+                    let mut text = String::new();
+                    loop {
+                        match c.next() {
+                            Some(Tok::Punct('(')) => {
+                                depth += 1;
+                                text.push('(');
+                            }
+                            Some(Tok::Punct(')')) if depth > 0 => {
+                                depth -= 1;
+                                text.push(')');
+                            }
+                            Some(Tok::Punct(')' | ',')) => {
+                                c.i -= 1;
+                                break;
+                            }
+                            Some(t) => {
+                                if !text.is_empty() && !text.ends_with('(') {
+                                    text.push(' ');
+                                }
+                                text.push_str(&tok_text(t));
+                            }
+                            None => return Err(err(line.no, "unterminated `with (…)`")),
+                        }
+                    }
+                    if text.is_empty() {
+                        return Err(err(line.no, format!("`{name} =` needs a value")));
+                    }
+                    u.overrides.push((name, text));
+                    if c.eat_punct(')') {
+                        break;
+                    }
+                    c.expect_punct(',')?;
+                }
+            }
+            "rotate" => {
+                let axis = parse_axis(&mut c)?;
+                u.rotate = Some((axis, c.expr1("the rotation angle")?));
+            }
+            "at" => u.at = Some(c.tuple()?),
+            "join" => {
+                if !c.eat_ident("targets") {
+                    return Err(err(line.no, "expected `join targets <body>`"));
+                }
+                let mut targets = vec![c.ident("a body")?];
+                while c.eat_punct(',') {
+                    targets.push(c.ident("a body")?);
+                }
+                u.join = Some(targets);
+            }
+            other => return Err(err(line.no, format!("unknown use option `{other}`"))),
+        }
+    }
+    if u.join.is_some() && u.body.is_some() {
+        return Err(err(line.no, "a used part either joins a body or is named with `-> body`, not both"));
+    }
+    Ok(u)
+}
+
 pub fn parse(src: &str) -> R<Design> {
     let lines = lex(src)?;
     let mut p = P { lines: &lines, i: 0 };
@@ -456,6 +546,9 @@ fn parse_design(p: &mut P, open: Option<usize>) -> R<Design> {
                     c.end()?;
                     d.prints.push(Print { bodies, up, line: l.no });
                 }
+            }
+            "use" => {
+                return Err(err(l.no, "`use` reads another file relative to this one: build the design from its file (`run`, `evaluate`, `watch`)"));
             }
             "check" => {
                 if open.is_some() {

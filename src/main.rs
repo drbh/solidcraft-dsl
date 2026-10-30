@@ -154,7 +154,7 @@ fn run(args: cli::Args) -> Result<(), String> {
         });
     }
     let src = read(path)?;
-    let c = solidcraft_dsl::build(&src).map_err(|e| format!("{path}:{}", e.strip_prefix("line ").unwrap_or(&e)))?;
+    let c = solidcraft_dsl::build_file(&src, std::path::Path::new(path)).map_err(|e| format!("{path}:{}", e.strip_prefix("line ").unwrap_or(&e)))?;
     if let Some(native) = &c.native {
         match sub {
             "compile" | "pack" => {

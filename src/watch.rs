@@ -96,9 +96,10 @@ impl Session {
         if crate::native::is_source(&src) {
             return Err("native source preserves the complete document; use `pack` and open it in SolidCraft, or `evaluate` for headless review. The command-replay watch mode supports concise source only.".into());
         }
-        let design = crate::parse(&src)?;
-        crate::check(&design)?;
-        let c = crate::compile(&design)?;
+        let c = crate::build_file(&src, Path::new(&self.opts.path))?;
+        // Parameter edits in the app are written back to `param` lines; a design that `use`s parts
+        // has parameters from other files, so it is not parsed on its own and gets none.
+        let design = crate::parse(&src).ok();
         let mut script = c.script.clone();
         crate::link::inline_files(&mut script, Path::new(&self.opts.path))?;
         if !c.links.is_empty() {
@@ -135,7 +136,7 @@ impl Session {
             let expr = p["expression"].as_str().unwrap_or("").to_string();
             if p["model"].as_bool() == Some(true) {
                 dims.push((name, expr, None));
-            } else if let Some(line) = design.params.iter().find(|q| q.name == name).map(|q| q.line) {
+            } else if let Some(line) = design.as_ref().and_then(|d| d.params.iter().find(|q| q.name == name)).map(|q| q.line) {
                 params.insert(name, (expr, line));
             }
         }
