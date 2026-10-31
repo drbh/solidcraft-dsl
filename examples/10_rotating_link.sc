@@ -1,6 +1,7 @@
 // 10. Persistent expression-bound points, shared references and counterbored holes.
-// Requires an engine with expression-driven sketch points (current development source).
-// Changing angle or L in the native design moves the outline AND both holes.
+// With an engine that has expression-driven sketch points (0.19 and later), changing angle or L
+// in the native design moves the outline AND both holes. Older engines place the points at
+// their current values.
 design RotatingLink units mm
 param L = 60 mm
 param W = 20 mm

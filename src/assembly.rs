@@ -515,7 +515,14 @@ pub fn check_capabilities(c: &Compiled, commands: &Value) -> R<()> {
 /// counting that component's occurrences in the order they are made, so the script uses those
 /// names instead. Any other missing capability is an error.
 pub fn fit_script(c: &Compiled, script: &mut Value, commands: &Value) -> R<()> {
-    let names = ["authored_occurrence_names", "linked_occurrence_names", "text_parameters", "thread_handedness", "sheet_path_flange"];
+    let names = [
+        "authored_occurrence_names",
+        "linked_occurrence_names",
+        "text_parameters",
+        "thread_handedness",
+        "sheet_path_flange",
+        "persistent_sketch_point_expressions",
+    ];
     let missing = missing(c, commands)?;
     if let Some((required, id, field)) = missing.iter().find(|(r, ..)| !names.contains(&r.as_str())) {
         return Err(format!(
@@ -533,6 +540,28 @@ pub fn fit_script(c: &Compiled, script: &mut Value, commands: &Value) -> R<()> {
     }
     if missing.iter().any(|(r, ..)| r == "sheet_path_flange") {
         path_flange_fallback(c, script)?;
+    }
+    if missing.iter().any(|(r, ..)| r == "persistent_sketch_point_expressions") {
+        literal_points(c, script)?;
+    }
+    Ok(())
+}
+
+/// For an engine without expression-bound sketch points: place each bound point at its current
+/// value. The design builds; the points stay where they are when a parameter changes. Bound
+/// points are the only sketch points whose coordinates are left as expressions, and their
+/// binding sites are recorded in the same order, x then y.
+pub fn literal_points(c: &Compiled, script: &mut Value) -> R<()> {
+    let mut values = c.expressions["sites"].as_array().into_iter().flatten().filter(|s| s["role"] == "binding").map(|s| s["value"].as_f64());
+    let Some(commands) = script["commands"].as_array_mut() else { return Ok(()) };
+    for command in commands.iter_mut().filter(|c| c["command"] == "sketch.point") {
+        let Some(point) = command["params"]["point"].as_array_mut() else { continue };
+        if !point.iter().any(Value::is_string) {
+            continue;
+        }
+        for v in point.iter_mut() {
+            *v = json!(values.next().flatten().ok_or("a bound sketch point has no recorded value")?);
+        }
     }
     Ok(())
 }

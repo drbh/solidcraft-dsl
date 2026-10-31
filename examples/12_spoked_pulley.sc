@@ -25,8 +25,9 @@ param spoke_w = 9 mm
 param spoke_h = 12 mm
 let spoke_len = rim_in - hub_r + 4 mm
 box Spoke size spoke_len spoke_w spoke_h corner (hub_r-2 mm,-spoke_w/2,(hub_h-spoke_h)/2) join targets Pulley
-pattern circular Spokes features Spoke axis Z count spokes angle 360 deg
+// Join the hub before patterning the spoke: engine 0.15's pattern merges every body it touches
 combine JoinHub target Pulley tools HubBody join
+pattern circular Spokes features Spoke axis Z count spokes angle 360 deg
 param key_w = 4 mm
 param key_d = 2.5 mm
 param flange_r = 28 mm

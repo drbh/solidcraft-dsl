@@ -53,8 +53,9 @@ polylines. They do not automatically join nearby points. Literal bindings are fi
 Do not add conflicting driving constraints to bound geometry.
 
 **Engine requirement:** SolidCraft 0.19.0 supports persistent sketch points. Older CLI versions
-0.15 and 0.16.2 do not. `evaluate` checks the advertised command capability and returns an
-actionable error. Use the pinned release explicitly:
+0.15 and 0.16.2 do not. On them, each bound point is placed at its current value: the design
+builds the same, but the points don't follow a parameter change made in the app. For live
+points, use the pinned release:
 
 ```sh
 ci/install-solidcraft-cli.sh 0.19.0 "$PWD/build/release-engine"

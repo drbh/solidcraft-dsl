@@ -337,3 +337,13 @@ fn engine_links_parts_and_reports_their_errors_and_cycles() {
     assert!(message.contains("cycle: pair.sc -> pin.sc -> pair.sc"), "{message}");
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+#[test]
+fn engines_without_point_expressions_place_bound_points_at_their_values() {
+    let c = build("param a = 30 deg\nsketch S on XY {\n bind point p = (10 mm*cos(a), 10 mm*sin(a))\n}\n").unwrap();
+    let mut script = c.script.clone();
+    solidcraft_dsl::assembly::fit_script(&c, &mut script, &json!([])).unwrap();
+    let point = script["commands"].as_array().unwrap().iter().find(|c| c["command"] == "sketch.point").unwrap();
+    let xy: Vec<f64> = point["params"]["point"].as_array().unwrap().iter().map(|v| v.as_f64().unwrap()).collect();
+    assert!((xy[0] - 8.660254).abs() < 1e-6 && (xy[1] - 5.0).abs() < 1e-9, "{xy:?}");
+}
