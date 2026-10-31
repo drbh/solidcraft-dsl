@@ -357,6 +357,12 @@ sketch move and transform, extend, and a section of a body (`sketch.intersect`),
 `73_surface_blends_and_sheet_queries` blends two patches, fairs and matches the blend, stitches
 the three, and runs the sheet rules and bend table queries. `surface.fillet` is listed by the
 engine but not implemented yet (it answers "not supported yet", issue #769).
+`74_sketch_curves` covers control-point, degree-5 and equation curves, blend curves,
+centerlines, construction and delete, path trim and break, the chamfer variants, the midpoint
+constraint, dimension toggles, DXF import, a 3D sketch (wires `w1`, `w2`, point `q1`) used as pipe
+paths, spun profiles, section fits, and the reference curves (included edges, intersections,
+isoparametric and surface projections), 48 checks. A circle's `dim` sets its diameter; its
+constraint id is `k…` and its parameter `d…`.
 An extrude of separate profiles makes one body per piece (`Studs`, `Studs (2)`, …); join them to
 something to keep one body. A pattern about a named construction
 axis needs 0.27; older engines stop with the reason. Two things it shows: a cylinder's
