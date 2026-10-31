@@ -335,7 +335,10 @@ text and imports, it comes after the sketch's own entities, and it refers to ent
 engine's ids (`c1`, `l3.end`). A finished sketch can also be reopened with `engine sketch.edit
 {"sketch": "S"}` … `engine sketch.finish {}`. `66_engine_commands` uses seven such commands
 (split face, press-pull, surface offset, boundary fill, tangent plane, a three-point circle, sheet
-unfold) and checks each result; it passes on 0.27 and 0.19. Two things it shows: a cylinder's
+unfold) and checks each result; it passes on 0.27 and 0.19. `68_more_engine_commands` adds eight
+more (surface extend, trim, ruled and reverse normal; an axis from two planes driving a pattern;
+sheet refold; sketch trim; solid align), 24 checks on 0.27. A pattern about a named construction
+axis needs 0.27; older engines stop with the reason. Two things it shows: a cylinder's
 side is two half-faces, so pick both; and the engine integrates the volume of spline and offset
 faces to about 0.01 %, so check those with a range.
 

@@ -524,6 +524,14 @@ pub(crate) fn compile_geometry(d: &Design) -> R<Compiled> {
                 {
                     r.push(json!("model_axes"));
                 }
+                // A circular pattern about a construction axis's name (engine 0.27+).
+                let named_axis = d.items.iter().any(|i| {
+                    matches!(i, Item::Feature(f) if f.kind == "pattern_circular"
+                        && f.opts.iter().any(|(k, v)| k == "axis" && matches!(v, Val::Ref(r) if !matches!(r.base.as_str(), "X" | "Y" | "Z"))))
+                });
+                if named_axis {
+                    r.push(json!("construction_axes"));
+                }
                 if text_expression || d.params.iter().any(|p| p.text().is_some()) {
                     r.push(json!("text_parameters"));
                 }

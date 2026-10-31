@@ -501,6 +501,7 @@ fn missing(c: &Compiled, commands: &Value) -> R<Vec<(String, &'static str, &'sta
             Some("text_parameters") => &[("sketch.text", "text_expression")],
             Some("sheet_path_flange") => &[("sheet.path_flange", "edge")],
             Some("model_axes") => &[("solid.pattern.circular", "{edge|face")],
+            Some("construction_axes") => &[("solid.pattern.circular", "construction axis name")],
             _ => return Err(format!("unknown required engine capability {required}")),
         };
         for (id, field) in specs {
