@@ -351,6 +351,9 @@ and planes, planes from two edges, along a path and perpendicular, axes through 
 two points), the engine's own cone, offset face, bounding solid, and surface boundary, untrim and
 unstitch, 30 checks on 0.27. The origin planes' names (XY, XZ, YZ, Top, Front, Right) can't name
 a construction plane.
+`72_more_sketch_commands` draws an ellipse, a conic, arc slots, circles tangent to two and three
+curves, a line from its midpoint, and uses the polygon, equal, tangent and symmetry constraints,
+sketch move and transform, extend, and a section of a body (`sketch.intersect`), 46 checks.
 An extrude of separate profiles makes one body per piece (`Studs`, `Studs (2)`, …); join them to
 something to keep one body. A pattern about a named construction
 axis needs 0.27; older engines stop with the reason. Two things it shows: a cylinder's
