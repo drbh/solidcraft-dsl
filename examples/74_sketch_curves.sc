@@ -139,8 +139,8 @@ sketch DxfSk on XY offset 20 mm {
 extrude DxfX from DxfSk distance 1 mm -> body DxfSquare
 check DxfSquare volume == 400 mm3
 
-// 3D sketch: line3d, arc3d and point3d drawn in space (wires w1, w2 and point q1), move3d, and
-// the curves as pipe paths.
+// 3D sketch: line3d, arc3d, point3d and spline3d drawn in space (wires w1, w2, w3 and point q1),
+// move3d, and the curves as pipe paths.
 // A 30 mm straight pipe of 4 mm diameter is pi 4 30 = 376.99; a quarter arc of radius 20 is
 // pi 4 (pi 20 / 2) = 394.78.
 sketch Wire on XY {
@@ -151,6 +151,7 @@ sketch Wire on XY {
   engine sketch.move3d {"wire": "w1", "index": 1, "to": [0, 100, 30]}
   engine sketch.arc3d {"start": [40, 100, 0], "through": [54.142, 100, 5.858], "end": [60, 100, 20]}
   engine sketch.point3d {"point": [80, 100, 10]}
+  engine sketch.spline3d {"points": [[100, 100, 0], [105, 105, 10], [110, 100, 20]]}
 }
 engine solid.pipe {"name": "StraightPipe", "path_sketch": "Wire", "path": ["w1"], "diameter": "4 mm", "body_name": "Straight"}
 engine solid.pipe {"name": "BentPipe", "path_sketch": "Wire", "path": ["w2"], "diameter": "4 mm", "body_name": "Bent"}
@@ -158,6 +159,8 @@ check Straight volume >= 376.95 mm3
 check Straight volume <= 377.03 mm3
 check Bent volume >= 394.74 mm3
 check Bent volume <= 394.82 mm3
+engine solid.pipe {"name": "CurvedPipe", "path_sketch": "Wire", "path": ["w3"], "diameter": "4 mm", "body_name": "Curved"}
+check Curved size.z >= 20 mm
 
 // Curves from 3D geometry: a cylinder's outline spun into the plane, its section fitted with arcs
 // (an r 5 circle, extruded: pi 25), and a box's top edges included as reference curves (they

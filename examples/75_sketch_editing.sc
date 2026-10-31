@@ -179,3 +179,21 @@ sketch Queries on XY {
   engine sketch.drawing_bounds {"text": "<svg xmlns='http://www.w3.org/2000/svg' width='20' height='10'><rect width='20' height='10'/></svg>", "format": "svg"}
   engine sketch.export_dxf {"sketch": "Queries"}
 }
+
+// sketch.draw.dimensioned: a rectangle drawn 15 x 8 and dimensioned 20 x 10 in one step: 200
+sketch DimDrawSk on XY offset 20 mm {
+  engine sketch.draw.dimensioned {"command": "sketch.rectangle.two_point", "params": {"p0": [0, 0], "p1": [15, 8]}, "dimensions": {"width": 20, "height": 10}}
+}
+extrude DimDrawX from DimDrawSk distance 1 mm profiles (5, 5) -> body DimDrawn
+check DimDrawn volume == 200 mm3
+
+// sketch.edit_text: 5 mm text "II" edited to 10 mm "IIII" (picked by one of its curves): the
+// lettering, extruded 1 mm, grows from under 6 to over 8 tall
+sketch LabelSk on XY offset 20 mm {
+  point o = (40, 0)
+  fix o
+  engine sketch.text {"text": "II", "at": [40, 0], "height": 5}
+  engine sketch.edit_text {"entity": "l1", "text": "IIII", "height": 10}
+}
+extrude LabelX from LabelSk distance 1 mm -> body Label
+check Label size.y >= 8 mm
