@@ -363,6 +363,10 @@ constraint, dimension toggles, DXF import, a 3D sketch (wires `w1`, `w2`, point 
 paths, spun profiles, section fits, and the reference curves (included edges, intersections,
 isoparametric and surface projections), 48 checks. A circle's `dim` sets its diameter; its
 constraint id is `k…` and its parameter `d…`.
+`75_sketch_editing` covers the editing commands: collinear and curvature constraints, spline
+insert and reverse, offset break, copy, cut and paste, edit and cancel, equation curve edit, move
+point and live drags, the constrainer, loose ends and tie, auto-constrain, redefine, break link,
+and the queries, 39 checks. An `engine sketch.finish_auto_constrain` line ends the sketch itself.
 An extrude of separate profiles makes one body per piece (`Studs`, `Studs (2)`, …); join them to
 something to keep one body. A pattern about a named construction
 axis needs 0.27; older engines stop with the reason. Two things it shows: a cylinder's

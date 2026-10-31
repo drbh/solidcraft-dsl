@@ -951,8 +951,11 @@ fn compile_sketch(s: &Sketch, out: &mut Vec<Value>, lines: &mut Vec<usize>, dims
             }
         }
     }
-    out.push(cmd("sketch.finish", json!({})));
-    lines.push(s.line);
+    // An `engine sketch.finish_auto_constrain` line has finished the sketch already.
+    if out.last().is_none_or(|c| c["command"] != "sketch.finish_auto_constrain") {
+        out.push(cmd("sketch.finish", json!({})));
+        lines.push(s.line);
+    }
     Ok(t)
 }
 
