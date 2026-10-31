@@ -10,8 +10,9 @@
 // `thread_clear` at the thread's radius without changing the pitch. Checked on engine 0.19 by
 // screwing the cap onto the neck (1 mm short of the seal) and turning it in 30 deg steps: at the
 // angle where the threads mesh, the cap clears the neck by 0.09 mm; at the others the flanks
-// overlap (300 deg was not measured: the engine query ran for 95 min). Raise `thread_clear`
-// for a looser fit. A ring in the cap seals on the neck's top.
+// overlap. Around 300 deg (295, 300 and 305 tried) neither the clearance query nor an
+// intersection of the two parts finishes within 30 min, so that angle is unmeasured. Raise
+// `thread_clear` for a looser fit. A ring in the cap seals on the neck's top.
 // No supports: the shoulder is 45 deg, and the 60 deg ISO flanks print as a 30 deg overhang.
 design BottleAndCap units mm
 param body_d = 60 mm
