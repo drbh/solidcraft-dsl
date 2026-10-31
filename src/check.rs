@@ -332,7 +332,10 @@ pub(crate) fn check_geometry(d: &Design) -> R<()> {
                 }
                 c.feature(f)?;
                 c.names.insert(f.name.clone(), Named::Feature);
-                if f.kind == "plane" {
+                // A plane, or a construction plane made by an `engine` statement, that sketches use.
+                let constructs_plane = f.kind == "engine"
+                    && f.opts.iter().any(|(k, v)| k == "command" && matches!(v, Val::Raw(id) if id.starts_with("construct.plane")));
+                if f.kind == "plane" || constructs_plane {
                     c.planes.push(f.name.clone());
                 }
             }

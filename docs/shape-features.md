@@ -316,6 +316,14 @@ one JSON object on the line. Expressions go in strings, as in `"2 mm"` or `"wall
 engine evaluates them. A `name` names the feature for later statements; a `body_name` declares
 the body it makes, so checks and later features can use it. Engine errors point at the line.
 
+A construction plane made this way (`construct.plane.*` with a `name`) can carry sketches like a
+`plane` statement's. A command that works inside a sketch runs between `engine sketch.edit
+{"sketch": "S"}` and `engine sketch.finish {}`. `66_engine_commands` uses seven such commands
+(split face, press-pull, surface offset, boundary fill, tangent plane, a three-point circle, sheet
+unfold) and checks each result; it passes on 0.27 and 0.19. Two things it shows: a cylinder's
+side is two half-faces, so pick both; and the engine integrates the volume of spline and offset
+faces to about 0.01 %, so check those with a range.
+
 The compiler can't check these parameters, so a wrong pick is the engine's to report, or not:
 a construction axis through two `vertex` points where the body has no vertex snaps to other
 vertices without an error. Measure the result, as with any feature.

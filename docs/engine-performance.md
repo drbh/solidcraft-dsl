@@ -41,6 +41,10 @@ copies and the size of the body they join:
 Whole builds: 29_thin_sheet 7.4 s → 158 s, the three gearboxes about 2.8 times slower, 35 1.3
 times. Builds without patterns take the same time or less.
 
+No workaround in the DSL: patterning tool bodies instead (600 pin bodies in 0.08 s on either
+engine) and cutting them from the sheet in one `combine` takes longer still, 245 s on 0.19.0 and
+265 s on 0.27.1.
+
 Smallest reproduction: `examples/03_bolt_plate.sc`, a plate with one hole patterned 2 × 2
 (`solidcraft-dsl run examples/03_bolt_plate.sc --timings`, step `Holes`). For a large one,
 `examples/29_thin_sheet.sc`.
