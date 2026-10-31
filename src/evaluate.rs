@@ -144,6 +144,11 @@ fn build(
         }
     };
     report["expressions"] = c.expressions.clone();
+    if let Some(warning) = engine_age(&opts.cli) {
+        let mut d = diagnostic("engine", warning, None, source);
+        d["severity"] = json!("warning");
+        diagnostics.push(d);
+    }
     let mut script = if c.native.is_some() { json!({"commands":[]}) } else { c.script.clone() };
     crate::assembly::fit_engine(&opts.cli, c, &mut script)?;
     if let Err(e) = crate::link::inline_files(&mut script, &opts.source) {
@@ -297,6 +302,25 @@ fn build(
     report["checks"] = json!(check_results);
 
     Ok(())
+}
+
+/// The engine version this repository pins (flake.nix) and is tested against.
+pub const PINNED_ENGINE: [u32; 3] = [0, 19, 0];
+
+/// A warning when the engine is older than the pinned version. 0.15 silently drops a join of a
+/// piece that doesn't touch the body, and rejects or misbuilds several examples.
+fn engine_age(cli: &str) -> Option<String> {
+    let out = Command::new(cli).arg("--version").output().ok()?;
+    let text = String::from_utf8_lossy(&out.stdout);
+    let version = text.split_whitespace().last()?;
+    let parts: Vec<u32> = version.split('.').map(|p| p.parse().ok()).collect::<Option<_>>()?;
+    let found: [u32; 3] = parts.try_into().ok()?;
+    (found < PINNED_ENGINE).then(|| {
+        let [a, b, c] = PINNED_ENGINE;
+        format!(
+            "engine {version} is older than {a}.{b}.{c}, which this DSL is tested against: older engines silently drop joins of pieces that don't touch and build some designs differently; install it with `ci/install-solidcraft-cli.sh {a}.{b}.{c}`"
+        )
+    })
 }
 
 /// Verify the design's `check` statements and every body's implied one-piece check. Clearance

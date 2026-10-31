@@ -402,6 +402,9 @@ pub struct Compiled {
     pub checks: Vec<crate::checks::Check>,
     /// The layout `print` statements describe, for `evaluate`'s print requests.
     pub print_layout: Option<Value>,
+    /// Left-hand threads: the thread command's index and its body. On an engine without thread
+    /// handedness, `assembly::fit_script` cuts them by mirroring (see `left_thread_fallback`).
+    pub left_threads: Vec<(usize, String)>,
 }
 
 #[derive(Debug, Clone)]
@@ -427,6 +430,7 @@ pub(crate) fn compile_geometry(d: &Design) -> R<Compiled> {
     let mut sketches: HashMap<String, SketchTable> = HashMap::new();
     let mut names: HashMap<String, usize> = HashMap::new();
     let mut features = 0;
+    let mut left_threads = Vec::new();
     for p in &d.params {
         if names.insert(p.name.clone(), p.line).is_some() {
             return Err(err(p.line, format!("parameter `{}` is defined twice", p.name)));
@@ -461,10 +465,13 @@ pub(crate) fn compile_geometry(d: &Design) -> R<Compiled> {
                 if let Some(prev) = names.insert(f.name.clone(), f.line) {
                     return Err(err(f.line, format!("`{}` is already the name of what line {prev} defines", f.name)));
                 }
-                for c in compile_feature(f, &mut sketches)? {
+                for mut c in compile_feature(f, &mut sketches)? {
                     // A cone's profile sketch makes model dimensions, like a drawn sketch's.
                     if c["command"] == "sketch.dimension" {
                         dims.push(None);
+                    }
+                    if let Some(body) = c["params"].as_object_mut().and_then(|p| p.remove("_left_body")) {
+                        left_threads.push((out.len(), body.as_str().unwrap_or("").to_string()));
                     }
                     out.push(c);
                     lines.push(f.line);
@@ -506,6 +513,7 @@ pub(crate) fn compile_geometry(d: &Design) -> R<Compiled> {
         links: vec![],
         checks: vec![],
         print_layout: None,
+        left_threads,
     })
 }
 
@@ -1620,8 +1628,10 @@ fn compile_feature(f: &Feature, sketches: &mut HashMap<String, SketchTable>) -> 
             if o.flag("modeled") {
                 p["modeled"] = json!(true);
             }
-            // Left-handed threads need an engine with thread handedness (0.27 or later).
-            if o.flag("left") {
+            // Left-handed: native on engines with thread handedness (0.27+); on others, cut as
+            // the mirror image of a right-hand thread, which needs the body and five more slots.
+            let left = o.flag("left");
+            if left {
                 p["handedness"] = json!("left");
             }
             // `clearance c internal|external axis A origin (…) body B`: the engine cuts the basic
@@ -1649,12 +1659,24 @@ fn compile_feature(f: &Feature, sketches: &mut HashMap<String, SketchTable>) -> 
                 };
                 let k = format!("1 {} ({c}) / ({} mm)", if side == "internal" { "+" } else { "-" }, major / 2.0);
                 let factors: Vec<Value> = ["X", "Y", "Z"].iter().map(|a| if *a == axis { json!(1) } else { json!(k) }).collect();
+                if left {
+                    p["_left_body"] = json!(body);
+                }
                 let thread = o.finish(p)?;
                 let name = format!("{}Clearance", f.name);
-                return Ok(vec![
-                    cmd("solid.thread", thread),
-                    cmd("solid.scale", json!({"bodies": [body], "factors": factors, "origin": origin, "name": name})),
-                ]);
+                let mut out = vec![cmd("solid.thread", thread)];
+                if left {
+                    out.extend(std::iter::repeat_n(placeholder(), 5));
+                }
+                out.push(cmd("solid.scale", json!({"bodies": [body], "factors": factors, "origin": origin, "name": name})));
+                return Ok(out);
+            }
+            if left {
+                let body = o.ident("body")?.ok_or_else(|| err(line, "a left-hand thread needs `body <name>`, the threaded part"))?;
+                p["_left_body"] = json!(body);
+                let mut out = vec![cmd("solid.thread", o.finish(p)?)];
+                out.extend(std::iter::repeat_n(placeholder(), 5));
+                return Ok(out);
             }
             "solid.thread"
         }
@@ -1829,6 +1851,11 @@ fn compile_feature(f: &Feature, sketches: &mut HashMap<String, SketchTable>) -> 
     };
     let params = o.finish(p)?;
     Ok(vec![cmd(id, params)])
+}
+
+/// A read-only command holding a place in the script, for a fallback to fill (see `left_threads`).
+fn placeholder() -> Value {
+    cmd("document.inspect", json!({"measure": false}))
 }
 
 /// Sketch curves named in `key` (`curves a, b`), in the feature's `from` sketch.
@@ -2109,9 +2136,25 @@ mod tests {
             .contains("`internal` or `external`")
         );
         assert!(fails("cone C height 2\n").contains("needs `radius` or `diameter`"));
-        let left = compile(&parse("cylinder S radius 4 height 20 -> body B\nthread T face (4,0,10) designation M8 modeled left\n").unwrap()).unwrap();
-        assert_eq!(left.script["commands"][1]["params"]["handedness"], json!("left"));
+        let left =
+            compile(&parse("cylinder S radius 4 height 20 -> body B\nthread T face (4,0,10) designation M8 modeled left body B\n").unwrap()).unwrap();
+        assert_eq!(
+            left.script["commands"][1]["params"],
+            json!({"face": [4.0, 0.0, 10.0], "designation": "M8", "modeled": true, "handedness": "left", "name": "T"})
+        );
         assert_eq!(left.expressions["requires"], json!(["thread_handedness"]));
+        assert_eq!(left.left_threads, [(1, "B".to_string())]);
+        // Five read-only slots follow, for the fallback; every command keeps its line.
+        assert!(left.script["commands"].as_array().unwrap()[2..7].iter().all(|c| c["command"] == "document.inspect"));
+        assert_eq!(left.lines.len(), 7);
+        // Without handedness, the slots become mirror, remove, right-hand thread, mirror back, remove, rename.
+        let mut script = left.script.clone();
+        crate::assembly::fit_script(&left, &mut script, &json!([])).unwrap();
+        let ids: Vec<&str> = script["commands"].as_array().unwrap()[1..].iter().map(|c| c["command"].as_str().unwrap()).collect();
+        assert_eq!(ids, ["solid.mirror", "solid.remove", "solid.thread", "solid.mirror", "solid.remove", "body.rename"]);
+        assert!(script["commands"][3]["params"].get("handedness").is_none());
+        assert_eq!(script["commands"][6]["params"], json!({"body": "B (2) (2)", "name": "B"}));
+        assert!(fails("cylinder S radius 4 height 20 -> body B\nthread T face (4,0,10) designation M8 left\n").contains("needs `body <name>`"));
         let right = compile(&parse("cylinder S radius 4 height 20 -> body B\nthread T face (4,0,10) designation M8\n").unwrap()).unwrap();
         assert_eq!(right.expressions["requires"], json!([]));
     }

@@ -515,20 +515,54 @@ pub fn check_capabilities(c: &Compiled, commands: &Value) -> R<()> {
 /// counting that component's occurrences in the order they are made, so the script uses those
 /// names instead. Any other missing capability is an error.
 pub fn fit_script(c: &Compiled, script: &mut Value, commands: &Value) -> R<()> {
-    let names = ["authored_occurrence_names", "linked_occurrence_names", "text_parameters"];
+    let names = ["authored_occurrence_names", "linked_occurrence_names", "text_parameters", "thread_handedness"];
     let missing = missing(c, commands)?;
     if let Some((required, id, field)) = missing.iter().find(|(r, ..)| !names.contains(&r.as_str())) {
         return Err(format!(
             "this design requires engine capability {required} ({id}: {field}); use a compatible development build via SOLIDCRAFT_CLI or update the running app"
         ));
     }
-    if missing.iter().any(|(r, ..)| r != "text_parameters") {
+    if missing.iter().any(|(r, ..)| r.ends_with("occurrence_names")) {
         default_occurrence_names(script);
+    }
+    if missing.iter().any(|(r, ..)| r == "thread_handedness") {
+        left_thread_fallback(c, script);
     }
     if missing.iter().any(|(r, ..)| r == "text_parameters") {
         literal_text(script)?;
     }
     Ok(())
+}
+
+/// For an engine without thread handedness: cut each left-hand thread as the mirror image of a
+/// right-hand one. Mirror the body through a plane at the thread's face point (the point stays on
+/// the mirrored face), cut the thread, mirror back; the rest of the body ends where it was. Fills
+/// the five slots the compiler left after the thread command.
+pub fn left_thread_fallback(c: &Compiled, script: &mut Value) {
+    let Some(commands) = script["commands"].as_array_mut() else { return };
+    for (i, body) in &c.left_threads {
+        let Some(thread) = commands.get(*i).cloned() else { continue };
+        let name = thread["params"]["name"].as_str().unwrap_or("Thread").to_string();
+        let plane = json!({"origin": thread["params"]["face"], "normal": [1, 0, 0]});
+        let mut right = thread.clone();
+        if let Some(p) = right["params"].as_object_mut() {
+            p.remove("handedness");
+        }
+        let copy = format!("{body} (2)");
+        let fill = [
+            json!({"command": "solid.mirror", "params": {"name": format!("{name}Flip"), "bodies": [body], "plane": plane}}),
+            json!({"command": "solid.remove", "params": {"name": format!("{name}Drop"), "bodies": [body]}}),
+            right,
+            json!({"command": "solid.mirror", "params": {"name": format!("{name}Back"), "bodies": [copy], "plane": plane}}),
+            json!({"command": "solid.remove", "params": {"name": format!("{name}DropFlip"), "bodies": [copy]}}),
+            json!({"command": "body.rename", "params": {"body": format!("{copy} (2)"), "name": body}}),
+        ];
+        for (k, cmd) in fill.into_iter().enumerate() {
+            if let Some(slot) = commands.get_mut(i + k) {
+                *slot = cmd;
+            }
+        }
+    }
 }
 
 /// For an engine without text parameters: draw each text expression's current words, and turn

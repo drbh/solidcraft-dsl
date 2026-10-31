@@ -137,13 +137,17 @@ material Shelf, ShelfLeft PLA
 loft Pot sections Base, Middle, Rim -> body Pot                 // 32_lofted_planter
 sweep Hook from Profile path Path.a, Path.k, Path.b new -> body Hook   // 33_swept_wall_hook
 pipe Tube path Path.a, Path.b diameter 6 wall 1 new -> body Tube
-thread NeckThread face (rn, 0, z) designation M28x2 modeled     // 49_bottle_and_cap; `left` for left-handed (engine 0.27+)
+thread NeckThread face (rn, 0, z) designation M28x2 modeled     // 49_bottle_and_cap; `left … body B` for left-handed
 coil Spring diameter 20 turns 5 pitch 4 section_size 1.5 base (0,0,0) new -> body Spring
 emboss Letters from Label depth 1 targets Tag                   // 50_name_tag (deboss to cut in)
 ```
 
 - `sweep` options are `twist <angle>`, `scale <factor>` and `parallel`, which keeps the profile
   from turning with the path. Path curves are listed in order and must all be in one sketch.
+- A left-hand thread names its body (`left body Cap`). Engines from 0.27 cut it directly. Older
+  engines cut it as the mirror image of a right-hand thread: they mirror the body through a plane
+  at the face point, thread it and mirror it back, which gives the same surface. The copy is
+  named `B (2)` along the way, so don't give another body that name.
 - `thread … clearance c internal|external axis X|Y|Z origin (x,y,z) body B` opens the fit: the
   engine cuts the basic ISO profile, so B is scaled about the thread's axis, out (internal) or in
   (external), by c at the major radius, with a live factor. See 49's cap.

@@ -270,6 +270,7 @@ impl Native {
             links: vec![],
             checks: vec![],
             print_layout: None,
+            left_threads: vec![],
         }
     }
 }
