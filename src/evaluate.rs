@@ -251,13 +251,17 @@ fn build(
             diagnostics.push(diagnostic("measurement", e, None, source));
         }
     }
-    // Sketches with an imported drawing: its curves are free by design, the file is their source.
+    // Sketches with an imported drawing, or drawn by `engine` lines: their curves are free by
+    // design (the file, or the engine command, is their source).
     let mut imported = std::collections::HashSet::new();
     let mut current = None;
-    for cmd in script["commands"].as_array().into_iter().flatten() {
+    let from_engine =
+        |i: usize| c.lines.get(i).and_then(|l| source.lines().nth(l.saturating_sub(1))).is_some_and(|t| t.trim_start().starts_with("engine "));
+    for (i, cmd) in script["commands"].as_array().into_iter().flatten().enumerate() {
         match cmd["command"].as_str() {
             Some("sketch.create") => current = cmd["params"]["name"].as_str(),
             Some("sketch.insert_svg" | "sketch.insert_dxf") => imported.extend(current),
+            Some(id) if id.starts_with("sketch.") && from_engine(i) => imported.extend(current),
             _ => {}
         }
     }

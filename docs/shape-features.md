@@ -340,7 +340,14 @@ more (surface extend, trim, ruled and reverse normal; an axis from two planes dr
 sheet refold; sketch trim; solid align), 24 checks on 0.27. `69_construction_geometry` covers
 construction geometry: offset, midplane and three-point planes, construction points, axes along an
 edge and square to a face, plus sheet fold, surface sweep and replace face, 25 checks on 0.27.
-The engine picks a construction point by where it is (`{"point": [x,y,z]}`), not by its name. A pattern about a named construction
+The engine picks a construction point by where it is (`{"point": [x,y,z]}`), not by its name.
+`70_sketch_commands` draws with sketch commands through `engine` (three-point rectangle, polygon
+from an edge, centre-point slot, two-point circles, concentric and fix constraints, tangent arc,
+scale, circular pattern) and uses the sketch chamfer, `project`, `pipe` and `coil` statements,
+32 checks on 0.27 and 0.19. Sketches drawn with `engine` lines don't get degrees-of-freedom
+warnings, as imported drawings don't: the command, not the DSL, decides how they're constrained.
+An extrude of separate profiles makes one body per piece (`Studs`, `Studs (2)`, …); join them to
+something to keep one body. A pattern about a named construction
 axis needs 0.27; older engines stop with the reason. Two things it shows: a cylinder's
 side is two half-faces, so pick both; and the engine integrates the volume of spline and offset
 faces to about 0.01 %, so check those with a range.
