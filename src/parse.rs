@@ -44,6 +44,7 @@ const EXPR_KEYS: &[&str] = &[
     "margin",
     "top_radius",
     "top_diameter",
+    "crown",
 ];
 const TUPLE_KEYS: &[&str] = &[
     "profiles",
@@ -86,6 +87,8 @@ const IDENT_KEYS: &[&str] = &[
     "section_position",
     "on",
     "neutral",
+    "of",
+    "continuity",
 ];
 const FLAGS: &[&str] = &[
     "symmetric",
@@ -157,6 +160,8 @@ pub const FEATURES: &[&str] = &[
     "perforate",
     "thicken",
     "convert",
+    "patch",
+    "stitch",
 ];
 
 struct P<'a> {

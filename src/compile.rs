@@ -1913,6 +1913,42 @@ fn compile_feature(f: &Feature, sketches: &mut HashMap<String, SketchTable>) -> 
             }
             "sheet.convert"
         }
+        // A surface filling a closed loop: planar regions of a sketch (`from`), or a loop of a
+        // body's edges (`edges … of B`), smooth when the loop isn't flat.
+        "patch" => {
+            if let Some(sketch) = o.ident("from")? {
+                if !sketches.contains_key(&sketch) {
+                    return Err(err(line, format!("unknown sketch `{sketch}`")));
+                }
+                p["sketch"] = json!(sketch);
+                profiles(&mut o, &mut p)?;
+            } else {
+                p["edges"] =
+                    json!(o.tuples("edges")?.ok_or_else(|| err(line, "`patch` needs `from <sketch>` or `edges (x,y,z) …` on a closed loop"))?);
+                if let Some(b) = o.ident("of")? {
+                    p["body"] = json!(b);
+                }
+                if let Some(g) = o.ident("continuity")? {
+                    if !matches!(g.as_str(), "g0" | "g1" | "g2") {
+                        return Err(err(line, format!("`continuity` is g0, g1 or g2, not `{g}`")));
+                    }
+                    p["continuity"] = json!(g);
+                }
+                if let Some(c) = o.expr("crown")? {
+                    p["crown"] = c;
+                }
+                if let Some(t) = o.tuples("through")? {
+                    p["points"] = json!(t);
+                }
+            }
+            p["body_name"] = json!(o.ident("body")?.ok_or_else(|| err(line, "a patch is a surface body: give it `-> body <name>`"))?);
+            "surface.patch"
+        }
+        // Surfaces sewn into the first body; a solid when they close.
+        "stitch" => {
+            p["bodies"] = json!(o.list("bodies")?.ok_or_else(|| err(line, "`stitch` needs `bodies A, B …` (sewn into the first)"))?);
+            "surface.stitch"
+        }
         // A sheet edge folded back on itself.
         "hem" => {
             p["edges"] = json!(o.tuples("edges")?.ok_or_else(|| err(line, "`hem` needs `edges (x,y,z) …` on sheet edges"))?);
@@ -2241,6 +2277,23 @@ mod tests {
         assert_eq!(ch[2], ("sketch.chamfer.distance_angle", &json!({"point": "l3.end", "distance": 4.0, "angle": 45.0})));
         // Each chamfer adds a line: the next line drawn is l8.
         assert_eq!(cmds.iter().find(|c| c["command"] == "sketch.dimension").unwrap()["params"]["entities"], json!(["l8"]));
+    }
+
+    #[test]
+    fn patches_and_stitching() {
+        let cmds = script(
+            "param h = 6 mm\nsketch B on XY {\n circle c = (0,0) radius 20\n}\nsketch R on XY offset 18 {\n circle c = (0,0) radius 16\n}\n\
+             loft S sections B, R surface -> body K\n\
+             patch D edges (16,0,18) (-16,0,18) of K continuity g1 through (0,0,18 mm + h) crown 0.2 -> body T\n\
+             patch F from B -> body U\nstitch C bodies K, T, U\n",
+        );
+        let by = |n: &str| cmds.iter().find(|c| c["params"]["name"] == n).unwrap();
+        assert_eq!(
+            by("D")["params"],
+            json!({"edges": [[16.0, 0.0, 18.0], [-16.0, 0.0, 18.0]], "body": "K", "continuity": "g1", "points": [[0.0, 0.0, 24.0]], "crown": 0.2, "body_name": "T", "name": "D"})
+        );
+        assert_eq!(by("F")["params"], json!({"sketch": "B", "body_name": "U", "name": "F"}));
+        assert_eq!((by("C")["command"].clone(), by("C")["params"]["bodies"].clone()), (json!("surface.stitch"), json!(["K", "T", "U"])));
     }
 
     #[test]

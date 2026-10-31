@@ -352,6 +352,14 @@ pub fn lower(d: &Design) -> R<Lowered> {
                             )?;
                         }
                     }
+                    // The engine takes a patch's crown as a number.
+                    if key == "crown"
+                        && let Val::Expr(e) = val
+                    {
+                        let n = env.number(e, Kind::Unitless, f.line, key)?;
+                        sites.push(json!({"line":f.line,"role":"seed","expression":e,"value":n,"persistent":false,"depends_on":references(e)}));
+                        *e = n.to_string();
+                    }
                     if matches!(key.as_str(), "count" | "count2") {
                         if let Val::Expr(e) = val {
                             let n = env.number(e, Kind::Unitless, f.line, key)?;

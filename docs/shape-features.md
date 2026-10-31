@@ -213,6 +213,24 @@ The engine (0.19 and 0.27) can't thicken across a sharp edge into the inside cor
 join or cut a thickened loft afterwards, even when the loft is ruled. Thickened revolves, extrudes
 and sweeps join and cut as usual.
 
+```sc
+loft Side sections Base, Rim surface -> body Knob                  // 65_domed_knob
+patch Dome edges (11.3,11.3,18) (-11.3,11.3,18) (-11.3,-11.3,18) (11.3,-11.3,18) of Knob continuity g1 through (0,0,24) -> body DomeTop
+patch Bottom from Base -> body BaseFace                             // planar regions of a sketch
+stitch Close bodies Knob, DomeTop, BaseFace                         // sewn into Knob: a solid
+```
+
+`patch` fills a closed loop with a surface: the regions of a sketch (`from`, with `profiles` to
+pick some), or a loop of a body's edges (`edges … of B`). Pick every edge of the loop; a loft's
+or revolve's circular rim can be split into several edges, so pick points all the way round.
+For an edge loop, `continuity g1` makes the patch meet the faces beside it without a crease
+(`g2` also matches their curvature), `through (x,y,z) …` makes it pass through points, and
+`crown` makes it fuller. A flat loop with `g0` and no points gives a flat face. Prefer `through`
+to shape a dome: with g1 and only `crown`, the patch can bulge out past the loop.
+
+`stitch` sews surfaces into the first body named; when they close, it is a solid that joins and
+cuts as usual.
+
 ## Sheet metal
 
 ```sc
