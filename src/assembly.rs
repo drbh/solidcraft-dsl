@@ -158,6 +158,8 @@ struct Builder<'a> {
     env: Environment,
     compiled: Compiled,
     moves: Vec<(String, Transform, usize)>,
+    /// The first occurrence made, which engines from 0.27 ground (see `compile`).
+    first: Option<(String, usize)>,
     root: HashMap<String, (&'a Component, Transform)>,
 }
 impl Builder<'_> {
@@ -218,6 +220,9 @@ impl Builder<'_> {
             let axis = unit(self.vector(&instance.axis, Kind::Unitless, instance.line, "placement_axis")?, instance.line)?;
             let angle = self.scalar(&instance.angle, Kind::Angle, instance.line, "placement", false)?;
             let transform = Transform { at, axis, angle };
+            if self.first.is_none() {
+                self.first = Some((occurrence.clone(), instance.line));
+            }
             if self.visiting.contains(&definition.name) {
                 return Err(error(instance.line, format!("cyclic component instances: {} -> {}", self.visiting.join(" -> "), definition.name)));
             }
@@ -376,6 +381,7 @@ pub fn compile(d: &Design) -> R<Compiled> {
         env: Environment::new(d)?,
         compiled,
         moves: vec![],
+        first: None,
         root: HashMap::new(),
     };
     let site_count = b.compiled.expressions["sites"].as_array().map_or(0, Vec::len);
@@ -398,6 +404,11 @@ pub fn compile(d: &Design) -> R<Compiled> {
         sites.truncate(site_count);
     }
     b.scope(d, None, 0)?;
+    // Engines from 0.27 ground the design's first part when it is made; earlier ones ground
+    // nothing. Only `ground` statements ground a part here, on every engine.
+    if let Some((name, line)) = b.first.clone() {
+        b.emit("occurrence.ground", json!({"occurrence":name,"grounded":false}), line);
+    }
     for (name, t, line) in b.moves.clone() {
         b.emit("occurrence.move", json!({"occurrence":name,"translate":t.at,"axis":t.axis,"angle":t.angle,"capture":true}), line);
     }

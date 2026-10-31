@@ -432,6 +432,9 @@ pub fn execute(cli: &str, design: &Path, dir: &Path, requests: &[Request], repor
                         cached.clone()
                     } else {
                         let metadata = crate::layout::prepare(&mut ctx, layout, &mut layout_source)?;
+                        for w in metadata["warnings"].as_array().into_iter().flatten() {
+                            diagnostics.push(json!({"stage":"artifact", "request_id":request.id, "severity":"warning", "message":w}));
+                        }
                         let cached = root.join(format!("layout-cache-{}.solidcraft", layouts.len()));
                         std::fs::copy(&ctx.design, &cached).map_err(|e| e.to_string())?;
                         layouts.insert(key, (cached.clone(), metadata.clone()));

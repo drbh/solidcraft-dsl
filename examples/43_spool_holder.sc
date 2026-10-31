@@ -64,7 +64,8 @@ sketch AxleSlotSk on XZ offset (-cheek_out - 1 mm) {
   fix a.line1 a.line2 a.arc1 a.arc2 b.line1 b.line2 b.arc1 b.arc2
 }
 extrude AxleSlots from AxleSlotSk distance (2*cheek_out + 2 mm) cut targets Stand
-chamfer SlotLeadIn edges (-xs - axle_slot/2, -cheek_out, cheek_h) (-xs + axle_slot/2, -cheek_out, cheek_h) (xs - axle_slot/2, -cheek_out, cheek_h) (xs + axle_slot/2, -cheek_out, cheek_h) (-xs - axle_slot/2, cheek_out, cheek_h) (-xs + axle_slot/2, cheek_out, cheek_h) (xs - axle_slot/2, cheek_out, cheek_h) (xs + axle_slot/2, cheek_out, cheek_h) distance 1 mm body Stand
+// The top edge of each slot wall, picked mid-way through the cheek
+chamfer SlotLeadIn edges (-xs - axle_slot/2, -cheek_out + cheek_t/2, cheek_h) (-xs + axle_slot/2, -cheek_out + cheek_t/2, cheek_h) (xs - axle_slot/2, -cheek_out + cheek_t/2, cheek_h) (xs + axle_slot/2, -cheek_out + cheek_t/2, cheek_h) (-xs - axle_slot/2, cheek_out - cheek_t/2, cheek_h) (-xs + axle_slot/2, cheek_out - cheek_t/2, cheek_h) (xs - axle_slot/2, cheek_out - cheek_t/2, cheek_h) (xs + axle_slot/2, cheek_out - cheek_t/2, cheek_h) distance 1 mm body Stand
 
 // Rollers: tube with a bearing seat at the middle; ledge bore on the -Y half, run-in on the +Y half
 cylinder RollerATube radius (roller_od/2) height roller_len base (-xs, -roller_len/2, axle_z) axis Y new -> body RollerA

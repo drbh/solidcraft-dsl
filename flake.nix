@@ -18,23 +18,23 @@
       # parameters) that was measured on this version; bump it here, run the tests, and update
       # the version in README.md. Hashes are from the release's SHA256SUMS.txt.
       solidcraft = {
-        version = "0.19.0";
+        version = "0.27.1";
         assets = {
           aarch64-darwin = {
-            file = "solidcraft-cli-0.19.0-macos-universal.zip";
-            sha256 = "e9ec50c3a838336feeffd7028dc2594fef791cdfee3ccbf5cbf235f78ba88245";
+            file = "solidcraft-cli-0.27.1-macos-universal.zip";
+            sha256 = "98222a069979388bf9ec7f432d214f0ad1911efff28cad7b439872f8c658b3b6";
           };
           x86_64-darwin = {
-            file = "solidcraft-cli-0.19.0-macos-universal.zip";
-            sha256 = "e9ec50c3a838336feeffd7028dc2594fef791cdfee3ccbf5cbf235f78ba88245";
+            file = "solidcraft-cli-0.27.1-macos-universal.zip";
+            sha256 = "98222a069979388bf9ec7f432d214f0ad1911efff28cad7b439872f8c658b3b6";
           };
           aarch64-linux = {
-            file = "solidcraft-0.19.0-linux-aarch64.tar.gz";
-            sha256 = "109a495c3a6049edd790304f5bd6abbd0abd79063120adf3847ca9c305f375c6";
+            file = "solidcraft-0.27.1-linux-aarch64.tar.gz";
+            sha256 = "8813aa03d67c2cd7486a206dca73bb1c888e38dfd78ad8b14e58ee0285ab90a3";
           };
           x86_64-linux = {
-            file = "solidcraft-0.19.0-linux-x86_64.tar.gz";
-            sha256 = "1e3650237a617667f557a16e865bbf544b20ece1dec39f7c380239d7058d632d";
+            file = "solidcraft-0.27.1-linux-x86_64.tar.gz";
+            sha256 = "bd4358dedee6d662dc7565eb84f978810b8940612bf156100b97cb46d01368ea";
           };
         };
       };

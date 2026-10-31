@@ -58,7 +58,8 @@ sketch CavitySk on XY offset base_t {
 extrude Cavity from CavitySk distance height taper draft cut targets Dish
 
 // Rim: round the top edges
-fillet Rim edges (0,ry + rim_dx,height) (0,ryi + rim_dx,height) radius rim_r body Dish
+// Picked 1 mm off the spline joints at x = 0 (within 0.01 mm of the curve): a pick on a joint is ambiguous
+fillet Rim edges (1 mm,ry + rim_dx,height) (1 mm,ryi + rim_dx,height) radius rim_r body Dish
 
 // Floor insert: a V wedge falling toward x = 0, plus ribs along X between the slot positions,
 // clipped to the cavity outline and joined to the dish. (XZ sketch coordinates are (x, -z).)

@@ -2,7 +2,7 @@
 # Install solidcraft-cli from a SolidCraft GitHub release into a directory.
 #
 #   ci/install-solidcraft-cli.sh latest  DIR     the newest release
-#   ci/install-solidcraft-cli.sh 0.19.0  DIR     that version
+#   ci/install-solidcraft-cli.sh 0.27.1  DIR     that version (the one flake.nix pins)
 #
 # Downloads are checked against the release's SHA256SUMS.txt. Needs curl, and unzip (macOS)
 # or tar (Linux). Prints the installed binary's path last.

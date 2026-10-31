@@ -386,6 +386,8 @@ pub(crate) fn prepare(ctx: &mut Context<'_>, layout: &Layout, cache: &mut Source
     for (i, part) in layout.parts.iter().enumerate() {
         let occurrence = result.get(2 + 2 * i).and_then(|r| r["occurrence"].as_u64()).ok_or("import did not return an occurrence")?;
         occurrences.push(occurrence);
+        // Engines from 0.27 ground the first part imported; the layout moves every part.
+        rotations.push(command("occurrence.ground", json!({"occurrence":occurrence,"grounded":false})));
         for r in &part.rotate {
             let axis = [env.number(&r.axis[0], Kind::Unitless)?, env.number(&r.axis[1], Kind::Unitless)?, env.number(&r.axis[2], Kind::Unitless)?];
             if axis.iter().map(|v| v * v).sum::<f64>() < 1e-24 {
@@ -402,6 +404,7 @@ pub(crate) fn prepare(ctx: &mut Context<'_>, layout: &Layout, cache: &mut Source
     // Snapshot/import is an evaluated geometry boundary, not source feature history.
     // Refuse a partial import rather than publishing a layout with missing or changed solids.
     let mut transfer = vec![];
+    let mut warnings = vec![];
     for ((names, measured), file) in selections.iter().zip(rotated.iter().skip(rotated.len() - occurrences.len())).zip(&files) {
         let mut expected = 0.;
         for name in names {
@@ -418,10 +421,20 @@ pub(crate) fn prepare(ctx: &mut Context<'_>, layout: &Layout, cache: &mut Source
         // volume. Tessellation error and transfer error are different quantities.
         let reference = if layout.geometry == Geometry::Mesh { mesh_volume(file)? } else { expected };
         let tolerance = 1e-5_f64.max(reference.abs() * layout.volume_relative_tolerance);
+        // A mesh with cracks (edges on one triangle) has no volume to an engine that checks it is
+        // closed, as 0.27 does; 0.19 integrates it anyway. The cracks are in the engine's own
+        // tessellation, so the transfer can't be checked by volume: say so instead of failing.
+        let open = if layout.geometry == Geometry::Mesh { mesh_open_edges(file)? } else { 0 };
         transfer.push(json!({"bodies":names,"source_volume_mm3":expected,"reference_volume_mm3":reference,
             "tessellation_difference_mm3":reference-expected,"prepared_volume_mm3":actual,
-            "difference_mm3":actual-reference,"tolerance_mm3":tolerance}));
-        if measured["body_count"].as_u64() != Some(names.len() as u64) || (actual - reference).abs() > tolerance {
+            "difference_mm3":actual-reference,"tolerance_mm3":tolerance,"open_edges":open}));
+        if open > 0 {
+            warnings.push(format!(
+                "the print mesh of {} has {open} open edges (cracks in the engine's tessellation); slicers usually repair them, but check the sliced part",
+                names.join(", ")
+            ));
+        }
+        if measured["body_count"].as_u64() != Some(names.len() as u64) || (open == 0 && (actual - reference).abs() > tolerance) {
             return Err(format!(
                 "layout geometry import changed body count or volume: expected {} bodies/{reference} mm³, got {}/{actual} mm³",
                 names.len(),
@@ -439,13 +452,39 @@ pub(crate) fn prepare(ctx: &mut Context<'_>, layout: &Layout, cache: &mut Source
     }
     moves.push(command("inspect.measure", json!({})));
     let result = phase(ctx, "layout-prepared", &moves, true)?;
-    let report = json!({"design":ctx.design,"placements":placements,"measurements":result.last(),"geometry":layout.geometry,"parameters":inventory[0]["parameters"],"geometry_transfer":transfer});
+    let report = json!({"design":ctx.design,"placements":placements,"measurements":result.last(),"geometry":layout.geometry,"parameters":inventory[0]["parameters"],"geometry_transfer":transfer,"warnings":warnings});
     std::fs::write(ctx.dir.join("layout.json"), serde_json::to_vec_pretty(&report).map_err(|e| e.to_string())?).map_err(|e| e.to_string())?;
     Ok(report)
 }
 
 /// Read only the flat world-space 3MF snapshots written by the engine. General user 3MF
 /// files still go through engine import, so unsupported scene structures are never guessed.
+/// Edges of a 3MF snapshot's meshes not shared by exactly two triangles: zero for closed meshes.
+fn mesh_open_edges(path: &std::path::Path) -> R<usize> {
+    use std::io::Read;
+    let file = std::fs::File::open(path).map_err(|e| e.to_string())?;
+    let mut archive = zip::ZipArchive::new(file).map_err(|e| e.to_string())?;
+    let entry = archive.by_name("3D/3dmodel.model").map_err(|e| e.to_string())?;
+    let mut xml = String::new();
+    entry.take(128 * 1024 * 1024 + 1).read_to_string(&mut xml).map_err(|e| e.to_string())?;
+    let doc = roxmltree::Document::parse(&xml).map_err(|e| format!("invalid engine 3MF snapshot: {e}"))?;
+    let mut open = 0;
+    for mesh in doc.root_element().descendants().filter(|n| n.has_tag_name("mesh")) {
+        let mut edges: HashMap<(usize, usize), usize> = HashMap::new();
+        for triangle in mesh.descendants().filter(|n| n.has_tag_name("triangle")) {
+            let v: Vec<usize> = ["v1", "v2", "v3"]
+                .iter()
+                .map(|k| triangle.attribute(*k).and_then(|s| s.parse().ok()).ok_or_else(|| "invalid 3MF triangle".to_string()))
+                .collect::<R<_>>()?;
+            for (a, b) in [(v[0], v[1]), (v[1], v[2]), (v[2], v[0])] {
+                *edges.entry((a.min(b), a.max(b))).or_default() += 1;
+            }
+        }
+        open += edges.values().filter(|&&n| n != 2).count();
+    }
+    Ok(open)
+}
+
 fn mesh_volume(path: &std::path::Path) -> R<f64> {
     use std::io::Read;
     let file = std::fs::File::open(path).map_err(|e| e.to_string())?;
