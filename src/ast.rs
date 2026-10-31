@@ -231,6 +231,11 @@ pub enum SketchKind {
         point: Option<Vec<Comp>>,
         body: Option<String>,
     },
+    /// `engine sketch.command {json}` inside a sketch: any sketch command, passed through.
+    Engine {
+        command: String,
+        params: String,
+    },
     /// `dim [type] a [-> b] = expr`
     Dim {
         kind: Option<String>,

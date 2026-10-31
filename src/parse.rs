@@ -579,20 +579,8 @@ fn parse_design(p: &mut P, open: Option<usize>) -> R<Design> {
             }
             // `engine command.id {json}`: any engine command, passed through as written.
             "engine" => {
-                let text = crate::lex::strip_comment(&l.raw).trim();
-                let rest = text.strip_prefix("engine").unwrap_or("").trim_start();
-                let (id, json) = rest.split_once(char::is_whitespace).map(|(a, b)| (a, b.trim())).unwrap_or((rest, ""));
-                if id.is_empty() || !id.contains('.') {
-                    return Err(err(l.no, "expected `engine command.id {…}`, for example `engine solid.split_face {\"faces\": [[0,0,5]]}`"));
-                }
-                let params: serde_json::Value = if json.is_empty() {
-                    serde_json::json!({})
-                } else {
-                    serde_json::from_str(json).map_err(|e| err(l.no, format!("the parameters must be one JSON object: {e}")))?
-                };
-                let Some(obj) = params.as_object() else {
-                    return Err(err(l.no, "the parameters must be a JSON object"));
-                };
+                let (id, params) = engine_line(l.no, &l.raw)?;
+                let obj = params.as_object().cloned().unwrap_or_default();
                 let name = obj.get("name").and_then(|n| n.as_str()).map(str::to_string).unwrap_or_else(|| format!("engine@{}", l.no));
                 let mut opts = vec![("command".to_string(), Val::Raw(id.to_string())), ("params".to_string(), Val::Raw(params.to_string()))];
                 // A body it names, so later statements can refer to it.
@@ -838,6 +826,25 @@ fn derived_refs(c: &mut Cur, line: usize, until: &[&str]) -> R<Vec<Ref>> {
     Ok(refs)
 }
 
+/// `engine command.id {json}`: the command id and its parameters, a JSON object.
+fn engine_line(no: usize, raw: &str) -> R<(String, serde_json::Value)> {
+    let text = crate::lex::strip_comment(raw).trim();
+    let rest = text.strip_prefix("engine").unwrap_or("").trim_start();
+    let (id, json) = rest.split_once(char::is_whitespace).map(|(a, b)| (a, b.trim())).unwrap_or((rest, ""));
+    if id.is_empty() || !id.contains('.') {
+        return Err(err(no, "expected `engine command.id {…}`, for example `engine solid.split_face {\"faces\": [[0,0,5]]}`"));
+    }
+    let params: serde_json::Value = if json.is_empty() {
+        serde_json::json!({})
+    } else {
+        serde_json::from_str(json).map_err(|e| err(no, format!("the parameters must be one JSON object: {e}")))?
+    };
+    if !params.is_object() {
+        return Err(err(no, "the parameters must be a JSON object"));
+    }
+    Ok((id.to_string(), params))
+}
+
 fn parse_sketch_stmt(c: &mut Cur) -> R<SketchStmt> {
     let line = c.no;
     let mut construction = false;
@@ -991,6 +998,11 @@ fn parse_sketch_stmt(c: &mut Cur) -> R<SketchStmt> {
             let pts = parse_points(c, 2)?;
             let periodic = has("periodic") || c.eat_ident("periodic");
             SketchKind::Spline { name, pts, periodic }
+        }
+        "engine" => {
+            let (command, params) = engine_line(line, c.raw)?;
+            c.i = c.toks.len();
+            SketchKind::Engine { command, params: params.to_string() }
         }
         "project" => {
             let what = c.ident("what to project: face, edge, vertex or body")?;

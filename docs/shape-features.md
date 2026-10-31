@@ -317,8 +317,10 @@ engine evaluates them. A `name` names the feature for later statements; a `body_
 the body it makes, so checks and later features can use it. Engine errors point at the line.
 
 A construction plane made this way (`construct.plane.*` with a `name`) can carry sketches like a
-`plane` statement's. A command that works inside a sketch runs between `engine sketch.edit
-{"sketch": "S"}` and `engine sketch.finish {}`. `66_engine_commands` uses seven such commands
+`plane` statement's. Inside a sketch block, `engine` runs a sketch command in that sketch; like
+text and imports, it comes after the sketch's own entities, and it refers to entities by the
+engine's ids (`c1`, `l3.end`). A finished sketch can also be reopened with `engine sketch.edit
+{"sketch": "S"}` … `engine sketch.finish {}`. `66_engine_commands` uses seven such commands
 (split face, press-pull, surface offset, boundary fill, tangent plane, a three-point circle, sheet
 unfold) and checks each result; it passes on 0.27 and 0.19. Two things it shows: a cylinder's
 side is two half-faces, so pick both; and the engine integrates the volume of spline and offset

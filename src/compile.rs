@@ -566,6 +566,7 @@ fn compile_sketch(s: &Sketch, out: &mut Vec<Value>, lines: &mut Vec<usize>, dims
             SketchKind::Pattern { .. } => Some("a pattern"),
             SketchKind::Import { .. } => Some("an import"),
             SketchKind::Project { .. } => Some("a projection"),
+            SketchKind::Engine { .. } => Some("an engine command"),
             _ => None,
         };
         let constraint = matches!(st.kind, SketchKind::Dim { .. } | SketchKind::Constraint { .. } | SketchKind::Fix { .. });
@@ -850,6 +851,9 @@ fn compile_sketch(s: &Sketch, out: &mut Vec<Value>, lines: &mut Vec<usize>, dims
                     }
                     out.push(cmd("sketch.pattern.rectangular", p));
                 }
+            }
+            SketchKind::Engine { command, params } => {
+                out.push(cmd(command, serde_json::from_str(params).map_err(|e| err(line, e))?));
             }
             SketchKind::Project { what, point, body } => {
                 let mut r = json!({});
@@ -2313,6 +2317,10 @@ mod tests {
         assert_eq!(cmds[1], json!({"command": "solid.bounding_solid", "params": {"bodies": ["Part"], "margin": "2 mm", "body_name": "Box"}}));
         assert!(crate::parse::parse("engine solid.box [1, 2]\n").unwrap_err().contains("JSON object"));
         assert!(crate::parse::parse("engine nodot {}\n").unwrap_err().contains("command.id"));
+        // Inside a sketch: a sketch command in that sketch, after the drawn entities.
+        let cmds = script("sketch S on XY {\n point a = (0,0)\n engine sketch.circle.three_point {\"p0\": [0,0], \"p1\": [2,0], \"p2\": [1,1]}\n}\n");
+        assert_eq!(cmds[2], json!({"command": "sketch.circle.three_point", "params": {"p0": [0, 0], "p1": [2, 0], "p2": [1, 1]}}));
+        assert!(fails("sketch S on XY {\n engine sketch.circle.three_point {}\n point a = (0,0)\n}\n").contains("an engine command"));
     }
 
     #[test]

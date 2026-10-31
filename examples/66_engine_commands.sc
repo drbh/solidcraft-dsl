@@ -43,16 +43,15 @@ sketch BossSk on Flat {
 extrude Boss from BossSk distance 8 mm symmetric join targets Rod
 check Rod size.x == 24 mm
 
-// sketch.edit with sketch.circle.three_point: a circle through three points drawn into a finished
-// sketch, then extruded: centre (110, 60), radius 10 (to the engine's 0.01 % here).
+// sketch.circle.three_point inside a sketch: a circle through three points, then extruded:
+// centre (110, 60), radius 10 (to the engine's 0.01 % here). Engine lines come after the
+// sketch's own entities, and refer to what they make by the engine's ids (the circle is c1).
 sketch Disc on XY {
   point anchor = (0, 0)
   fix anchor
+  engine sketch.circle.three_point {"p0": [100, 60], "p1": [120, 60], "p2": [110, 70]}
+  engine sketch.constraint.fix {"entities": ["c1"], "fixed": true}
 }
-engine sketch.edit {"sketch": "Disc"}
-engine sketch.circle.three_point {"p0": [100, 60], "p1": [120, 60], "p2": [110, 70]}
-engine sketch.constraint.fix {"entities": ["c1"], "fixed": true}
-engine sketch.finish {}
 extrude Puck from Disc distance 5 mm profiles (110, 60) -> body Puck
 check Puck volume >= 1570.6 mm3
 check Puck volume <= 1570.9 mm3
