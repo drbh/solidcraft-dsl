@@ -197,3 +197,14 @@ sketch LabelSk on XY offset 20 mm {
 }
 extrude LabelX from LabelSk distance 1 mm -> body Label
 check Label size.y >= 8 mm
+
+// sketch.auto_project: with it on, a sketch made on a face starts with that face's edges, so the
+// outline of a 10 x 10 block's top can be extruded straight away: 100. (It is a setting of the
+// running design, not a saved preference.) Turned off again after.
+box AutoBlock size 10 10 10 corner (80, 40, 0) -> body AutoBlock
+engine sketch.auto_project {"value": true}
+sketch OnFaceSk on face (85, 45, 10) {
+}
+engine sketch.auto_project {"value": false}
+extrude OnFaceX from OnFaceSk distance 1 mm new -> body FaceCopy
+check FaceCopy volume == 100 mm3
