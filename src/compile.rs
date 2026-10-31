@@ -405,6 +405,9 @@ pub struct Compiled {
     /// Left-hand threads: the thread command's index and its body. On an engine without thread
     /// handedness, `assembly::fit_script` cuts them by mirroring (see `left_thread_fallback`).
     pub left_threads: Vec<(usize, String)>,
+    /// Path flanges: the command's index and the same chain as edge flanges (or why it can't be
+    /// written so). On an engine without path flanges, `assembly::fit_script` uses the chain.
+    pub path_flanges: Vec<(usize, Result<Vec<Value>, String>)>,
 }
 
 #[derive(Debug, Clone)]
@@ -431,6 +434,7 @@ pub(crate) fn compile_geometry(d: &Design) -> R<Compiled> {
     let mut names: HashMap<String, usize> = HashMap::new();
     let mut features = 0;
     let mut left_threads = Vec::new();
+    let mut path_flanges = Vec::new();
     for p in &d.params {
         if names.insert(p.name.clone(), p.line).is_some() {
             return Err(err(p.line, format!("parameter `{}` is defined twice", p.name)));
@@ -476,6 +480,15 @@ pub(crate) fn compile_geometry(d: &Design) -> R<Compiled> {
                     out.push(c);
                     lines.push(f.line);
                 }
+                if f.kind == "path_flange" {
+                    let chain = path_flange_chain(f, d, &environment);
+                    // Slots for the chain's other flanges, filled only on an engine that needs them.
+                    for _ in 1..chain.as_ref().map_or(1, Vec::len) {
+                        out.push(placeholder());
+                        lines.push(f.line);
+                    }
+                    path_flanges.push((out.len() - chain.as_ref().map_or(1, Vec::len), chain));
+                }
                 features += 1;
             }
         }
@@ -514,6 +527,7 @@ pub(crate) fn compile_geometry(d: &Design) -> R<Compiled> {
         checks: vec![],
         print_layout: None,
         left_threads,
+        path_flanges,
     })
 }
 
@@ -1851,6 +1865,157 @@ fn compile_feature(f: &Feature, sketches: &mut HashMap<String, SketchTable>) -> 
     };
     let params = o.finish(p)?;
     Ok(vec![cmd(id, params)])
+}
+
+/// A path flange written as edge flanges, each bent from the free edge of the one before: its
+/// line's length high, at the line's start, flipped by the rule in docs/shape-features.md
+/// (checked against engine 0.27's path flange). Heights stay live expressions; which edge each
+/// flange is bent from and which way it folds are decided with the parameters' current values.
+fn path_flange_chain(f: &Feature, d: &Design, env: &crate::expressions::Environment) -> R<Vec<Value>> {
+    let line = f.line;
+    let opt = |k: &str| f.opts.iter().find(|(o, _)| o == k).map(|(_, v)| v);
+    let length = |t: &str| env.number(t, solidcraft_expr::Kind::Length, line, "path flange");
+    // A coordinate as a length expression: bare numbers are millimetres.
+    let mm = |c: &Comp| match c {
+        Comp::Num(v, _) => format!("{v} mm"),
+        Comp::Expr(e) => e.clone(),
+    };
+    let sketch = |name: &str| {
+        d.items.iter().find_map(|i| match i {
+            Item::Sketch(s) if s.name == name => Some(s),
+            _ => None,
+        })
+    };
+    let body = match opt("body") {
+        Some(Val::Expr(b)) => b.clone(),
+        _ => return Err(err(line, "a path flange needs `body <name>` to be written as edge flanges")),
+    };
+    // The sheet's top face: the normal of the sketch its base flange came from.
+    let base = d
+        .items
+        .iter()
+        .find_map(|i| match i {
+            Item::Feature(b) if b.kind == "flange" && b.opts.iter().any(|(k, v)| k == "body" && matches!(v, Val::Expr(n) if *n == body)) => {
+                b.opts.iter().find_map(|(k, v)| match (k.as_str(), v) {
+                    ("from", Val::Expr(s) | Val::Ref(Ref { base: s, .. })) => sketch(s),
+                    _ => None,
+                })
+            }
+            _ => None,
+        })
+        .ok_or_else(|| err(line, format!("no base flange of `{body}` drawn from a sketch")))?;
+    // A plane's origin and sketch axes, as 3D expressions.
+    let frame = |s: &Sketch| -> R<([f64; 3], [f64; 3], [f64; 3])> {
+        if s.flip {
+            return Err(err(line, format!("sketch `{}` is flipped; draw it unflipped to write the path flange as edge flanges", s.name)));
+        }
+        let o = s.offset.as_deref().map_or(Ok(0.0), length)?;
+        Ok(match &s.plane {
+            Plane::Named(n) if n == "XY" => ([0., 0., o], [1., 0., 0.], [0., 1., 0.]),
+            Plane::Named(n) if n == "XZ" => ([0., o, 0.], [1., 0., 0.], [0., 0., -1.]),
+            Plane::Named(n) if n == "YZ" => ([o, 0., 0.], [0., 1., 0.], [0., 0., 1.]),
+            _ => return Err(err(line, format!("sketch `{}` must be on XY, XZ or YZ to write the path flange as edge flanges", s.name))),
+        })
+    };
+    // A sketch point in 3D, at the parameters' current values.
+    let place = |s: &Sketch, p: &[Comp; 2]| -> R<[f64; 3]> {
+        let (o, u, v) = frame(s)?;
+        let (a, b) = (length(&mm(&p[0]))?, length(&mm(&p[1]))?);
+        Ok([0, 1, 2].map(|k| o[k] + u[k] * a + v[k] * b))
+    };
+    let path = match opt("path") {
+        Some(Val::List(l)) => l.clone(),
+        Some(Val::Expr(e)) => vec![e.clone()],
+        _ => return Err(err(line, "`path_flange` needs `path Sketch.a, Sketch.b`")),
+    };
+    let mut points: Vec<[f64; 3]> = Vec::new();
+    let mut lengths = Vec::new();
+    let mut plane = None;
+    for r in &path {
+        let (sk, name) = r.split_once('.').ok_or_else(|| err(line, format!("`{r}` names no sketch line")))?;
+        let s = sketch(sk).ok_or_else(|| err(line, format!("no sketch `{sk}`")))?;
+        let pts = s
+            .stmts
+            .iter()
+            .find_map(|st| match &st.kind {
+                SketchKind::Line { name: n, pts, .. } if n == name => Some(pts),
+                _ => None,
+            })
+            .ok_or_else(|| err(line, format!("`{r}` must be a `line` to write the path flange as edge flanges")))?;
+        let [Pt::Xy(a), Pt::Xy(b)] = pts.as_slice() else {
+            return Err(err(line, format!("`{r}` needs coordinates for both ends to write the path flange as edge flanges")));
+        };
+        let (start, end) = (place(s, a)?, place(s, b)?);
+        if points.is_empty() {
+            points.push(start);
+        }
+        points.push(end);
+        let t = |k: usize| (mm(&a[k]), mm(&b[k]));
+        lengths.push(format!("sqrt((({}) - ({}))^2 + (({}) - ({}))^2)", t(0).1, t(0).0, t(1).1, t(1).0));
+        plane = Some(frame(s)?);
+    }
+    let (_, pu, pv) = plane.ok_or_else(|| err(line, "`path` names no lines"))?;
+    let (_, bu, bv) = frame(base)?;
+    let cross = |a: [f64; 3], b: [f64; 3]| [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+    let dot = |a: [f64; 3], b: [f64; 3]| a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+    let sub = |a: [f64; 3], b: [f64; 3]| [a[0] - b[0], a[1] - b[1], a[2] - b[2]];
+    let top = cross(bu, bv);
+    // The plate runs toward the edge: across the path's plane, away from the blank's middle.
+    let mut corners = Vec::new();
+    for st in &base.stmts {
+        match &st.kind {
+            SketchKind::Rect { kind: RectKind::Center, p0, .. } => corners.push(place(base, p0)?),
+            SketchKind::Rect { p0, p1, .. } => {
+                corners.push(place(base, p0)?);
+                corners.push(place(base, p1)?);
+            }
+            SketchKind::Line { pts, .. } | SketchKind::Polyline { pts, .. } => {
+                for p in pts {
+                    if let Pt::Xy(p) = p {
+                        corners.push(place(base, p)?);
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
+    if corners.is_empty() {
+        return Err(err(line, format!("sketch `{}` needs drawn lines or rectangles to write the path flange as edge flanges", base.name)));
+    }
+    let middle = corners.iter().fold([0.0; 3], |m, c| [m[0] + c[0], m[1] + c[1], m[2] + c[2]]).map(|v| v / corners.len() as f64);
+    let edge = match opt("edge") {
+        Some(Val::Tuples(t)) if t.len() == 1 && t[0].len() == 3 => t[0].clone(),
+        _ => return Err(err(line, "`path_flange` needs `edge (x,y,z)`")),
+    };
+    let at: [f64; 3] = [length(&mm(&edge[0]))?, length(&mm(&edge[1]))?, length(&mm(&edge[2]))?];
+    let mut plate = cross(top, cross(pu, pv));
+    if dot(plate, sub(at, middle)) < 0.0 {
+        plate = plate.map(|v| -v);
+    }
+    let steps: Vec<[f64; 3]> = points.windows(2).map(|w| sub(w[1], w[0])).collect();
+    let radius = match opt("radius") {
+        Some(Val::Expr(r)) => Some(r.clone()),
+        _ => None,
+    };
+    let mut chain = Vec::new();
+    for (k, step) in steps.iter().enumerate() {
+        let flip = match k {
+            0 => dot(*step, top) > 0.0,
+            1 => dot(*step, plate) < 0.0,
+            _ => dot(*step, steps[k - 2]) < 0.0,
+        };
+        // Points only pick the edge, so they are numbers, like other flanges' edge points.
+        let point = if k == 0 { at } else { points[k] };
+        let mut p = json!({"edges": [point], "height": lengths[k], "body": body, "name": format!("{}{}", f.name, k + 1), "type": "edge"});
+        if flip {
+            p["flip"] = json!(true);
+        }
+        if let Some(r) = &radius {
+            p["radius"] = json!(r);
+        }
+        chain.push(cmd("sheet.flange", p));
+    }
+    Ok(chain)
 }
 
 /// A read-only command holding a place in the script, for a fallback to fill (see `left_threads`).

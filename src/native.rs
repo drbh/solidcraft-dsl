@@ -271,6 +271,7 @@ impl Native {
             checks: vec![],
             print_layout: None,
             left_threads: vec![],
+            path_flanges: vec![],
         }
     }
 }

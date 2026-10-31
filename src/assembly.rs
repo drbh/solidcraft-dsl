@@ -515,7 +515,7 @@ pub fn check_capabilities(c: &Compiled, commands: &Value) -> R<()> {
 /// counting that component's occurrences in the order they are made, so the script uses those
 /// names instead. Any other missing capability is an error.
 pub fn fit_script(c: &Compiled, script: &mut Value, commands: &Value) -> R<()> {
-    let names = ["authored_occurrence_names", "linked_occurrence_names", "text_parameters", "thread_handedness"];
+    let names = ["authored_occurrence_names", "linked_occurrence_names", "text_parameters", "thread_handedness", "sheet_path_flange"];
     let missing = missing(c, commands)?;
     if let Some((required, id, field)) = missing.iter().find(|(r, ..)| !names.contains(&r.as_str())) {
         return Err(format!(
@@ -530,6 +530,24 @@ pub fn fit_script(c: &Compiled, script: &mut Value, commands: &Value) -> R<()> {
     }
     if missing.iter().any(|(r, ..)| r == "text_parameters") {
         literal_text(script)?;
+    }
+    if missing.iter().any(|(r, ..)| r == "sheet_path_flange") {
+        path_flange_fallback(c, script)?;
+    }
+    Ok(())
+}
+
+/// For an engine without path flanges: each path flange as the chain of edge flanges the compiler
+/// worked out (see `compile::path_flange_chain`), in the command's place and the slots after it.
+pub fn path_flange_fallback(c: &Compiled, script: &mut Value) -> R<()> {
+    let Some(commands) = script["commands"].as_array_mut() else { return Ok(()) };
+    for (i, chain) in &c.path_flanges {
+        let chain = chain.as_ref().map_err(|e| format!("{e} (this engine has no path flanges)"))?;
+        for (k, cmd) in chain.iter().enumerate() {
+            if let Some(slot) = commands.get_mut(i + k) {
+                *slot = cmd.clone();
+            }
+        }
     }
     Ok(())
 }

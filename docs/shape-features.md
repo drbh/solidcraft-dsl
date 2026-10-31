@@ -170,30 +170,35 @@ perforate Holes diameter 4 mm pitch 6.5 mm margin 8 mm body Grille   // staggere
 ```
 
 ```sc
-path_flange Z edge (20,30,0) path Zed.up, Zed.out radius 1.5 mm body Bracket   // engine 0.27+
+path_flange Z edge (20,30,0) path Zed.up, Zed.out radius 1.5 mm body Bracket
 ```
 
 A path flange bends flanges along an open chain of sketch lines drawn across a sheet edge,
-from the edge out: one flange per line, one bend per corner (a Z, a hat, a return lip). An
-engine before 0.27 refuses the design up front (`sheet_path_flange`). There, write the chain as
-edge flanges, each bent from the last one's free edge. This Z matches the path flange above
-exactly (same volume and bounds):
+from the edge out: one flange per line, one bend per corner (a Z, a hat, a return lip). Engines
+from 0.27 make it directly. On older ones the compiler writes the same chain as edge flanges,
+each bent from the last one's free edge, as you would by hand:
 
 ```sc
 flange Up edges (20,30,0) height 15 mm flip body Bracket
 flange Out edges (20,30,15) height 20 mm body Bracket
 ```
 
-Each flange of the chain starts at the free edge of the one before, and its height is its line's
-length. Whether to `flip` it follows one rule, checked against 0.27's path flange for a Z, a return
-lip, a hat and a downward Z (identical volume and bounds each time):
+Each flange of the chain starts at the start of its line, and its height is the line's length.
+Whether to `flip` it follows one rule:
 
 - The first flange flips when it folds toward the sheet's top face (the normal of the sketch its
   base flange came from).
 - Each later flange flips when it heads opposite to the segment two before it. For the second
-  flange, that segment is the plate, running toward the edge.
+  flange, that segment is the plate, running toward the edge (away from the middle of the base
+  flange's sketch).
 
-For example, a hat section (up, out, down) from a plate on XY is `flip`, plain, `flip`.
+For example, a hat section (up, out, down) from a plate on XY is `flip`, plain, `flip`. The
+chain matched 0.27's path flange exactly (area, bounds and centre of mass) on engines 0.15 and
+0.19 for a Z, a hat, a return lip, a downward Z, a chain from the plate's other edge, a plate
+sketched on XZ and a 3 mm bend radius. For that, the path's lines need coordinates at both ends,
+and the sketches must be on XY, XZ or YZ (offset, not flipped); otherwise an older engine stops
+with the reason. The heights stay live. As with every flange, the edges are picked at the
+coordinates' current values. See `62_hat_channel_mount`.
 
 A hem folds an edge back on itself. A perforation is a hole field over the flat sheet: it is in
 the flat pattern, the DXF (layer PERFORATION) and the mass, but is not cut into the solid. See

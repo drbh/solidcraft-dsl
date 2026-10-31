@@ -99,9 +99,21 @@ fn engines_without_authored_names_address_occurrences_by_their_own() {
     let moved: Vec<&str> =
         commands.iter().filter(|c| c["command"] == "occurrence.move").map(|c| c["params"]["occurrence"].as_str().unwrap()).collect();
     assert_eq!(moved, ["Leaf:1", "Leaf:2"]);
-    // Any other missing capability still stops the build.
-    let flange = build("sheet_rule S thickness 1 mm bend_radius 1 mm k_factor 0.4\nsketch B on XY {\n rect r = (0,0) (10,10)\n}\nflange P from B rule S -> body Sheet\nsketch Z on YZ offset 5 mm {\n line a = (10,0) (10,5)\n}\npath_flange F edge (5,10,0) path Z.a body Sheet\n").unwrap();
-    assert!(solidcraft_dsl::assembly::fit_script(&flange, &mut flange.script.clone(), &json!([])).unwrap_err().contains("sheet_path_flange"));
+    // A path flange becomes a chain of edge flanges, one per line, in the command's slots.
+    let src = "sheet_rule S thickness 1 mm bend_radius 1 mm k_factor 0.4\nsketch B on XY {\n rect r = (0,0) (10,10)\n}\nflange P from B rule S -> body Sheet\nsketch Z on YZ offset 5 mm {\n line a = (10,0) (10,5)\n line b = (10,5) (20,5)\n}\npath_flange F edge (5,10,0) path Z.a, Z.b body Sheet\n";
+    let flange = build(src).unwrap();
+    let mut script = flange.script.clone();
+    solidcraft_dsl::assembly::fit_script(&flange, &mut script, &json!([])).unwrap();
+    let chain: Vec<&Value> = script["commands"].as_array().unwrap().iter().filter(|c| c["params"]["type"] == "edge").collect();
+    assert_eq!(chain.len(), 2);
+    assert_eq!(chain[0]["params"]["edges"], json!([[5.0, 10.0, 0.0]]));
+    assert_eq!(chain[0]["params"]["flip"], json!(true));
+    assert_eq!(chain[1]["params"]["edges"], json!([[5.0, 10.0, 5.0]]));
+    assert!(chain[1]["params"].get("flip").is_none());
+    // One the compiler can't place still stops the build, saying why.
+    let flipped = build(&src.replace("offset 5 mm {", "offset 5 mm flip {")).unwrap();
+    let e = solidcraft_dsl::assembly::fit_script(&flipped, &mut flipped.script.clone(), &json!([])).unwrap_err();
+    assert!(e.contains("flipped") && e.contains("no path flanges"), "{e}");
 }
 
 #[test]
