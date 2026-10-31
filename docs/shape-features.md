@@ -346,6 +346,11 @@ from an edge, centre-point slot, two-point circles, concentric and fix constrain
 scale, circular pattern) and uses the sketch chamfer, `project`, `pipe` and `coil` statements,
 32 checks on 0.27 and 0.19. Sketches drawn with `engine` lines don't get degrees-of-freedom
 warnings, as imported drawings don't: the command, not the DSL, decides how they're constrained.
+`71_more_construction_and_surfaces` adds the remaining construction commands (points from edges
+and planes, planes from two edges, along a path and perpendicular, axes through a cylinder and
+two points), the engine's own cone, offset face, bounding solid, and surface boundary, untrim and
+unstitch, 30 checks on 0.27. The origin planes' names (XY, XZ, YZ, Top, Front, Right) can't name
+a construction plane.
 An extrude of separate profiles makes one body per piece (`Studs`, `Studs (2)`, …); join them to
 something to keep one body. A pattern about a named construction
 axis needs 0.27; older engines stop with the reason. Two things it shows: a cylinder's
