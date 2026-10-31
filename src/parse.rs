@@ -66,6 +66,9 @@ const TUPLE_KEYS: &[&str] = &[
     "edge",
     "pull",
     "factors",
+    "bends",
+    "axis_face",
+    "axis_edge",
 ];
 const LIST_KEYS: &[&str] = &["targets", "features", "bodies", "tools", "points", "sections", "between", "curves"];
 const IDENT_KEYS: &[&str] = &[
@@ -114,6 +117,7 @@ const FLAGS: &[&str] = &[
     "left",
     "internal",
     "external",
+    "surface",
 ];
 
 pub const FEATURES: &[&str] = &[
@@ -151,6 +155,8 @@ pub const FEATURES: &[&str] = &[
     "path_flange",
     "cone",
     "perforate",
+    "thicken",
+    "convert",
 ];
 
 struct P<'a> {
@@ -956,6 +962,22 @@ fn parse_sketch_stmt(c: &mut Cur) -> R<SketchStmt> {
             let pts = parse_points(c, 2)?;
             let periodic = has("periodic") || c.eat_ident("periodic");
             SketchKind::Spline { name, pts, periodic }
+        }
+        "project" => {
+            let what = c.ident("what to project: face, edge, vertex or body")?;
+            let (point, body) = match what.as_str() {
+                "face" | "edge" | "vertex" => {
+                    let p = c.tuple()?;
+                    if p.len() != 3 {
+                        return Err(err(line, format!("`project {what}` takes a point (x,y,z) on it")));
+                    }
+                    let body = if c.eat_ident("body") { Some(c.ident("the body name")?) } else { None };
+                    (Some(p), body)
+                }
+                "body" => (None, Some(c.ident("the body name")?)),
+                other => return Err(err(line, format!("`project` takes face, edge, vertex or body, not `{other}`"))),
+            };
+            SketchKind::Project { what, point, body }
         }
         "svg" | "dxf" => {
             let path = match c.next() {

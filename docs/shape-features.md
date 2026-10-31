@@ -73,6 +73,20 @@ sketch Logo on XY offset 3 mm {
   Imported curves stay unconstrained, and `evaluate` does not warn about them. An import, like
   text, comes after the sketch's drawn entities. See `58_logo_coaster`.
 
+```sc
+sketch LidSk on XY offset (H + 2 mm) {
+  project face (L/2, W/2, H) body Box             // also: edge (x,y,z), vertex (x,y,z), body Box
+}
+extrude Lid from LidSk distance 3 mm -> body Lid
+```
+
+- `project` draws body geometry onto the sketch plane: a face's edge loops, one edge, one
+  vertex, or a whole body's silhouette (`project body Box`). The projection stays linked, so it
+  follows the body when a parameter changes it: changing the box's length above also lengthens
+  the lid (checked on 0.19 and 0.27). The point picks the face, edge or vertex at the
+  parameters' current values; `body` says whose, where bodies meet. Like an import, it comes
+  after the sketch's drawn entities.
+
 ## Construction planes
 
 ```sc
@@ -111,11 +125,16 @@ draft Walls faces (60,0,15) (60,80,15) angle (-4 deg) neutral XY body Tray
 offset_faces Grow faces (126,3,3) distance 1 mm body Peg
 scale Big bodies Peg factor 1.5 origin (120,0,0)        // or factors (1, 1, 2)
 pattern Teeth features Tooth path Rail.edge count 9 distance 120 mm   // or spacing; identical; flip
+pattern circular Ring features Hole axis_face (38,0,12) count 4 angle 360 deg   // about a boss
 split Halves target Shelf origin (160,0,0) normal (1,0,0) -> body ShelfLeft   // or plane Mid
 color Shelf "#d9a441"
 material Shelf, ShelfLeft PLA
 ```
 
+- A circular pattern or a revolve can turn about a model's own axis: `axis_face (x,y,z)` on a
+  cylinder, cone or torus face, or `axis_edge (x,y,z)` on a straight or circular edge. The axis
+  follows the model, so moving the boss moves the ring of holes around it. This needs engine
+  0.27; older engines stop with the reason.
 - `rib` takes one connected chain. `web` makes one wall per curve. `direction normal` grows
   along the sketch's normal, and `flip` turns it to the other side.
 - `draft`: a positive angle narrows the part along the pull, which defaults to the neutral
@@ -155,6 +174,30 @@ emboss Letters from Label depth 1 targets Tag                   // 50_name_tag (
   change. Modelled threads are slow to compute. Put them last, after every other boolean on that body.
 - `coil` takes two of `turns`, `pitch` and `height`. Other options are `square`,
   `section_position inside|center|outside`, `axis`, `start_angle` and `clockwise`.
+
+## Surfaces and thickening
+
+```sc
+revolve Skin from Profile axis Z curves s surface -> body Skin   // 63_thin_wall_vase
+thicken Wall bodies Skin thickness wall new -> body Vase
+remove DropSkin bodies Skin
+```
+
+`surface` on an `extrude`, `revolve`, `loft` or `sweep` makes a surface body, walls only and no
+caps, instead of a solid. Its profile can be an open chain of sketch curves (`curves a, b`). A
+surface is its own body: it takes `-> body <name>`, not `join`, `cut` or `targets`.
+
+`thicken` grows surface bodies into a solid by `thickness`, square to the surface everywhere,
+which gives an even wall that `shell` or a second, smaller cut can't. It grows along the surface's
+normal; `flip` grows it the other way and `symmetric` half each way. A closed loft's normal points
+out of it, and a revolve's depends on the profile's direction. The result is `new -> body <name>`,
+or joins or cuts `targets`. Remove the surface afterwards, or it stays in the design as a body.
+The wall's ends are square to the surface, so a sloping wall's end rises a little past the
+profile.
+
+The engine (0.19 and 0.27) can't thicken across a sharp edge into the inside corner, and it can't
+join or cut a thickened loft afterwards, even when the loft is ruled. Thickened revolves, extrudes
+and sweeps join and cut as usual.
 
 ## Sheet metal
 
@@ -199,6 +242,19 @@ sketched on XZ and a 3 mm bend radius. For that, the path's lines need coordinat
 and the sketches must be on XY, XZ or YZ (offset, not flipped); otherwise an older engine stops
 with the reason. The heights stay live. As with every flange, the edges are picked at the
 coordinates' current values. See `62_hat_channel_mount`.
+
+A solid or shelled body can also become sheet metal after it is modelled:
+
+```sc
+convert Sheet body Tray face (L/2, W/2, 0) rule Steel bends (L/2, 0, 0) (L/2, W, 0) (0, W/2, 0) (L, W/2, 0)
+```
+
+`face` is the fixed face. The flat faces reached from it across the `bends` edges become the
+sheet, and each bend gets the rule's radius. Edges between those faces that aren't bends, such as
+a tray's wall corners, are cut open with the rule's gap. A shelled body keeps its wall thickness;
+a solid plate takes the rule's thickness. Holes cut square through the faces become cut-outs in
+the flat pattern. See `64_bent_tray`, whose DXF has the outline, the holes, the vents and the
+four bend lines.
 
 A hem folds an edge back on itself. A perforation is a hole field over the flat sheet: it is in
 the flat pattern, the DXF (layer PERFORATION) and the mass, but is not cut into the solid. See

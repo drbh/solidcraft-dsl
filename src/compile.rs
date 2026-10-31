@@ -517,6 +517,13 @@ pub(crate) fn compile_geometry(d: &Design) -> R<Compiled> {
                 if uses("path_flange", None) {
                     r.push(json!("sheet_path_flange"));
                 }
+                if uses("revolve", Some("axis_face"))
+                    || uses("revolve", Some("axis_edge"))
+                    || uses("pattern_circular", Some("axis_face"))
+                    || uses("pattern_circular", Some("axis_edge"))
+                {
+                    r.push(json!("model_axes"));
+                }
                 if text_expression || d.params.iter().any(|p| p.text().is_some()) {
                     r.push(json!("text_parameters"));
                 }
@@ -558,6 +565,7 @@ fn compile_sketch(s: &Sketch, out: &mut Vec<Value>, lines: &mut Vec<usize>, dims
             SketchKind::Mirror { .. } => Some("a mirror"),
             SketchKind::Pattern { .. } => Some("a pattern"),
             SketchKind::Import { .. } => Some("an import"),
+            SketchKind::Project { .. } => Some("a projection"),
             _ => None,
         };
         let constraint = matches!(st.kind, SketchKind::Dim { .. } | SketchKind::Constraint { .. } | SketchKind::Fix { .. });
@@ -843,6 +851,17 @@ fn compile_sketch(s: &Sketch, out: &mut Vec<Value>, lines: &mut Vec<usize>, dims
                     out.push(cmd("sketch.pattern.rectangular", p));
                 }
             }
+            SketchKind::Project { what, point, body } => {
+                let mut r = json!({});
+                match point {
+                    Some(p) => r[what.as_str()] = comps(p),
+                    None => r["body"] = json!(body),
+                }
+                if let (Some(b), Some(_)) = (body, point) {
+                    r["body"] = json!(b);
+                }
+                out.push(cmd("sketch.project", json!({"refs": [r]})));
+            }
             SketchKind::Import { format, path, at, scale } => {
                 // `run`, `evaluate` and `watch` replace the path with the file's text (link::inline_files).
                 let mut p = json!({"path": path});
@@ -1021,7 +1040,27 @@ fn compile_feature(f: &Feature, sketches: &mut HashMap<String, SketchTable>) -> 
     let line = f.line;
     let mut o = Opts::new(f);
     let mut p = json!({});
+    let surface = matches!(f.kind.as_str(), "extrude" | "revolve" | "loft" | "sweep") && o.flag("surface");
     let id = match f.kind.as_str() {
+        // A surface body thickened into a solid: new, or joined to / cut from targets.
+        "thicken" => {
+            p["bodies"] = json!(o.list("bodies")?.ok_or_else(|| err(line, "`thicken` needs `bodies A, B` (surface bodies)"))?);
+            // Along the surface's normal (out of a closed loft or revolve); `flip`: against it.
+            let t = o.require("thickness")?;
+            p["thickness"] = if o.flag("flip") {
+                match t {
+                    Value::String(e) => json!(format!("-({e})")),
+                    v => json!(-v.as_f64().unwrap_or(0.0)),
+                }
+            } else {
+                t
+            };
+            if o.flag("symmetric") {
+                p["symmetric"] = json!(true);
+            }
+            operation(&mut o, &mut p)?;
+            "surface.thicken"
+        }
         "extrude" => {
             let sketch = o.ident("from")?.ok_or_else(|| err(line, "`extrude` needs `from <sketch>`"))?;
             if !sketches.contains_key(&sketch) {
@@ -1051,7 +1090,9 @@ fn compile_feature(f: &Feature, sketches: &mut HashMap<String, SketchTable>) -> 
                 return Err(err(line, format!("unknown sketch `{sketch}`")));
             }
             p["sketch"] = json!(sketch);
+            let modelled = model_axis(&mut o)?;
             p["axis"] = match o.take("axis") {
+                None if modelled.is_some() => modelled.unwrap_or_default(),
                 Some(Val::Ref(r)) if r.parts.is_empty() && matches!(r.base.as_str(), "X" | "Y" | "Z" | "x" | "y") => json!(r.base),
                 Some(Val::Ref(r)) => {
                     let id = sketch_ref(r, Some(&sketch), sketches, line)?.1;
@@ -1378,9 +1419,10 @@ fn compile_feature(f: &Feature, sketches: &mut HashMap<String, SketchTable>) -> 
             }
             p["axis"] = match o.take("axis") {
                 Some(Val::Ref(r)) if r.parts.is_empty() => json!(r.base),
-                _ => match (o.tuple("origin")?, o.tuple("dir")?) {
-                    (Some(origin), Some(dir)) => json!({"origin": origin, "dir": dir}),
-                    _ => return Err(err(line, "`pattern circular` needs `axis X|Y|Z` or `origin (…) dir (…)`")),
+                _ => match (model_axis(&mut o)?, o.tuple("origin")?, o.tuple("dir")?) {
+                    (Some(a), ..) => a,
+                    (None, Some(origin), Some(dir)) => json!({"origin": origin, "dir": dir}),
+                    _ => return Err(err(line, "`pattern circular` needs `axis X|Y|Z`, `origin (…) dir (…)`, or `axis_face`/`axis_edge (x,y,z)`")),
                 },
             };
             p["count"] = o.require("count")?;
@@ -1831,6 +1873,20 @@ fn compile_feature(f: &Feature, sketches: &mut HashMap<String, SketchTable>) -> 
             }
             "sheet.path_flange"
         }
+        // A solid or shelled body made into sheet metal: `face` is the fixed face; the flat faces
+        // reached from it across the `bends` edges become the sheet, the other edges between them
+        // are cut open with the rule's gap.
+        "convert" => {
+            p["body"] = json!(o.ident("body")?.ok_or_else(|| err(line, "`convert` needs `body <name>`"))?);
+            p["face"] = o.tuple("face")?.ok_or_else(|| err(line, "`convert` needs `face (x,y,z)` on the body's fixed flat face"))?;
+            if let Some(r) = o.ident("rule")? {
+                p["rule"] = json!(r);
+            }
+            if let Some(b) = o.tuples("bends")? {
+                p["bends"] = json!(b);
+            }
+            "sheet.convert"
+        }
         // A sheet edge folded back on itself.
         "hem" => {
             p["edges"] = json!(o.tuples("edges")?.ok_or_else(|| err(line, "`hem` needs `edges (x,y,z) …` on sheet edges"))?);
@@ -1863,8 +1919,53 @@ fn compile_feature(f: &Feature, sketches: &mut HashMap<String, SketchTable>) -> 
         }
         other => return Err(err(line, format!("`{other}` is not supported yet"))),
     };
+    let id = if surface { surface_command(&mut o, &mut p, id, sketches)? } else { id };
     let params = o.finish(p)?;
     Ok(vec![cmd(id, params)])
+}
+
+/// `axis_face (x,y,z)` or `axis_edge (x,y,z)`: the axis of a cylinder, cone or torus face, or of a
+/// straight or circular edge, followed as the model changes (engine 0.27+).
+fn model_axis(o: &mut Opts) -> R<Option<Value>> {
+    if let Some(p) = o.tuple("axis_face")? {
+        return Ok(Some(json!({"face": p})));
+    }
+    Ok(o.tuple("axis_edge")?.map(|p| json!({"edge": p})))
+}
+
+/// `surface`: the extrude, revolve, loft or sweep makes a surface body (walls only, no caps)
+/// instead of a solid. Its profile may be an open chain of sketch `curves`. `thicken` turns it
+/// into a solid.
+fn surface_command(o: &mut Opts, p: &mut Value, id: &str, sketches: &mut HashMap<String, SketchTable>) -> R<&'static str> {
+    let line = o.f.line;
+    if p.get("operation").is_some_and(|op| op != "new") || p.get("targets").is_some() {
+        return Err(err(line, "a surface is a body of its own: give it `-> body <name>`, then `thicken` it to join or cut"));
+    }
+    if p.get("body_name").is_none() {
+        return Err(err(line, "a surface needs `-> body <name>`"));
+    }
+    for k in ["taper", "through_all"] {
+        if p.get(k).is_some() {
+            return Err(err(line, format!("a surface extrude takes no `{k}`")));
+        }
+    }
+    let Some(m) = p.as_object_mut() else { return Err(err(line, "internal: feature params are not an object")) };
+    m.remove("operation");
+    if id == "solid.revolve" && m.get("direction").is_some_and(|d| d == "symmetric") {
+        m.remove("direction");
+        m.insert("symmetric".into(), json!(true));
+    }
+    if let Some(sketch) = p["sketch"].as_str().map(str::to_string)
+        && o.f.opts.iter().any(|(k, _)| k == "curves")
+    {
+        p["curves"] = json!(sketch_curves(o, "curves", &sketch, sketches)?);
+    }
+    Ok(match id {
+        "solid.extrude" => "surface.extrude",
+        "solid.revolve" => "surface.revolve",
+        "solid.loft" => "surface.loft",
+        _ => "surface.sweep",
+    })
 }
 
 /// A path flange written as edge flanges, each bent from the free edge of the one before: its
@@ -2053,6 +2154,69 @@ mod tests {
 
     fn fails(src: &str) -> String {
         compile(&parse(src).unwrap()).unwrap_err()
+    }
+
+    #[test]
+    fn projections_into_sketches() {
+        let cmds = script(
+            "param H = 30 mm\nbox B size 80 50 H -> body Box\nsketch S on XY offset (H + 2 mm) {\n line l = (0,0) (5,0)\n \
+             project face (40, 25, H) body Box\n project body Box\n}\n",
+        );
+        let p: Vec<&Value> = cmds.iter().filter(|c| c["command"] == "sketch.project").map(|c| &c["params"]["refs"][0]).collect();
+        assert_eq!(p, [&json!({"face": [40.0, 25.0, 30.0], "body": "Box"}), &json!({"body": "Box"})]);
+        let e = fails("box B size 8 5 3 -> body Box\nsketch S on XY {\n project body Box\n line l = (0,0) (5,0)\n}\n");
+        assert!(e.contains("a projection"), "{e}");
+    }
+
+    #[test]
+    fn converting_a_body_to_sheet_metal() {
+        let cmds = script(
+            "sheet_rule S thickness 1 mm bend_radius 1 mm k_factor 0.4\nbox B size 50 40 20 -> body Tray\n\
+             shell O faces (25,20,20) thickness 1 mm body Tray\nconvert Sheet body Tray face (25,20,0) rule S bends (25,0,0) (0,20,0)\n",
+        );
+        let c = cmds.iter().find(|c| c["command"] == "sheet.convert").unwrap();
+        assert_eq!(
+            c["params"],
+            json!({"body": "Tray", "face": [25.0, 20.0, 0.0], "rule": "S", "bends": [[25.0, 0.0, 0.0], [0.0, 20.0, 0.0]], "name": "Sheet"})
+        );
+    }
+
+    #[test]
+    fn patterns_and_revolves_about_model_axes() {
+        let c = compile(
+            &parse(
+                "box P size 100 60 5 -> body Part\ncylinder H radius 2 height 7 base (44,0,-1) cut targets Part\n\
+                 pattern circular Ring features H axis_face (38,0,12) count 4 angle 360 deg\n\
+                 sketch S on XZ {\n rect r = (50,0) (60,-5)\n}\nrevolve R from S axis_edge (40,0,0) angle 90 deg new -> body Q\n",
+            )
+            .unwrap(),
+        )
+        .unwrap();
+        let cmds = c.script["commands"].as_array().unwrap();
+        let by = |id: &str| cmds.iter().find(|c| c["command"] == id).unwrap()["params"]["axis"].clone();
+        assert_eq!(by("solid.pattern.circular"), json!({"face": [38.0, 0.0, 12.0]}));
+        assert_eq!(by("solid.revolve"), json!({"edge": [40.0, 0.0, 0.0]}));
+        assert_eq!(c.expressions["requires"], json!(["model_axes"]));
+    }
+
+    #[test]
+    fn surfaces_and_thickening() {
+        let cmds = script(
+            "param wall = 1.6 mm\nsketch P on XZ {\n spline s = (35,0) (50,-60) (36,-150)\n}\n\
+             revolve Skin from P axis Z curves s symmetric angle 90 deg surface -> body Skin\n\
+             thicken Wall bodies Skin thickness wall flip new -> body Vase\n",
+        );
+        let n = cmds.len();
+        assert_eq!(cmds[n - 2]["command"], "surface.revolve");
+        let rev = &cmds[n - 2]["params"];
+        assert_eq!((rev["curves"].clone(), rev["symmetric"].clone(), rev["body_name"].clone()), (json!(["s1"]), json!(true), json!("Skin")));
+        assert!(rev.get("operation").is_none() && rev.get("direction").is_none(), "{rev}");
+        assert_eq!(cmds[n - 1]["command"], "surface.thicken");
+        assert_eq!(cmds[n - 1]["params"]["thickness"], json!("-(wall)"));
+        assert_eq!(cmds[n - 1]["params"]["body_name"], json!("Vase"));
+        let loft = "sketch A on XY {\n circle c = (0,0) radius 5\n}\nsketch B on XY offset 10 {\n circle c = (0,0) radius 8\n}\n";
+        assert!(fails(&format!("{loft}loft L sections A, B surface join targets X\n")).contains("a body of its own"));
+        assert!(fails(&format!("{loft}loft L sections A, B surface\n")).contains("needs `-> body <name>`"));
     }
 
     #[test]

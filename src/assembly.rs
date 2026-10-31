@@ -500,6 +500,7 @@ fn missing(c: &Compiled, commands: &Value) -> R<Vec<(String, &'static str, &'sta
             Some("thread_handedness") => &[("solid.thread", "handedness")],
             Some("text_parameters") => &[("sketch.text", "text_expression")],
             Some("sheet_path_flange") => &[("sheet.path_flange", "edge")],
+            Some("model_axes") => &[("solid.pattern.circular", "{edge|face")],
             _ => return Err(format!("unknown required engine capability {required}")),
         };
         for (id, field) in specs {

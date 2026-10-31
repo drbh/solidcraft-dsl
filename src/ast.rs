@@ -224,6 +224,13 @@ pub enum SketchKind {
         at: Option<[Comp; 2]>,
         scale: Option<String>,
     },
+    /// `project face|edge|vertex (x,y,z) [body B]` or `project body B` (its silhouette): body
+    /// geometry projected onto the sketch plane, as sketch curves (linked: they follow the body).
+    Project {
+        what: String,
+        point: Option<Vec<Comp>>,
+        body: Option<String>,
+    },
     /// `dim [type] a [-> b] = expr`
     Dim {
         kind: Option<String>,

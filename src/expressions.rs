@@ -224,6 +224,8 @@ pub fn lower(d: &Design) -> R<Lowered> {
                             coords(major, &env, line, "seed", Kind::Length, false, &mut sites)?;
                         }
                         SketchKind::Offset { side: Some(side), .. } => coords(side, &env, line, "seed", Kind::Length, false, &mut sites)?,
+                        // A projected face, edge or vertex is picked by a point, like a feature's edges.
+                        SketchKind::Project { point: Some(p), .. } => coords(p, &env, line, "selection", Kind::Length, false, &mut sites)?,
                         SketchKind::Import { at, scale, .. } => {
                             if let Some(at) = at {
                                 coords(at, &env, line, "seed", Kind::Length, false, &mut sites)?;

@@ -1,0 +1,16 @@
+{
+  "version": 1,
+  "defaults": false,
+  "requests": [
+    { "id": "flat-dxf", "kind": "commands", "extension": "dxf",
+      "commands": [ { "command": "sheet.export_dxf", "params": { "body": "Tray", "path": "$output", "bend_notes": true } } ] },
+    { "id": "flat-pattern", "kind": "commands",
+      "commands": [ { "command": "sheet.flat_pattern", "params": { "body": "Tray" } } ] },
+    { "id": "cad-step", "kind": "export", "format": "step", "params": { "bodies": ["Tray"] } },
+    { "id": "preview-glb", "kind": "export", "format": "glb", "layout": "single" },
+    { "id": "single-view", "kind": "snapshot", "layout": "single", "options": { "view": "iso" } }
+  ],
+  "layouts": {
+    "single": { "parts": [ { "id": "Tray", "select": { "bodies": ["Tray"] } } ] }
+  }
+}
