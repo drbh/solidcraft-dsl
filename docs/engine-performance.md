@@ -49,6 +49,9 @@ No workaround in the DSL: patterning tool bodies instead (600 pin bodies in 0.08
 engine) and cutting them from the sheet in one `combine` takes longer still, 245 s on 0.19.0 and
 265 s on 0.27.1.
 
+Tracked upstream (open, 2026-10-31): tangency-labs/solidcraft #9007 (circular pattern), #6478 and
+#8787 (rectangular pattern), #2076 (pattern cost growing about quadratically with the copies).
+
 Smallest reproduction: `examples/03_bolt_plate.sc`, a plate with one hole patterned 2 × 2
 (`solidcraft-dsl run examples/03_bolt_plate.sc --timings`, step `Holes`). For a large one,
 `examples/29_thin_sheet.sc`.
@@ -63,6 +66,9 @@ than 30 minutes at full CPU (0.19.0 and 0.27.1). At other angles the same query 
 overlap 0.49 mm deep, as at 330 deg, so the query stalls on overlapping threads, not touching ones.
 
 ## Other engine problems found along the way
+
+- **`surface.fillet` not implemented** (0.27.1 and 0.28.0): listed by the engine, it answers "not
+  supported yet"; tracked upstream as tangency-labs/solidcraft #769 (open).
 
 Not performance, but found in the same runs:
 
