@@ -116,6 +116,8 @@ pub fn evaluate(opts: &Options) -> Result<Value, String> {
         });
     }
     report["ok"] = json!(!diagnostics.iter().any(|d| d["severity"] == "error"));
+    // Errors first (in the order they happened), then warnings such as the engine's age.
+    diagnostics.sort_by_key(|d| d["severity"] != "error");
     report["diagnostics"] = json!(diagnostics);
     write_json(&dir.join("report.json"), &report)?;
     publish(&root, "latest.json", &attempt, &report)?;
