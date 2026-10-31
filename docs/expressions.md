@@ -58,12 +58,12 @@ builds the same, but the points don't follow a parameter change made in the app.
 points, use the pinned release:
 
 ```sh
-ci/install-solidcraft-cli.sh 0.27.1 "$PWD/build/release-engine"
+ci/install-solidcraft-cli.sh 0.28.0 "$PWD/build/release-engine"
 export SOLIDCRAFT_CLI="$PWD/build/release-engine/solidcraft-cli"
 cargo run -- evaluate examples/10_rotating_link.sc --json
 ```
 
-All ten expression examples work with 0.19.0 and 0.27.1. Persistent point tests print an explicit
+All ten expression examples work with 0.19.0, 0.27.1 and 0.28.0. Persistent point tests print an explicit
 skip on older engines. For a strict test of every DSL capability, including assemblies, use
 `ci/check-compatibility.sh` with the [compatible engine](assemblies.md#engine-compatibility).
 

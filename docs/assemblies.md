@@ -166,7 +166,7 @@ names without guessing global IDs. The arguments use the existing saved name fie
 schema change is needed. Names must be unique, nonnumeric, and different from `root`.
 
 Assembly execution requires an engine/app containing this command addition. Stock releases, up to
-0.27.1, do not provide it; on them the DSL uses the engine's own occurrence names (see above). `check` and `compile` work without the engine; `run`, `pack`,
+0.28.0, do not provide it; on them the DSL uses the engine's own occurrence names (see above). `check` and `compile` work without the engine; `run`, `pack`,
 `evaluate` and `watch` check capabilities before execution. For direct command-script replay,
 use the same compatible engine.
 

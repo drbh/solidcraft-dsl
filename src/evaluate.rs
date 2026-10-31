@@ -311,7 +311,7 @@ fn build(
 }
 
 /// The engine version this repository pins (flake.nix) and is tested against.
-pub const PINNED_ENGINE: [u32; 3] = [0, 27, 1];
+pub const PINNED_ENGINE: [u32; 3] = [0, 28, 0];
 
 /// A warning when the engine is older than the pinned version. Older engines build some designs
 /// differently (0.15 silently drops a join of a piece that doesn't touch the body), and the DSL

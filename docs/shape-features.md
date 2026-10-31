@@ -326,8 +326,8 @@ engine evaluates them. A `name` names the feature for later statements; a `body_
 the body it makes, so checks and later features can use it. Engine errors point at the line.
 
 `ci/engine-sweep.py` checks the whole command list of an engine: every command compiles through
-`engine` unchanged (542 of 542 on 0.27.1), and every solid, surface, construction, sheet and
-sketch command reaches the engine and is recognised (202 of 202).
+`engine` unchanged (553 of 553 on 0.28.0), and every solid, surface, construction, sheet and
+sketch command reaches the engine and is recognised (212 of 212).
 
 A construction plane made this way (`construct.plane.*` with a `name`) can carry sketches like a
 `plane` statement's. Inside a sketch block, `engine` runs a sketch command in that sketch; like
@@ -367,6 +367,9 @@ constraint id is `k…` and its parameter `d…`.
 insert and reverse, offset break, copy, cut and paste, edit and cancel, equation curve edit, move
 point and live drags, the constrainer, loose ends and tie, auto-constrain, redefine, break link,
 and the queries, 39 checks. An `engine sketch.finish_auto_constrain` line ends the sketch itself.
+`76_construction_lines` covers 0.28's infinite construction lines (free, horizontal, vertical,
+at an angle, parallel, perpendicular, bisector and tangents), each placed line checked by
+mirroring a disc across it, and `body.print_face`, 20 checks.
 An extrude of separate profiles makes one body per piece (`Studs`, `Studs (2)`, …); join them to
 something to keep one body. A pattern about a named construction
 axis needs 0.27; older engines stop with the reason. Two things it shows: a cylinder's
