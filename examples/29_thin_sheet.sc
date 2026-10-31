@@ -12,16 +12,18 @@ param hole_d = 1.0 mm
 let cols = 60
 let rows = 20
 box Sheet size L W T corner (0,0,0) -> body Sheet
-// Two seeds, each patterned over half the rows: one 60 x 20 pattern is over the engine's
-// instance limit (somewhere between 1000 and 1200).
-let half = rows/2
-sketch Locations on XY offset T {
-  point a = (pitch/2, pitch/2)
-  dim horizontal origin -> a = pitch/2
-  dim vertical origin -> a = pitch/2
-  point b = (pitch/2, pitch/2 + half*pitch)
-  dim horizontal origin -> b = pitch/2
-  dim vertical origin -> b = pitch/2 + half*pitch
+// Every hole is a circle in one sketch, cut with one extrude: much faster than patterning a hole
+// feature, which cuts each copy into the sheet in turn (158 s on engine 0.28, against 6 s here;
+// see docs/engine-performance.md). A sketch pattern makes at most 500 copies, so the 60 columns
+// are three patterns of 20 x 20. The engine takes sketch pattern counts and spacings as numbers:
+// they follow `pitch` when compiled, not when it is changed in SolidCraft.
+sketch HoleGrid on XY offset (-1 mm) {
+  circle h1 = (pitch/2, pitch/2) diameter hole_d
+  circle h2 = (pitch/2 + cols/3*pitch, pitch/2) diameter hole_d
+  circle h3 = (pitch/2 + 2*cols/3*pitch, pitch/2) diameter hole_d
+  fix h1 h2 h3
+  pattern rectangular h1 count (cols/3) spacing pitch count2 rows spacing2 pitch
+  pattern rectangular h2 count (cols/3) spacing pitch count2 rows spacing2 pitch
+  pattern rectangular h3 count (cols/3) spacing pitch count2 rows spacing2 pitch
 }
-hole SeedHoles at Locations diameter hole_d depth T
-pattern Grid features SeedHoles dir (1,0,0) count cols spacing pitch dir2 (0,1,0) count2 half spacing2 pitch
+extrude Holes from HoleGrid distance (T + 2 mm) cut targets Sheet

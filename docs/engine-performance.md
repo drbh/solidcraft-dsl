@@ -45,9 +45,26 @@ Still present in 0.28.0 (released 2026-10-31; all 80 examples and the 95 tests p
 unchanged): 29_thin_sheet 158.1 s, 14_printable_gearbox
 17.4 s, 06 and 03 unchanged from 0.27.1.
 
-No workaround in the DSL: patterning tool bodies instead (600 pin bodies in 0.08 s on either
-engine) and cutting them from the sheet in one `combine` takes longer still, 245 s on 0.19.0 and
-265 s on 0.27.1.
+**Workaround (in use):** pattern the outline inside the sketch and cut it with one extrude,
+instead of patterning the cut feature. The same holes and tooth spaces come out with the same
+volume, and the build is back to 0.19's speed or better (0.28.0, one build at a time):
+
+| Example | 0.19.0, feature pattern | 0.28.0, feature pattern | 0.28.0, sketch pattern |
+|---|---:|---:|---:|
+| 29_thin_sheet | 7.4 s | 158 s | 5.9 s |
+| 14_printable_gearbox | 6.5 s | 17.4 s | 7.3 s |
+| 18_skeleton_gearbox | 8.9 s | 24.3 s | 14.2 s |
+| 19_mini_skeleton_gearbox | 3.1 s | 9.1 s | 3.5 s |
+
+Those four examples (and 19's assembly) now cut this way; their volumes are unchanged (18's
+housing gains 3 faces from a different face split). A sketch pattern makes at most 500 copies
+(29 uses three), and the engine takes its counts and spacings as numbers, so they follow
+parameters when the design is compiled, not live in SolidCraft. Feature patterns remain the way
+to copy anything that isn't one sketch's cut or join.
+
+Other ways tried: a pattern of a pattern (29 as 10 x 10 blocks, patterned 6 times) took over 7
+minutes; patterning tool bodies (600 pins in 0.08 s) and cutting them in one `combine` took
+245 s on 0.19.0 and 265 s on 0.27.1.
 
 Tracked upstream (open, 2026-10-31): tangency-labs/solidcraft #9007 (circular pattern), #6478 and
 #8787 (rectangular pattern), #2076 (pattern cost growing about quadratically with the copies).

@@ -197,9 +197,11 @@ component HousingPart {
   sketch RingSpaceSketch on XY offset floor_t {
   polyline closed tooth = (0+(ring_tip-1 mm)*rg_cp*rg_cb-(-(ring_tip-1 mm)*rg_sp)*rg_sb,0+(ring_tip-1 mm)*rg_cp*rg_sb+(-(ring_tip-1 mm)*rg_sp)*rg_cb) (0+rg_x0*rg_cb-(-rg_y0)*rg_sb,0+rg_x0*rg_sb+(-rg_y0)*rg_cb) (0+rg_x1*rg_cb-(-rg_y1)*rg_sb,0+rg_x1*rg_sb+(-rg_y1)*rg_cb) (0+rg_x2*rg_cb-(-rg_y2)*rg_sb,0+rg_x2*rg_sb+(-rg_y2)*rg_cb) (0+rg_x3*rg_cb-(-rg_y3)*rg_sb,0+rg_x3*rg_sb+(-rg_y3)*rg_cb) (0+rg_x4*rg_cb-(-rg_y4)*rg_sb,0+rg_x4*rg_sb+(-rg_y4)*rg_cb) (0+rg_x5*rg_cb-(-rg_y5)*rg_sb,0+rg_x5*rg_sb+(-rg_y5)*rg_cb) (0+rg_x6*rg_cb-(-rg_y6)*rg_sb,0+rg_x6*rg_sb+(-rg_y6)*rg_cb) (0+rg_x6*rg_cb-rg_y6*rg_sb,0+rg_x6*rg_sb+rg_y6*rg_cb) (0+rg_x5*rg_cb-rg_y5*rg_sb,0+rg_x5*rg_sb+rg_y5*rg_cb) (0+rg_x4*rg_cb-rg_y4*rg_sb,0+rg_x4*rg_sb+rg_y4*rg_cb) (0+rg_x3*rg_cb-rg_y3*rg_sb,0+rg_x3*rg_sb+rg_y3*rg_cb) (0+rg_x2*rg_cb-rg_y2*rg_sb,0+rg_x2*rg_sb+rg_y2*rg_cb) (0+rg_x1*rg_cb-rg_y1*rg_sb,0+rg_x1*rg_sb+rg_y1*rg_cb) (0+rg_x0*rg_cb-rg_y0*rg_sb,0+rg_x0*rg_sb+rg_y0*rg_cb) (0+(ring_tip-1 mm)*rg_cp*rg_cb-(ring_tip-1 mm)*rg_sp*rg_sb,0+(ring_tip-1 mm)*rg_cp*rg_sb+(ring_tip-1 mm)*rg_sp*rg_cb)
   fix tooth.1 tooth.2 tooth.3 tooth.4 tooth.5 tooth.6 tooth.7 tooth.8 tooth.9 tooth.10 tooth.11 tooth.12 tooth.13 tooth.14 tooth.15 tooth.16
+  // All z_ring tooth spaces in this sketch, cut with one extrude (much faster than patterning
+  // the cut; see docs/engine-performance.md)
+  pattern circular tooth count z_ring center (0,0) angle 360 deg
   }
   extrude RingSpace from RingSpaceSketch distance (ring_h-floor_t+1 mm) cut targets Housing
-  pattern circular RingSpaces features RingSpace axis Z count z_ring angle 360 deg
   // Skeleton: spoked floor, carriers and thumbwheel
   sketch FloorWindowSk on XY offset (-1) {
   polyline closed edge = (16.1691,1) (15.7253,3.8929) (14.7683,6.6587) (13.3292,9.2072) (11.4551,11.4551) (9.2072,13.3292) (6.6587,14.7683) (3.8929,15.7253) (1,16.1691) (1,4.899) (3.5355,3.5355) (4.899,1)

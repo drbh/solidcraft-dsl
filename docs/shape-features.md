@@ -41,6 +41,11 @@ sketch Plate on XY {
 
 ## Copies in a sketch
 
+A sketch pattern followed by one extrude is the fast way to cut many identical holes or slots:
+engines from 0.27 pattern a cut feature several times more slowly, about quadratically in the
+copies (see [engine performance](engine-performance.md); `29_thin_sheet` cuts 1200 holes in 6 s
+this way, 158 s as a feature pattern). A sketch pattern makes at most 500 copies.
+
 ```sc
 sketch Lid on XY {
   rect rounded o = (0,0) (90,64) radius 6
