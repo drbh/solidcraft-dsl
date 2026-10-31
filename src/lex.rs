@@ -127,7 +127,9 @@ pub fn lex(src: &str) -> Result<Vec<Line>, String> {
         if raw.is_empty() {
             continue;
         }
-        out.push(Line { no, toks: tokenize_line(no, raw)?, raw: raw.to_string() });
+        // An `engine` statement's JSON is read from the raw text; only its keyword is a token.
+        let toks = if raw.split_whitespace().next() == Some("engine") { vec![Tok::Ident("engine".into())] } else { tokenize_line(no, raw)? };
+        out.push(Line { no, toks, raw: raw.to_string() });
     }
     Ok(out)
 }

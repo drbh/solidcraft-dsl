@@ -577,6 +577,30 @@ fn parse_design(p: &mut P, open: Option<usize>) -> R<Design> {
             "use" => {
                 return Err(err(l.no, "`use` reads another file relative to this one: build the design from its file (`run`, `evaluate`, `watch`)"));
             }
+            // `engine command.id {json}`: any engine command, passed through as written.
+            "engine" => {
+                let text = crate::lex::strip_comment(&l.raw).trim();
+                let rest = text.strip_prefix("engine").unwrap_or("").trim_start();
+                let (id, json) = rest.split_once(char::is_whitespace).map(|(a, b)| (a, b.trim())).unwrap_or((rest, ""));
+                if id.is_empty() || !id.contains('.') {
+                    return Err(err(l.no, "expected `engine command.id {…}`, for example `engine solid.split_face {\"faces\": [[0,0,5]]}`"));
+                }
+                let params: serde_json::Value = if json.is_empty() {
+                    serde_json::json!({})
+                } else {
+                    serde_json::from_str(json).map_err(|e| err(l.no, format!("the parameters must be one JSON object: {e}")))?
+                };
+                let Some(obj) = params.as_object() else {
+                    return Err(err(l.no, "the parameters must be a JSON object"));
+                };
+                let name = obj.get("name").and_then(|n| n.as_str()).map(str::to_string).unwrap_or_else(|| format!("engine@{}", l.no));
+                let mut opts = vec![("command".to_string(), Val::Raw(id.to_string())), ("params".to_string(), Val::Raw(params.to_string()))];
+                // A body it names, so later statements can refer to it.
+                if let Some(b) = obj.get("body_name").and_then(|n| n.as_str()) {
+                    opts.push(("body".to_string(), Val::Expr(b.to_string())));
+                }
+                d.items.push(Item::Feature(Feature { kind: "engine".into(), name, opts, line: l.no }));
+            }
             // `suppress A, B`: build these features, then switch them off (SolidCraft can turn them on).
             "suppress" => {
                 let mut features = vec![c.ident("a feature name")?];

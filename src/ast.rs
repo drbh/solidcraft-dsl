@@ -272,6 +272,8 @@ pub enum Val {
     /// A sketch entity reference, `Sketch.a` or `a`.
     Ref(Ref),
     Flag,
+    /// Verbatim JSON (an `engine` statement's parameters), untouched by expression passes.
+    Raw(String),
 }
 
 #[derive(Debug, Clone)]

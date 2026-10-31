@@ -1662,6 +1662,14 @@ fn compile_feature(f: &Feature, sketches: &mut HashMap<String, SketchTable>) -> 
             }
             "solid.scale"
         }
+        "engine" => {
+            let raw = |k: &str| match f.opts.iter().find(|(o, _)| o == k) {
+                Some((_, Val::Raw(s))) => Ok(s.clone()),
+                _ => Err(err(line, "internal: engine statement without its command")),
+            };
+            let params: Value = serde_json::from_str(&raw("params")?).map_err(|e| err(line, e))?;
+            return Ok(vec![cmd(&raw("command")?, params)]);
+        }
         "suppress" => {
             let features = o.list("features")?.unwrap_or_default();
             o.finish(json!({}))?;
@@ -2294,6 +2302,17 @@ mod tests {
         );
         assert_eq!(by("F")["params"], json!({"sketch": "B", "body_name": "U", "name": "F"}));
         assert_eq!((by("C")["command"].clone(), by("C")["params"]["bodies"].clone()), (json!("surface.stitch"), json!(["K", "T", "U"])));
+    }
+
+    #[test]
+    fn engine_pass_through() {
+        let src = "box P size 10 10 10 -> body Part\n\
+                   engine solid.bounding_solid {\"bodies\": [\"Part\"], \"margin\": \"2 mm\", \"body_name\": \"Box\"}  // its own body\n\
+                   combine J target Box tools Part join\n";
+        let cmds = script(src);
+        assert_eq!(cmds[1], json!({"command": "solid.bounding_solid", "params": {"bodies": ["Part"], "margin": "2 mm", "body_name": "Box"}}));
+        assert!(crate::parse::parse("engine solid.box [1, 2]\n").unwrap_err().contains("JSON object"));
+        assert!(crate::parse::parse("engine nodot {}\n").unwrap_err().contains("command.id"));
     }
 
     #[test]

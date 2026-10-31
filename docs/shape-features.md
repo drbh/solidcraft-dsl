@@ -301,3 +301,21 @@ pattern. A `cylinder … cut` is refused. Export the flat pattern from a request
 ```
 
 See [51_sheet_metal_bracket](../examples/51_sheet_metal_bracket.sc).
+
+## Any other engine command
+
+```sc
+engine construct.axis.through_cylinder {"name": "Spin", "face": {"face": [6, 0, 11]}}
+pattern circular Ring features Hole axis Spin count 6 angle 360 deg
+engine solid.bounding_solid {"bodies": ["Part"], "margin": "2 mm", "name": "Envelope", "body_name": "Box"}
+```
+
+`engine <command> {json}` adds any SolidCraft command to the design as written, for what has no
+statement of its own (the engine lists them with `solidcraft-cli commands`). The parameters are
+one JSON object on the line. Expressions go in strings, as in `"2 mm"` or `"wall/2"`, and the
+engine evaluates them. A `name` names the feature for later statements; a `body_name` declares
+the body it makes, so checks and later features can use it. Engine errors point at the line.
+
+The compiler can't check these parameters, so a wrong pick is the engine's to report, or not:
+a construction axis through two `vertex` points where the body has no vertex snaps to other
+vertices without an error. Measure the result, as with any feature.
