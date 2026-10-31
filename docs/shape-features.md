@@ -316,6 +316,10 @@ one JSON object on the line. Expressions go in strings, as in `"2 mm"` or `"wall
 engine evaluates them. A `name` names the feature for later statements; a `body_name` declares
 the body it makes, so checks and later features can use it. Engine errors point at the line.
 
+`ci/engine-sweep.py` checks the whole command list of an engine: every command compiles through
+`engine` unchanged (542 of 542 on 0.27.1), and every solid, surface, construction, sheet and
+sketch command reaches the engine and is recognised (202 of 202).
+
 A construction plane made this way (`construct.plane.*` with a `name`) can carry sketches like a
 `plane` statement's. Inside a sketch block, `engine` runs a sketch command in that sketch; like
 text and imports, it comes after the sketch's own entities, and it refers to entities by the

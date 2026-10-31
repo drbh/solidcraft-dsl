@@ -41,6 +41,9 @@ copies and the size of the body they join:
 Whole builds: 29_thin_sheet 7.4 s → 158 s, the three gearboxes about 2.8 times slower, 35 1.3
 times. Builds without patterns take the same time or less.
 
+Still present in 0.28.0 (released 2026-10-31): 29_thin_sheet 158.1 s, 14_printable_gearbox
+17.4 s, 06 and 03 unchanged from 0.27.1.
+
 No workaround in the DSL: patterning tool bodies instead (600 pin bodies in 0.08 s on either
 engine) and cutting them from the sheet in one `combine` takes longer still, 245 s on 0.19.0 and
 265 s on 0.27.1.
