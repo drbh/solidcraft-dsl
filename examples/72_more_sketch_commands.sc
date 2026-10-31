@@ -1,6 +1,7 @@
-// 72. More sketch commands through `engine` inside sketches, and the last surface and sheet ones
-// (a test bench, as 66 and 68-71). Sketches are extruded 1 mm, so volume is area (to the engine's
-// 0.01 % integration where the outline is curved); placement is checked by clearances.
+// 72. More sketch commands through `engine` inside sketches (a test bench, as 66 and 68-71).
+// Sketches are extruded 1 mm, so volume is area (to the engine's 0.01 % integration where the
+// outline is curved); placement is checked by clearances. Needs engine 0.27 (the arc slot's
+// `sweep`).
 design MoreSketchCommands units mm
 
 // sketch.ellipse: semi-axes 10 and 5: pi 50 = 157.08

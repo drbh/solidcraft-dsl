@@ -354,6 +354,9 @@ a construction plane.
 `72_more_sketch_commands` draws an ellipse, a conic, arc slots, circles tangent to two and three
 curves, a line from its midpoint, and uses the polygon, equal, tangent and symmetry constraints,
 sketch move and transform, extend, and a section of a body (`sketch.intersect`), 46 checks.
+`73_surface_blends_and_sheet_queries` blends two patches, fairs and matches the blend, stitches
+the three, and runs the sheet rules and bend table queries. `surface.fillet` is listed by the
+engine but not implemented yet (it answers "not supported yet", issue #769).
 An extrude of separate profiles makes one body per piece (`Studs`, `Studs (2)`, …); join them to
 something to keep one body. A pattern about a named construction
 axis needs 0.27; older engines stop with the reason. Two things it shows: a cylinder's
