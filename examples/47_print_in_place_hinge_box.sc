@@ -98,14 +98,16 @@ sketch Cone4Sk on XZ offset y_a {
 }
 revolve Cone4 from Cone4Sk axis ax new -> body Cone4Tool
 combine Cone4Join target Box tools Cone4Tool join
-// Sockets in the lid knuckles: the same cones moved pin_clear out along their surface normal
+// Sockets in the lid knuckles: the same cones moved pin_clear out along their surface normal, also
+// stopped `tip` short of a point (a pointed socket is meshed so coarsely that its clearance can't
+// be measured; the flat end is 0.57 mm past the cone's tip)
 sketch SocketSk on XZ offset y_a {
   construction line ax = (0, -zh) (W, -zh)
-  polyline closed s1 = (k, -zh) (k, -zh - rc - c2) (k + rc + c2, -zh)
-  polyline closed s2 = (2*pitch, -zh) (2*pitch, -zh - rc - c2) (2*pitch - rc - c2, -zh)
-  polyline closed s3 = (2*pitch + k, -zh) (2*pitch + k, -zh - rc - c2) (2*pitch + k + rc + c2, -zh)
-  polyline closed s4 = (4*pitch, -zh) (4*pitch, -zh - rc - c2) (4*pitch - rc - c2, -zh)
-  fix ax s1.1 s1.2 s1.3 s2.1 s2.2 s2.3 s3.1 s3.2 s3.3 s4.1 s4.2 s4.3
+  polyline closed s1 = (k, -zh) (k, -zh - rc - c2) (k + rc + c2 - tip, -zh - tip) (k + rc + c2 - tip, -zh)
+  polyline closed s2 = (2*pitch, -zh) (2*pitch, -zh - rc - c2) (2*pitch - rc - c2 + tip, -zh - tip) (2*pitch - rc - c2 + tip, -zh)
+  polyline closed s3 = (2*pitch + k, -zh) (2*pitch + k, -zh - rc - c2) (2*pitch + k + rc + c2 - tip, -zh - tip) (2*pitch + k + rc + c2 - tip, -zh)
+  polyline closed s4 = (4*pitch, -zh) (4*pitch, -zh - rc - c2) (4*pitch - rc - c2 + tip, -zh - tip) (4*pitch - rc - c2 + tip, -zh)
+  fix ax s1.1 s1.2 s1.3 s1.4 s2.1 s2.2 s2.3 s2.4 s3.1 s3.2 s3.3 s3.4 s4.1 s4.2 s4.3 s4.4
 }
 revolve Sockets from SocketSk axis ax cut targets Lid
 

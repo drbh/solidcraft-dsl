@@ -100,8 +100,8 @@ fn engines_without_authored_names_address_occurrences_by_their_own() {
         commands.iter().filter(|c| c["command"] == "occurrence.move").map(|c| c["params"]["occurrence"].as_str().unwrap()).collect();
     assert_eq!(moved, ["Leaf:1", "Leaf:2"]);
     // Any other missing capability still stops the build.
-    let cone = build("cone C radius 2 height 3 -> body C\n").unwrap();
-    assert!(solidcraft_dsl::assembly::fit_script(&cone, &mut cone.script.clone(), &json!([])).unwrap_err().contains("solid_cone"));
+    let flange = build("sheet_rule S thickness 1 mm bend_radius 1 mm k_factor 0.4\nsketch B on XY {\n rect r = (0,0) (10,10)\n}\nflange P from B rule S -> body Sheet\nsketch Z on YZ offset 5 mm {\n line a = (10,0) (10,5)\n}\npath_flange F edge (5,10,0) path Z.a body Sheet\n").unwrap();
+    assert!(solidcraft_dsl::assembly::fit_script(&flange, &mut flange.script.clone(), &json!([])).unwrap_err().contains("sheet_path_flange"));
 }
 
 #[test]

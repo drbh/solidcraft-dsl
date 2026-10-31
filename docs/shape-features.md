@@ -16,7 +16,8 @@ sketch Label on XY offset 2 {
 
 - Text can come from a text parameter (engine 0.27+): `param who = "ADA LOVELACE"`, then
   `text who at (…)` or `text (who + " - L") at (…)`. A parameter edit in SolidCraft relabels
-  the part. An older engine refuses the design (`text_parameters`).
+  the part. An older engine draws the parameters' current words instead: the design builds,
+  but relabelling it needs engine 0.27.
 - `text` must come last in its sketch. The engine numbers glyph curves from the same counters
   as every other entity, so nothing drawn after the text can be predicted. Put labels in a sketch
   of their own.
@@ -92,13 +93,14 @@ A plane can be used by name wherever a plane is taken: in `sketch … on`, in an
 ## Cones
 
 ```sc
-cone Tip radius 10 mm height 20 mm -> body Tip                      // to an apex
-cone Funnel radius 15 mm top_radius 5 mm height 30 mm base (40,0,0) axis X -> body Funnel
+cone Tip radius 10 mm height 20 mm -> body Tip                      // to a point
+cone Funnel diameter 30 mm top_radius 5 mm height 30 mm base (40,0,0) axis X -> body Funnel
 ```
 
-`cone` uses the engine's `solid.cone`, added in 0.27. An older engine refuses the design up
-front, with a message naming the missing `solid_cone` capability. On those engines, revolve a
-triangle or trapezoid instead.
+A cone is a revolved profile: a right trapezoid, or a triangle for a point, drawn beside the
+axis (X, Y or Z) from `base`. Its radius, top radius and height are live sketch dimensions, so it
+builds on any engine and follows parameter edits. Cone faces can be shelled. See
+`61_kitchen_funnel`.
 
 ## Shaping and splitting solids
 
@@ -135,13 +137,16 @@ material Shelf, ShelfLeft PLA
 loft Pot sections Base, Middle, Rim -> body Pot                 // 32_lofted_planter
 sweep Hook from Profile path Path.a, Path.k, Path.b new -> body Hook   // 33_swept_wall_hook
 pipe Tube path Path.a, Path.b diameter 6 wall 1 new -> body Tube
-thread NeckThread face (rn, 0, z) designation M28x2 modeled     // 49_bottle_and_cap; `left` for left-handed (engine 0.27+); for play between the flanks, scale the internal-thread part out in XY about its axis (49)
+thread NeckThread face (rn, 0, z) designation M28x2 modeled     // 49_bottle_and_cap; `left` for left-handed (engine 0.27+)
 coil Spring diameter 20 turns 5 pitch 4 section_size 1.5 base (0,0,0) new -> body Spring
 emboss Letters from Label depth 1 targets Tag                   // 50_name_tag (deboss to cut in)
 ```
 
 - `sweep` options are `twist <angle>`, `scale <factor>` and `parallel`, which keeps the profile
   from turning with the path. Path curves are listed in order and must all be in one sketch.
+- `thread … clearance c internal|external axis X|Y|Z origin (x,y,z) body B` opens the fit: the
+  engine cuts the basic ISO profile, so B is scaled about the thread's axis, out (internal) or in
+  (external), by c at the major radius, with a live factor. See 49's cap.
 - `thread` without `modeled` is cosmetic: it is recorded on the face, and the geometry does not
   change. Modelled threads are slow to compute. Put them last, after every other boolean on that body.
 - `coil` takes two of `turns`, `pitch` and `height`. Other options are `square`,
@@ -166,7 +171,14 @@ path_flange Z edge (20,30,0) path Zed.up, Zed.out radius 1.5 mm body Bracket   /
 
 A path flange bends flanges along an open chain of sketch lines drawn across a sheet edge,
 from the edge out: one flange per line, one bend per corner (a Z, a hat, a return lip). An
-engine before 0.27 refuses the design up front (`sheet_path_flange`).
+engine before 0.27 refuses the design up front (`sheet_path_flange`). There, write the chain as
+edge flanges, each bent from the last one's free edge. This Z matches the path flange above
+exactly (same volume and bounds):
+
+```sc
+flange Up edges (20,30,0) height 15 mm flip body Bracket
+flange Out edges (20,30,15) height 20 mm body Bracket
+```
 
 A hem folds an edge back on itself. A perforation is a hole field over the flat sheet: it is in
 the flat pattern, the DXF (layer PERFORATION) and the mass, but is not cut into the solid. See

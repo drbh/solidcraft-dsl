@@ -515,15 +515,65 @@ pub fn check_capabilities(c: &Compiled, commands: &Value) -> R<()> {
 /// counting that component's occurrences in the order they are made, so the script uses those
 /// names instead. Any other missing capability is an error.
 pub fn fit_script(c: &Compiled, script: &mut Value, commands: &Value) -> R<()> {
-    let names = ["authored_occurrence_names", "linked_occurrence_names"];
+    let names = ["authored_occurrence_names", "linked_occurrence_names", "text_parameters"];
     let missing = missing(c, commands)?;
     if let Some((required, id, field)) = missing.iter().find(|(r, ..)| !names.contains(&r.as_str())) {
         return Err(format!(
             "this design requires engine capability {required} ({id}: {field}); use a compatible development build via SOLIDCRAFT_CLI or update the running app"
         ));
     }
-    if !missing.is_empty() {
+    if missing.iter().any(|(r, ..)| r != "text_parameters") {
         default_occurrence_names(script);
+    }
+    if missing.iter().any(|(r, ..)| r == "text_parameters") {
+        literal_text(script)?;
+    }
+    Ok(())
+}
+
+/// For an engine without text parameters: draw each text expression's current words, and turn
+/// the text parameters' definitions into a read-only command (keeping every command's index,
+/// which the source map follows). The design builds; relabelling needs a newer engine.
+pub fn literal_text(script: &mut Value) -> R<()> {
+    let Some(commands) = script["commands"].as_array_mut() else { return Ok(()) };
+    let mut words: HashMap<String, String> = HashMap::new();
+    for cmd in commands.iter_mut() {
+        if cmd["command"] == "parameters.add" && cmd["params"]["unit"] == "text" {
+            let name = cmd["params"]["name"].as_str().unwrap_or("").to_string();
+            words.insert(name, cmd["params"]["expression"].as_str().unwrap_or("").to_string());
+            *cmd = json!({"command": "document.inspect", "params": {"measure": false}});
+        }
+    }
+    for cmd in commands.iter_mut() {
+        let Some(expr) = cmd["params"]["text_expression"].as_str().map(str::to_string) else { continue };
+        let mut text = String::new();
+        // `name + 'words' + …`: split on the `+`s outside quotes.
+        let mut quoted = false;
+        let mut part = String::new();
+        let mut parts = Vec::new();
+        for ch in expr.chars() {
+            match ch {
+                '\'' => {
+                    quoted = !quoted;
+                    part.push(ch);
+                }
+                '+' if !quoted => parts.push(std::mem::take(&mut part)),
+                _ => part.push(ch),
+            }
+        }
+        parts.push(part);
+        for p in parts {
+            let p = p.trim();
+            if let Some(q) = p.strip_prefix('\'').and_then(|q| q.strip_suffix('\'')) {
+                text.push_str(q);
+            } else {
+                text.push_str(words.get(p).ok_or_else(|| format!("text `{expr}`: `{p}` is not a text parameter"))?);
+            }
+        }
+        if let Some(params) = cmd["params"].as_object_mut() {
+            params.remove("text_expression");
+            params.insert("text".into(), json!(text));
+        }
     }
     Ok(())
 }

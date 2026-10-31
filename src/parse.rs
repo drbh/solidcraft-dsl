@@ -112,6 +112,8 @@ const FLAGS: &[&str] = &[
     "parallel",
     "clockwise",
     "left",
+    "internal",
+    "external",
 ];
 
 pub const FEATURES: &[&str] = &[

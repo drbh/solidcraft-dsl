@@ -291,6 +291,29 @@ pub fn lower(d: &Design) -> R<Lowered> {
                 }
             }
             Item::Feature(f) => {
+                // A cone's profile is drawn at these sizes; its dimensions keep the expressions.
+                if f.kind == "cone" {
+                    let size = |keys: [&str; 2], half: bool| -> R<Option<f64>> {
+                        let found = f.opts.iter().find(|(k, _)| keys.contains(&k.as_str()));
+                        match found {
+                            Some((k, Val::Expr(e))) => {
+                                let v = env.number(e, Kind::Length, f.line, k)?;
+                                Ok(Some(if half && k.ends_with("diameter") { v / 2.0 } else { v }))
+                            }
+                            _ => Ok(None),
+                        }
+                    };
+                    let seeds = [
+                        ("_r", size(["radius", "diameter"], true)?),
+                        ("_rt", size(["top_radius", "top_diameter"], true)?),
+                        ("_h", size(["height", "height"], false)?),
+                    ];
+                    for (k, v) in seeds {
+                        if let Some(v) = v {
+                            f.opts.push((k.to_string(), Val::Expr(v.to_string())));
+                        }
+                    }
+                }
                 for (key, val) in &mut f.opts {
                     if let Val::Tuples(tuples) = val {
                         let direction = matches!(key.as_str(), "dir" | "dir2" | "axis" | "normal");

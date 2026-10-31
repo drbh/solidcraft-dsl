@@ -462,6 +462,10 @@ pub(crate) fn compile_geometry(d: &Design) -> R<Compiled> {
                     return Err(err(f.line, format!("`{}` is already the name of what line {prev} defines", f.name)));
                 }
                 for c in compile_feature(f, &mut sketches)? {
+                    // A cone's profile sketch makes model dimensions, like a drawn sketch's.
+                    if c["command"] == "sketch.dimension" {
+                        dims.push(None);
+                    }
                     out.push(c);
                     lines.push(f.line);
                 }
@@ -483,9 +487,6 @@ pub(crate) fn compile_geometry(d: &Design) -> R<Compiled> {
                 d.items.iter().any(|i| matches!(i, Item::Feature(f) if f.kind == kind && flag.is_none_or(|k| f.opts.iter().any(|(o, _)| o == k))))
             };
             if let Some(r) = e["requires"].as_array_mut() {
-                if uses("cone", None) {
-                    r.push(json!("solid_cone"));
-                }
                 if uses("thread", Some("left")) {
                     r.push(json!("thread_handedness"));
                 }
@@ -1158,31 +1159,74 @@ fn compile_feature(f: &Feature, sketches: &mut HashMap<String, SketchTable>) -> 
             operation(&mut o, &mut p)?;
             "solid.cylinder"
         }
-        // Needs an engine with `solid.cone` (0.27 or later); see the `solid_cone` capability.
+        // A revolved profile, so it builds on every engine: a right trapezoid (or a triangle, for a
+        // point) beside the axis, its radius, top radius and height live sketch dimensions.
         "cone" => {
-            match (o.expr("radius")?, o.expr("diameter")?) {
-                (Some(r), None) => p["radius"] = r,
-                (None, Some(d)) => p["diameter"] = d,
+            let half = |e: Value| match e {
+                Value::String(s) => json!(format!("({s}) / 2")),
+                Value::Number(n) => json!(n.as_f64().unwrap_or(0.0) / 2.0),
+                v => v,
+            };
+            let r = match (o.expr("radius")?, o.expr("diameter")?) {
+                (Some(r), None) => r,
+                (None, Some(d)) => half(d),
                 _ => return Err(err(line, "`cone` needs `radius` or `diameter` (the base)")),
-            }
-            match (o.expr("top_radius")?, o.expr("top_diameter")?) {
-                (Some(r), None) => p["top_radius"] = r,
-                (None, Some(d)) => p["top_diameter"] = d,
-                (None, None) => {}
+            };
+            let rt = match (o.expr("top_radius")?, o.expr("top_diameter")?) {
+                (Some(r), None) => Some(r),
+                (None, Some(d)) => Some(half(d)),
+                (None, None) => None,
                 _ => return Err(err(line, "give `top_radius` or `top_diameter`, not both")),
-            }
-            p["height"] = o.require("height")?;
-            if let Some(t) = o.tuple("base")? {
-                p["base"] = t;
-            }
-            match o.take("axis") {
-                Some(Val::Ref(r)) if r.parts.is_empty() => p["axis"] = json!(r.base),
-                Some(Val::Tuples(t)) if t.len() == 1 => p["axis"] = comps(&t[0]),
-                Some(_) => return Err(err(line, "`axis` is X, Y, Z or `(x,y,z)`")),
-                None => {}
-            }
+            };
+            let h = o.require("height")?;
+            let seed = |o: &mut Opts, k: &str| -> f64 { o.expr(k).ok().flatten().and_then(|v| v.as_f64()).unwrap_or(0.0) };
+            let (sr, srt, sh) = (seed(&mut o, "_r"), seed(&mut o, "_rt"), seed(&mut o, "_h"));
+            let rt = rt.filter(|_| srt > 1e-9);
+            let base: Vec<f64> = match o.tuple("base")? {
+                Some(Value::Array(b)) => b.iter().map(|v| v.as_f64().unwrap_or(0.0)).collect(),
+                _ => vec![0.0; 3],
+            };
+            let axis = match o.take("axis") {
+                None => "Z".to_string(),
+                Some(Val::Ref(r)) if r.parts.is_empty() && matches!(r.base.as_str(), "X" | "Y" | "Z") => r.base.clone(),
+                Some(_) => return Err(err(line, "a cone's `axis` is X, Y or Z")),
+            };
+            // (radial, axial) to sketch coordinates; whether the axis runs vertically in the sketch.
+            let (plane, offset, vertical): (&str, f64, bool) = match axis.as_str() {
+                "Z" => ("XZ", base[1], true),
+                "X" => ("XY", base[2], false),
+                _ => ("XY", base[2], true),
+            };
+            let at = |radial: f64, axial: f64| -> Value {
+                match axis.as_str() {
+                    "Z" => json!([base[0] + radial, -(base[2] + axial)]),
+                    "X" => json!([base[0] + axial, base[1] + radial]),
+                    _ => json!([base[0] + radial, base[1] + axial]),
+                }
+            };
+            let sketch = format!("{}Profile", f.name);
+            let mut out = vec![cmd("sketch.create", json!({"name": sketch, "plane": plane, "offset": offset}))];
+            let mode = if vertical { "vertical" } else { "horizontal" };
+            let axis_line = if let Some(rt) = &rt {
+                out.push(cmd("sketch.line", json!({"points": [at(0.0, 0.0), at(sr, 0.0), at(srt, sh), at(0.0, sh)], "closed": true})));
+                out.push(cmd("sketch.constraint.parallel", json!({"a": "l3", "b": "l1"})));
+                out.push(cmd("sketch.dimension", json!({"entities": ["l3"], "value": rt})));
+                "l4"
+            } else {
+                out.push(cmd("sketch.line", json!({"points": [at(0.0, 0.0), at(sr, 0.0), at(0.0, sh)], "closed": true})));
+                "l3"
+            };
+            out.push(cmd("sketch.constraint.fix", json!({"entities": ["l1.start"], "fixed": true})));
+            out.push(cmd("sketch.constraint.horizontal_vertical", json!({"line": axis_line, "mode": mode})));
+            out.push(cmd("sketch.constraint.perpendicular", json!({"a": "l1", "b": axis_line})));
+            out.push(cmd("sketch.dimension", json!({"entities": ["l1"], "value": r})));
+            out.push(cmd("sketch.dimension", json!({"entities": [axis_line], "value": h})));
+            out.push(cmd("sketch.finish", json!({})));
+            p["sketch"] = json!(sketch);
+            p["axis"] = json!(axis_line);
             operation(&mut o, &mut p)?;
-            "solid.cone"
+            out.push(cmd("solid.revolve", o.finish(p)?));
+            return Ok(out);
         }
         "sphere" => {
             match (o.expr("radius")?, o.expr("diameter")?) {
@@ -1579,6 +1623,38 @@ fn compile_feature(f: &Feature, sketches: &mut HashMap<String, SketchTable>) -> 
             // Left-handed threads need an engine with thread handedness (0.27 or later).
             if o.flag("left") {
                 p["handedness"] = json!("left");
+            }
+            // `clearance c internal|external axis A origin (…) body B`: the engine cuts the basic
+            // profile, so open the fit by scaling the threaded body about the thread's axis,
+            // out for an internal thread and in for an external one, by c at the major radius.
+            if let Some(c) = o.expr("clearance")? {
+                let side = o.one_of(&["internal", "external"])?.ok_or_else(|| err(line, "a thread clearance needs `internal` or `external`"))?;
+                let designation =
+                    p["designation"].as_str().ok_or_else(|| err(line, "a thread clearance needs the `designation` (for its diameter)"))?;
+                let major: f64 = designation
+                    .trim_start_matches(['M', 'm'])
+                    .split(['x', 'X'])
+                    .next()
+                    .and_then(|d| d.parse().ok())
+                    .ok_or_else(|| err(line, format!("cannot read a diameter from `{designation}`")))?;
+                let body = o.ident("body")?.ok_or_else(|| err(line, "a thread clearance needs `body <name>`, the part to open"))?;
+                let axis = match o.take("axis") {
+                    Some(Val::Ref(r)) if r.parts.is_empty() && matches!(r.base.as_str(), "X" | "Y" | "Z") => r.base.clone(),
+                    _ => return Err(err(line, "a thread clearance needs the thread's `axis X|Y|Z`")),
+                };
+                let origin = o.tuple("origin")?.ok_or_else(|| err(line, "a thread clearance needs `origin (x,y,z)` on the thread's axis"))?;
+                let c = match &c {
+                    Value::String(s) => s.clone(),
+                    v => format!("{v} mm"),
+                };
+                let k = format!("1 {} ({c}) / ({} mm)", if side == "internal" { "+" } else { "-" }, major / 2.0);
+                let factors: Vec<Value> = ["X", "Y", "Z"].iter().map(|a| if *a == axis { json!(1) } else { json!(k) }).collect();
+                let thread = o.finish(p)?;
+                let name = format!("{}Clearance", f.name);
+                return Ok(vec![
+                    cmd("solid.thread", thread),
+                    cmd("solid.scale", json!({"bodies": [body], "factors": factors, "origin": origin, "name": name})),
+                ]);
             }
             "solid.thread"
         }
@@ -1992,18 +2068,46 @@ mod tests {
     }
 
     #[test]
-    fn cones_need_an_engine_with_solid_cone() {
-        let d = parse("param r = 10 mm\ncone Tip radius r top_radius 2 mm height 20 mm base (1,2,3) axis X -> body Tip\n").unwrap();
+    fn cones_are_revolved_profiles_with_live_dimensions_and_thread_options() {
+        let d = parse("param r = 10 mm\ncone Tip diameter (2*r) top_radius 2 mm height 20 mm base (1,2,3) axis X -> body Tip\n").unwrap();
         let c = compile(&d).unwrap();
+        let cmds = c.script["commands"].as_array().unwrap();
+        let ids: Vec<&str> = cmds.iter().map(|c| c["command"].as_str().unwrap()).collect();
         assert_eq!(
-            c.script["commands"][1]["params"],
-            json!({"radius": "r", "top_radius": "2 mm", "height": "20 mm", "base": [1.0, 2.0, 3.0], "axis": "X", "body_name": "Tip", "name": "Tip"})
+            ids,
+            [
+                "parameters.add",
+                "sketch.create",
+                "sketch.line",
+                "sketch.constraint.parallel",
+                "sketch.dimension",
+                "sketch.constraint.fix",
+                "sketch.constraint.horizontal_vertical",
+                "sketch.constraint.perpendicular",
+                "sketch.dimension",
+                "sketch.dimension",
+                "sketch.finish",
+                "solid.revolve"
+            ]
         );
-        assert_eq!(c.expressions["requires"], json!(["solid_cone"]));
-        let old = json!([{"id": "solid.box", "params": "length"}]);
-        assert!(crate::assembly::check_capabilities(&c, &old).unwrap_err().contains("solid_cone"));
-        let new = json!([{"id": "solid.cone", "params": "radius | diameter, height; top_radius?"}]);
-        crate::assembly::check_capabilities(&c, &new).unwrap();
+        // Axis X: the profile is on XY at the base's z, the axis edge horizontal; seeds are numbers.
+        assert_eq!(cmds[1]["params"], json!({"name": "TipProfile", "plane": "XY", "offset": 3.0}));
+        assert_eq!(cmds[2]["params"]["points"], json!([[1.0, 2.0], [1.0, 12.0], [21.0, 4.0], [21.0, 2.0]]));
+        let dims: Vec<&Value> = cmds.iter().filter(|c| c["command"] == "sketch.dimension").map(|c| &c["params"]["value"]).collect();
+        assert_eq!(dims, [&json!("2 mm"), &json!("(2 * r) / 2"), &json!("20 mm")]);
+        assert_eq!(cmds[11]["params"], json!({"sketch": "TipProfile", "axis": "l4", "body_name": "Tip", "name": "Tip"}));
+        assert_eq!(c.expressions["requires"], json!([]));
+        assert_eq!(c.dims.len(), 3);
+        // A thread clearance scales the part about the thread's axis, by a live expression.
+        let fit = compile(&parse("param play = 0.2 mm\ncylinder N radius 15 height 10 -> body Nut\nthread T face (13,0,5) designation M28x2 modeled clearance play internal axis Z origin (0,0,0) body Nut\n").unwrap()).unwrap();
+        let scale = fit.script["commands"].as_array().unwrap().last().unwrap().clone();
+        assert_eq!(scale["params"]["factors"], json!(["1 + (play) / (14 mm)", "1 + (play) / (14 mm)", 1]));
+        assert!(
+            fails(
+                "cylinder N radius 15 height 10 -> body Nut\nthread T face (13,0,5) designation M28x2 clearance 1 mm axis Z origin (0,0,0) body Nut\n"
+            )
+            .contains("`internal` or `external`")
+        );
         assert!(fails("cone C height 2\n").contains("needs `radius` or `diameter`"));
         let left = compile(&parse("cylinder S radius 4 height 20 -> body B\nthread T face (4,0,10) designation M8 modeled left\n").unwrap()).unwrap();
         assert_eq!(left.script["commands"][1]["params"]["handedness"], json!("left"));
