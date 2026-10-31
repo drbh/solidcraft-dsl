@@ -184,6 +184,17 @@ flange Up edges (20,30,0) height 15 mm flip body Bracket
 flange Out edges (20,30,15) height 20 mm body Bracket
 ```
 
+Each flange of the chain starts at the free edge of the one before, and its height is its line's
+length. Whether to `flip` it follows one rule, checked against 0.27's path flange for a Z, a return
+lip, a hat and a downward Z (identical volume and bounds each time):
+
+- The first flange flips when it folds toward the sheet's top face (the normal of the sketch its
+  base flange came from).
+- Each later flange flips when it heads opposite to the segment two before it. For the second
+  flange, that segment is the plate, running toward the edge.
+
+For example, a hat section (up, out, down) from a plate on XY is `flip`, plain, `flip`.
+
 A hem folds an edge back on itself. A perforation is a hole field over the flat sheet: it is in
 the flat pattern, the DXF (layer PERFORATION) and the mass, but is not cut into the solid. See
 `57_perforated_grille`.
