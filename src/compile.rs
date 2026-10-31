@@ -1956,6 +1956,38 @@ fn compile_feature(f: &Feature, sketches: &mut HashMap<String, SketchTable>) -> 
             p["body_name"] = json!(o.ident("body")?.ok_or_else(|| err(line, "a patch is a surface body: give it `-> body <name>`"))?);
             "surface.patch"
         }
+        // A face pushed (positive, adding material) or pulled (negative, cutting) along its normal.
+        "press_pull" => {
+            p["face"] = o.tuple("face")?.ok_or_else(|| err(line, "`press_pull` needs `face (x,y,z)` on the face to move"))?;
+            p["distance"] = o.require("distance")?;
+            "solid.press_pull"
+        }
+        // Faces split in two by a plane, without changing the solid: one part can then be moved.
+        "split_face" => {
+            p["faces"] = json!(o.tuples("faces")?.ok_or_else(|| err(line, "`split_face` needs `faces (x,y,z) …`"))?);
+            if let Some(b) = o.ident("of")? {
+                p["body"] = json!(b);
+            }
+            p["plane"] = match (o.ident("plane")?, o.tuple("origin")?, o.tuple("normal")?) {
+                (Some(n), None, None) => json!(n),
+                (None, Some(origin), Some(normal)) => json!({"origin": origin, "normal": normal}),
+                _ => return Err(err(line, "`split_face` needs `plane XY|XZ|YZ|<name>` or `origin (…) normal (…)`")),
+            };
+            "solid.split_face"
+        }
+        // Faces copied along their normals as a new surface body (planes and cylinders exactly).
+        "offset_surface" => {
+            p["faces"] = json!(o.tuples("faces")?.ok_or_else(|| err(line, "`offset_surface` needs `faces (x,y,z) …`"))?);
+            if let Some(b) = o.ident("of")? {
+                p["body"] = json!(b);
+            }
+            p["distance"] = o.require("distance")?;
+            if o.flag("chain") {
+                p["chain"] = json!(true);
+            }
+            p["body_name"] = json!(o.ident("body")?.ok_or_else(|| err(line, "an offset surface is a body of its own: give it `-> body <name>`"))?);
+            "surface.offset"
+        }
         // Surfaces sewn into the first body; a solid when they close.
         "stitch" => {
             p["bodies"] = json!(o.list("bodies")?.ok_or_else(|| err(line, "`stitch` needs `bodies A, B …` (sewn into the first)"))?);
@@ -2321,6 +2353,26 @@ mod tests {
         let cmds = script("sketch S on XY {\n point a = (0,0)\n engine sketch.circle.three_point {\"p0\": [0,0], \"p1\": [2,0], \"p2\": [1,1]}\n}\n");
         assert_eq!(cmds[2], json!({"command": "sketch.circle.three_point", "params": {"p0": [0, 0], "p1": [2, 0], "p2": [1, 1]}}));
         assert!(fails("sketch S on XY {\n engine sketch.circle.three_point {}\n point a = (0,0)\n}\n").contains("an engine command"));
+    }
+
+    #[test]
+    fn direct_face_edits() {
+        let cmds = script(
+            "param d = 5 mm\nbox B size 60 40 20 -> body Block\ncylinder P radius 4 height 30 base (80,20,0) -> body Pin\n\
+             split_face S faces (30,20,20) of Block origin (20,0,0) normal (1,0,0)\nsplit_face T faces (30,20,20) plane XY\n\
+             press_pull C face (30,20,20) distance (-d)\noffset_surface O faces (84,20,15) (76,20,15) of Pin distance 0.3 mm chain -> body Skin\n",
+        );
+        let by = |n: &str| cmds.iter().find(|c| c["params"]["name"] == n).unwrap().clone();
+        assert_eq!(
+            by("S"),
+            json!({"command": "solid.split_face", "params": {"faces": [[30.0, 20.0, 20.0]], "body": "Block", "plane": {"origin": [20.0, 0.0, 0.0], "normal": [1.0, 0.0, 0.0]}, "name": "S"}})
+        );
+        assert_eq!(by("T")["params"]["plane"], json!("XY"));
+        assert_eq!(by("C"), json!({"command": "solid.press_pull", "params": {"face": [30.0, 20.0, 20.0], "distance": "- d", "name": "C"}}));
+        assert_eq!(
+            by("O")["params"],
+            json!({"faces": [[84.0, 20.0, 15.0], [76.0, 20.0, 15.0]], "body": "Pin", "distance": "0.3 mm", "chain": true, "body_name": "Skin", "name": "O"})
+        );
     }
 
     #[test]

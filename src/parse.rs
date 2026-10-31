@@ -162,6 +162,9 @@ pub const FEATURES: &[&str] = &[
     "convert",
     "patch",
     "stitch",
+    "press_pull",
+    "split_face",
+    "offset_surface",
 ];
 
 struct P<'a> {

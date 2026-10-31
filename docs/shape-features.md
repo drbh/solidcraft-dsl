@@ -141,10 +141,19 @@ scale Big bodies Peg factor 1.5 origin (120,0,0)        // or factors (1, 1, 2)
 pattern Teeth features Tooth path Rail.edge count 9 distance 120 mm   // or spacing; identical; flip
 pattern circular Ring features Hole axis_face (38,0,12) count 4 angle 360 deg   // about a boss
 split Halves target Shelf origin (160,0,0) normal (1,0,0) -> body ShelfLeft   // or plane Mid
+split_face SplitA faces (30,20,20) of Block origin (20,0,0) normal (1,0,0)    // or plane XY / Mid
+press_pull Channel face (30,20,20) distance (-5 mm)                            // + adds, - cuts
+offset_surface Bore faces (84,20,15) (76,20,15) of Pin distance 0.3 mm -> body BoreSkin   // chain
 color Shelf "#d9a441"
 material Shelf, ShelfLeft PLA
 ```
 
+- `split_face` divides faces with a plane without changing the solid, so `press_pull` can move
+  just part of a face along its normal: `67_channel_block_and_sleeve` cuts a cable channel into
+  the middle strip of a block's top. `offset_surface` copies faces along their normals as a new
+  surface body (planes and cylinders exactly), for example a pin's side moved out by a clearance
+  and thickened into a sleeve, which keeps the gap exact when the pin changes. A cylinder's side
+  is two half-faces: pick both.
 - A circular pattern or a revolve can turn about a model's own axis: `axis_face (x,y,z)` on a
   cylinder, cone or torus face, or `axis_edge (x,y,z)` on a straight or circular edge. The axis
   follows the model, so moving the boss moves the ring of holes around it. This needs engine
