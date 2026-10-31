@@ -337,7 +337,10 @@ engine's ids (`c1`, `l3.end`). A finished sketch can also be reopened with `engi
 (split face, press-pull, surface offset, boundary fill, tangent plane, a three-point circle, sheet
 unfold) and checks each result; it passes on 0.27 and 0.19. `68_more_engine_commands` adds eight
 more (surface extend, trim, ruled and reverse normal; an axis from two planes driving a pattern;
-sheet refold; sketch trim; solid align), 24 checks on 0.27. A pattern about a named construction
+sheet refold; sketch trim; solid align), 24 checks on 0.27. `69_construction_geometry` covers
+construction geometry: offset, midplane and three-point planes, construction points, axes along an
+edge and square to a face, plus sheet fold, surface sweep and replace face, 25 checks on 0.27.
+The engine picks a construction point by where it is (`{"point": [x,y,z]}`), not by its name. A pattern about a named construction
 axis needs 0.27; older engines stop with the reason. Two things it shows: a cylinder's
 side is two half-faces, so pick both; and the engine integrates the volume of spline and offset
 faces to about 0.01 %, so check those with a range.
