@@ -263,6 +263,19 @@ pub fn lower(d: &Design) -> R<Lowered> {
                                 *a = v.to_string();
                             }
                         }
+                        // The engine takes a sketch chamfer's sizes as numbers.
+                        SketchKind::Chamfer { distance, distance2, angle, .. } => {
+                            for e in [Some(distance), distance2.as_mut()].into_iter().flatten() {
+                                let v = env.number(e, Kind::Length, line, "chamfer distance")?;
+                                sites.push(json!({"line":line,"role":"seed","expression":e,"value":v,"unit":"mm","persistent":false,"depends_on":references(e)}));
+                                *e = v.to_string();
+                            }
+                            if let Some(a) = angle {
+                                let v = env.number(a, Kind::Angle, line, "chamfer angle")?.to_degrees();
+                                sites.push(json!({"line":line,"role":"seed","expression":a,"value":v,"unit":"deg","persistent":false,"depends_on":references(a)}));
+                                *a = v.to_string();
+                            }
+                        }
                         SketchKind::Polygon { center, sides, .. } => {
                             coords(center, &env, line, "seed", Kind::Length, false, &mut sites)?;
                             let n = env.number(sides, Kind::Unitless, line, "sides")?;
@@ -474,6 +487,12 @@ fn inline_helpers(d: &mut Design) -> R<()> {
                             }
                         }
                         SketchKind::Fillet { radius, .. } => expand(radius, &helpers)?,
+                        SketchKind::Chamfer { distance, distance2, angle, .. } => {
+                            expand(distance, &helpers)?;
+                            for e in [distance2, angle].into_iter().flatten() {
+                                expand(e, &helpers)?;
+                            }
+                        }
                         _ => {}
                     }
                 }

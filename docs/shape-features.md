@@ -25,6 +25,20 @@ sketch Label on XY offset 2 {
 - `at` stays a live expression; `minor` is evaluated when compiling.
 - `fix outline` fixes every curve of a polyline, rectangle, slot or polygon named whole.
 
+```sc
+sketch Plate on XY {
+  polyline closed o = (0,0) (40,0) (40,20) (0,20)
+  fillet o.1.end radius 4 mm                     // round a corner
+  chamfer o.2.end distance 3 mm                  // or: distance 3 mm distance2 5 mm
+  chamfer o.3.end distance 4 mm angle 45 deg     // distance along the first line, angle from it
+}
+```
+
+- A corner is the point where two lines meet, named by either line's end, such as `o.1.end`.
+  A chamfer cuts it with a line, a fillet with an arc. Both may be followed by more entities and
+  constraints: the compiler numbers what they add. The engine takes a chamfer's sizes as numbers,
+  so they are evaluated when compiling; a fillet's radius stays live.
+
 ## Copies in a sketch
 
 ```sc

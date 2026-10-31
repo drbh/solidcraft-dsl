@@ -127,6 +127,12 @@ impl Checker {
                 SketchKind::Polygon { radius, .. } => len("`radius`", radius)?,
                 SketchKind::Slot { width, .. } => len("`width`", width)?,
                 SketchKind::Fillet { radius, .. } => len("`radius`", radius)?,
+                SketchKind::Chamfer { distance, distance2, .. } => {
+                    len("`distance`", distance)?;
+                    if let Some(d) = distance2 {
+                        len("`distance2`", d)?;
+                    }
+                }
                 SketchKind::Dim { kind, value, .. } => match kind.as_deref() {
                     Some("angle") => {
                         self.expect(line, "an angle dimension", value, &Class::Angle)?;

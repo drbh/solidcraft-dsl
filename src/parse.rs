@@ -1148,6 +1148,20 @@ fn parse_sketch_stmt(c: &mut Cur) -> R<SketchStmt> {
             }
             SketchKind::Fillet { point, radius: c.expr1("the radius")? }
         }
+        "chamfer" => {
+            let point = c.reference()?;
+            if !c.eat_ident("distance") {
+                return Err(err(line, "expected `distance <expr>`"));
+            }
+            let distance = c.expr1("the distance")?;
+            let (mut distance2, mut angle) = (None, None);
+            if c.eat_ident("distance2") {
+                distance2 = Some(c.expr1("the second distance")?);
+            } else if c.eat_ident("angle") {
+                angle = Some(c.expr1("the angle")?);
+            }
+            SketchKind::Chamfer { point, distance, distance2, angle }
+        }
         k @ ("horizontal" | "vertical" | "coincident" | "tangent" | "equal" | "parallel" | "perpendicular" | "concentric" | "collinear"
         | "midpoint" | "symmetric" | "curvature") => {
             let mut refs = Vec::new();

@@ -892,6 +892,32 @@ fn compile_sketch(s: &Sketch, out: &mut Vec<Value>, lines: &mut Vec<usize>, dims
                 t.counters.p();
                 out.push(cmd("sketch.fillet", json!({"point": id, "radius": expr(radius)})));
             }
+            SketchKind::Chamfer { point, distance, distance2, angle } => {
+                let id = t.resolve(line, point)?;
+                if Kind::of(&id) != Kind::Point {
+                    return Err(err(
+                        line,
+                        format!("`chamfer` takes a corner point such as `outline.2.end`; `{}` is {}", point.text(), Kind::of(&id).name()),
+                    ));
+                }
+                // The engine cuts the corner with a line (and its two end points).
+                t.counters.l();
+                t.counters.p();
+                t.counters.p();
+                let mut p = json!({"point": id, "distance": expr(distance)});
+                let id = match (distance2, angle) {
+                    (Some(d2), _) => {
+                        p["distance2"] = expr(d2);
+                        "sketch.chamfer.two_distance"
+                    }
+                    (None, Some(a)) => {
+                        p["angle"] = expr(a);
+                        "sketch.chamfer.distance_angle"
+                    }
+                    (None, None) => "sketch.chamfer.equal_distance",
+                };
+                out.push(cmd(id, p));
+            }
         }
         lines.extend(std::iter::repeat_n(line, out.len() - before));
     }
@@ -2197,6 +2223,24 @@ mod tests {
         assert_eq!(by("solid.pattern.circular"), json!({"face": [38.0, 0.0, 12.0]}));
         assert_eq!(by("solid.revolve"), json!({"edge": [40.0, 0.0, 0.0]}));
         assert_eq!(c.expressions["requires"], json!(["model_axes"]));
+    }
+
+    #[test]
+    fn sketch_chamfers() {
+        let cmds = script(
+            "param c = 3 mm\nsketch S on XY {\n polyline closed o = (0,0) (40,0) (40,20) (0,20)\n chamfer o.1.end distance c\n \
+             chamfer o.2.end distance 3 mm distance2 5 mm\n chamfer o.3.end distance 4 mm angle 45 deg\n line e = (10,5) (20,5)\n dim e = 12 mm\n}\n",
+        );
+        let ch: Vec<(&str, &Value)> = cmds
+            .iter()
+            .filter(|c| c["command"].as_str().unwrap().starts_with("sketch.chamfer"))
+            .map(|c| (c["command"].as_str().unwrap(), &c["params"]))
+            .collect();
+        assert_eq!(ch[0], ("sketch.chamfer.equal_distance", &json!({"point": "l1.end", "distance": 3.0})));
+        assert_eq!(ch[1], ("sketch.chamfer.two_distance", &json!({"point": "l2.end", "distance": 3.0, "distance2": 5.0})));
+        assert_eq!(ch[2], ("sketch.chamfer.distance_angle", &json!({"point": "l3.end", "distance": 4.0, "angle": 45.0})));
+        // Each chamfer adds a line: the next line drawn is l8.
+        assert_eq!(cmds.iter().find(|c| c["command"] == "sketch.dimension").unwrap()["params"]["entities"], json!(["l8"]));
     }
 
     #[test]

@@ -247,6 +247,13 @@ pub enum SketchKind {
         point: Ref,
         radius: String,
     },
+    /// `chamfer corner distance d [distance2 d2 | angle a]`: a corner of two lines cut by a line.
+    Chamfer {
+        point: Ref,
+        distance: String,
+        distance2: Option<String>,
+        angle: Option<String>,
+    },
     /// `fix a b …` (points or curves)
     Fix {
         refs: Vec<Ref>,
