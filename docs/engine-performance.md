@@ -49,12 +49,14 @@ Smallest reproduction: `examples/03_bolt_plate.sc`, a plate with one hole patter
 (`solidcraft-dsl run examples/03_bolt_plate.sc --timings`, step `Holes`). For a large one,
 `examples/29_thin_sheet.sc`.
 
-### Clearance and intersection near touching threads don't finish (open)
+### Clearance and intersection of overlapping threads don't finish at some angles (open)
 
 `examples/49_bottle_and_cap.sc` with the cap screwed on and turned 295°, 300° or 305°: both
 `inspect.clearance` between Cap and Bottle and a boolean intersection of the two run for more
 than 30 minutes at full CPU (0.19.0 and 0.27.1). At other angles the same query finishes in about
-3 minutes. The flanks probably nearly touch there. The angle remains unmeasured in 49's notes.
+3 minutes. Those angles were measured on the parts' finest meshes instead, with
+`ci/mesh-fit.py` (calibrated on 180 deg, where it finds the engine's 0.088 mm gap): the flanks
+overlap 0.49 mm deep, as at 330 deg, so the query stalls on overlapping threads, not touching ones.
 
 ## Other engine problems found along the way
 
