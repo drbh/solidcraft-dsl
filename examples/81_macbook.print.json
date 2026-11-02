@@ -1,0 +1,435 @@
+{
+  "version": 1,
+  "defaults": false,
+  "requests": [
+    {
+      "id": "tray_l-3mf",
+      "kind": "export",
+      "format": "3mf",
+      "layout": "tray_l"
+    },
+    {
+      "id": "tray_r-3mf",
+      "kind": "export",
+      "format": "3mf",
+      "layout": "tray_r"
+    },
+    {
+      "id": "deck_l-3mf",
+      "kind": "export",
+      "format": "3mf",
+      "layout": "deck_l"
+    },
+    {
+      "id": "deck_r-3mf",
+      "kind": "export",
+      "format": "3mf",
+      "layout": "deck_r"
+    },
+    {
+      "id": "bezel_l-3mf",
+      "kind": "export",
+      "format": "3mf",
+      "layout": "bezel_l"
+    },
+    {
+      "id": "bezel_r-3mf",
+      "kind": "export",
+      "format": "3mf",
+      "layout": "bezel_r"
+    },
+    {
+      "id": "lid_l-3mf",
+      "kind": "export",
+      "format": "3mf",
+      "layout": "lid_l"
+    },
+    {
+      "id": "lid_r-3mf",
+      "kind": "export",
+      "format": "3mf",
+      "layout": "lid_r"
+    },
+    {
+      "id": "all-stl",
+      "kind": "export",
+      "format": "stl",
+      "layout": "all"
+    },
+    {
+      "id": "preview-glb",
+      "kind": "export",
+      "format": "glb",
+      "layout": "all"
+    },
+    {
+      "id": "print-check",
+      "kind": "commands",
+      "layout": "all",
+      "commands": [
+        {
+          "command": "inspect.measure",
+          "params": {}
+        }
+      ]
+    },
+    {
+      "id": "plates-view",
+      "kind": "snapshot",
+      "layout": "all",
+      "options": {
+        "view": "iso"
+      }
+    }
+  ],
+  "layouts": {
+    "tray_l": {
+      "bed": [
+        256,
+        256
+      ],
+      "parts": [
+        {
+          "id": "tray_l",
+          "select": {
+            "bodies": [
+              "BaseTrayL"
+            ]
+          }
+        }
+      ]
+    },
+    "tray_r": {
+      "bed": [
+        256,
+        256
+      ],
+      "parts": [
+        {
+          "id": "tray_r",
+          "select": {
+            "bodies": [
+              "BaseTrayR"
+            ]
+          }
+        }
+      ]
+    },
+    "deck_l": {
+      "bed": [
+        256,
+        256
+      ],
+      "parts": [
+        {
+          "id": "deck_l",
+          "select": {
+            "bodies": [
+              "DeckL"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                1,
+                0,
+                0
+              ],
+              "angle": "180 deg"
+            }
+          ]
+        }
+      ]
+    },
+    "deck_r": {
+      "bed": [
+        256,
+        256
+      ],
+      "parts": [
+        {
+          "id": "deck_r",
+          "select": {
+            "bodies": [
+              "DeckR"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                1,
+                0,
+                0
+              ],
+              "angle": "180 deg"
+            }
+          ]
+        }
+      ]
+    },
+    "bezel_l": {
+      "bed": [
+        256,
+        256
+      ],
+      "parts": [
+        {
+          "id": "bezel_l",
+          "select": {
+            "bodies": [
+              "BezelL"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                1,
+                0,
+                0
+              ],
+              "angle": "lid_angle"
+            }
+          ]
+        }
+      ]
+    },
+    "bezel_r": {
+      "bed": [
+        256,
+        256
+      ],
+      "parts": [
+        {
+          "id": "bezel_r",
+          "select": {
+            "bodies": [
+              "BezelR"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                1,
+                0,
+                0
+              ],
+              "angle": "lid_angle"
+            }
+          ]
+        }
+      ]
+    },
+    "lid_l": {
+      "bed": [
+        256,
+        256
+      ],
+      "parts": [
+        {
+          "id": "lid_l",
+          "select": {
+            "bodies": [
+              "LidBackL"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                1,
+                0,
+                0
+              ],
+              "angle": "lid_angle"
+            },
+            {
+              "axis": [
+                1,
+                0,
+                0
+              ],
+              "angle": "180 deg"
+            }
+          ]
+        }
+      ]
+    },
+    "lid_r": {
+      "bed": [
+        256,
+        256
+      ],
+      "parts": [
+        {
+          "id": "lid_r",
+          "select": {
+            "bodies": [
+              "LidBackR"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                1,
+                0,
+                0
+              ],
+              "angle": "lid_angle"
+            },
+            {
+              "axis": [
+                1,
+                0,
+                0
+              ],
+              "angle": "180 deg"
+            }
+          ]
+        }
+      ]
+    },
+    "all": {
+      "parts": [
+        {
+          "id": "tray_l",
+          "select": {
+            "bodies": [
+              "BaseTrayL"
+            ]
+          }
+        },
+        {
+          "id": "tray_r",
+          "select": {
+            "bodies": [
+              "BaseTrayR"
+            ]
+          }
+        },
+        {
+          "id": "deck_l",
+          "select": {
+            "bodies": [
+              "DeckL"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                1,
+                0,
+                0
+              ],
+              "angle": "180 deg"
+            }
+          ]
+        },
+        {
+          "id": "deck_r",
+          "select": {
+            "bodies": [
+              "DeckR"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                1,
+                0,
+                0
+              ],
+              "angle": "180 deg"
+            }
+          ]
+        },
+        {
+          "id": "bezel_l",
+          "select": {
+            "bodies": [
+              "BezelL"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                1,
+                0,
+                0
+              ],
+              "angle": "lid_angle"
+            }
+          ]
+        },
+        {
+          "id": "bezel_r",
+          "select": {
+            "bodies": [
+              "BezelR"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                1,
+                0,
+                0
+              ],
+              "angle": "lid_angle"
+            }
+          ]
+        },
+        {
+          "id": "lid_l",
+          "select": {
+            "bodies": [
+              "LidBackL"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                1,
+                0,
+                0
+              ],
+              "angle": "lid_angle"
+            },
+            {
+              "axis": [
+                1,
+                0,
+                0
+              ],
+              "angle": "180 deg"
+            }
+          ]
+        },
+        {
+          "id": "lid_r",
+          "select": {
+            "bodies": [
+              "LidBackR"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                1,
+                0,
+                0
+              ],
+              "angle": "lid_angle"
+            },
+            {
+              "axis": [
+                1,
+                0,
+                0
+              ],
+              "angle": "180 deg"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

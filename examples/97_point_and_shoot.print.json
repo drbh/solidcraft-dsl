@@ -1,0 +1,396 @@
+{
+  "version": 1,
+  "defaults": false,
+  "requests": [
+    {
+      "id": "print-case-3mf",
+      "kind": "export",
+      "format": "3mf",
+      "layout": "case"
+    },
+    {
+      "id": "print-case-stl",
+      "kind": "export",
+      "format": "stl",
+      "layout": "case"
+    },
+    {
+      "id": "case-check",
+      "kind": "commands",
+      "layout": "case",
+      "commands": [
+        {
+          "command": "inspect.measure",
+          "params": {}
+        }
+      ]
+    },
+    {
+      "id": "print-parts-3mf",
+      "kind": "export",
+      "format": "3mf",
+      "layout": "parts"
+    },
+    {
+      "id": "print-parts-stl",
+      "kind": "export",
+      "format": "stl",
+      "layout": "parts"
+    },
+    {
+      "id": "parts-check",
+      "kind": "commands",
+      "layout": "parts",
+      "commands": [
+        {
+          "command": "inspect.measure",
+          "params": {}
+        }
+      ]
+    },
+    {
+      "id": "preview-glb",
+      "kind": "export",
+      "format": "glb",
+      "layout": "assembled"
+    },
+    {
+      "id": "assembled-view",
+      "kind": "snapshot",
+      "layout": "assembled",
+      "options": {
+        "view": "iso"
+      }
+    },
+    {
+      "id": "case-view",
+      "kind": "snapshot",
+      "layout": "case",
+      "options": {
+        "view": "top"
+      }
+    },
+    {
+      "id": "parts-view",
+      "kind": "snapshot",
+      "layout": "parts",
+      "options": {
+        "view": "top"
+      }
+    }
+  ],
+  "layouts": {
+    "case": {
+      "bed": [
+        256,
+        256
+      ],
+      "parts": [
+        {
+          "id": "Front",
+          "select": {
+            "bodies": [
+              "Front"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                1,
+                0,
+                0
+              ],
+              "angle": "90 deg"
+            }
+          ]
+        },
+        {
+          "id": "Back",
+          "select": {
+            "bodies": [
+              "Back"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                1,
+                0,
+                0
+              ],
+              "angle": "-90 deg"
+            }
+          ]
+        }
+      ]
+    },
+    "parts": {
+      "bed": [
+        256,
+        256
+      ],
+      "parts": [
+        {
+          "id": "Collar",
+          "select": {
+            "bodies": [
+              "Collar"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                1,
+                0,
+                0
+              ],
+              "angle": "-90 deg"
+            }
+          ]
+        },
+        {
+          "id": "Stage1",
+          "select": {
+            "bodies": [
+              "Stage1"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                1,
+                0,
+                0
+              ],
+              "angle": "-90 deg"
+            }
+          ]
+        },
+        {
+          "id": "Stage2",
+          "select": {
+            "bodies": [
+              "Stage2"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                1,
+                0,
+                0
+              ],
+              "angle": "-90 deg"
+            }
+          ]
+        },
+        {
+          "id": "Stage3",
+          "select": {
+            "bodies": [
+              "Stage3"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                1,
+                0,
+                0
+              ],
+              "angle": "-90 deg"
+            }
+          ]
+        },
+        {
+          "id": "Flash",
+          "select": {
+            "bodies": [
+              "Flash"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                1,
+                0,
+                0
+              ],
+              "angle": "-90 deg"
+            }
+          ]
+        },
+        {
+          "id": "Shutter",
+          "select": {
+            "bodies": [
+              "Shutter"
+            ]
+          }
+        },
+        {
+          "id": "Power",
+          "select": {
+            "bodies": [
+              "Power"
+            ]
+          }
+        },
+        {
+          "id": "KeyUp",
+          "select": {
+            "bodies": [
+              "KeyUp"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                1,
+                0,
+                0
+              ],
+              "angle": "90 deg"
+            }
+          ]
+        },
+        {
+          "id": "KeyDown",
+          "select": {
+            "bodies": [
+              "KeyDown"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                1,
+                0,
+                0
+              ],
+              "angle": "90 deg"
+            }
+          ]
+        },
+        {
+          "id": "KeyLeft",
+          "select": {
+            "bodies": [
+              "KeyLeft"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                1,
+                0,
+                0
+              ],
+              "angle": "90 deg"
+            }
+          ]
+        },
+        {
+          "id": "KeyRight",
+          "select": {
+            "bodies": [
+              "KeyRight"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                1,
+                0,
+                0
+              ],
+              "angle": "90 deg"
+            }
+          ]
+        },
+        {
+          "id": "Func",
+          "select": {
+            "bodies": [
+              "Func"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                1,
+                0,
+                0
+              ],
+              "angle": "90 deg"
+            }
+          ]
+        },
+        {
+          "id": "KeyA",
+          "select": {
+            "bodies": [
+              "KeyA"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                1,
+                0,
+                0
+              ],
+              "angle": "90 deg"
+            }
+          ]
+        },
+        {
+          "id": "KeyB",
+          "select": {
+            "bodies": [
+              "KeyB"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                1,
+                0,
+                0
+              ],
+              "angle": "90 deg"
+            }
+          ]
+        }
+      ]
+    },
+    "assembled": {
+      "parts": [
+        {
+          "id": "Assembled",
+          "select": {
+            "bodies": [
+              "Front",
+              "Back",
+              "Collar",
+              "Stage1",
+              "Stage2",
+              "Stage3",
+              "Flash",
+              "Shutter",
+              "Power",
+              "KeyUp",
+              "KeyDown",
+              "KeyLeft",
+              "KeyRight",
+              "Func",
+              "KeyA",
+              "KeyB",
+              "Tft"
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

@@ -18,7 +18,9 @@ const edgeColor = new THREE.Color();
 const modelColor = new THREE.Color();
 const backColor = new THREE.Color();
 
-const VIEW_DIR = new THREE.Vector3(1, 0.75, 1.15).normalize();
+// Front-biased three-quarter view (glTF is Y up, +Z is the design's front, -Y): 20 deg round from
+// the front and 28 deg up, so models built along 45 deg diagonals don't land edge-on.
+const VIEW_DIR = new THREE.Vector3(0.3, 0.47, 0.83).normalize();
 const EDGE_TRIANGLE_LIMIT = 600_000;
 
 function readColors() {

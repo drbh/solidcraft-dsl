@@ -1,0 +1,168 @@
+{
+  "version": 1,
+  "defaults": false,
+  "requests": [
+    {
+      "id": "shells-3mf",
+      "kind": "export",
+      "format": "3mf",
+      "layout": "shells"
+    },
+    {
+      "id": "shells-stl",
+      "kind": "export",
+      "format": "stl",
+      "layout": "shells"
+    },
+    {
+      "id": "shells-glb",
+      "kind": "export",
+      "format": "glb",
+      "layout": "shells"
+    },
+    {
+      "id": "shells-check",
+      "kind": "commands",
+      "layout": "shells",
+      "commands": [
+        {
+          "command": "inspect.measure",
+          "params": {}
+        }
+      ]
+    },
+    {
+      "id": "shells-view",
+      "kind": "snapshot",
+      "layout": "shells",
+      "options": {
+        "view": "iso"
+      }
+    },
+    {
+      "id": "parts-3mf",
+      "kind": "export",
+      "format": "3mf",
+      "layout": "parts"
+    },
+    {
+      "id": "parts-stl",
+      "kind": "export",
+      "format": "stl",
+      "layout": "parts"
+    },
+    {
+      "id": "parts-glb",
+      "kind": "export",
+      "format": "glb",
+      "layout": "parts"
+    },
+    {
+      "id": "parts-check",
+      "kind": "commands",
+      "layout": "parts",
+      "commands": [
+        {
+          "command": "inspect.measure",
+          "params": {}
+        }
+      ]
+    },
+    {
+      "id": "parts-view",
+      "kind": "snapshot",
+      "layout": "parts",
+      "options": {
+        "view": "iso"
+      }
+    },
+    {
+      "id": "fit-check",
+      "kind": "commands",
+      "commands": [
+        {
+          "command": "inspect.interference",
+          "params": {}
+        }
+      ]
+    }
+  ],
+  "layouts": {
+    "shells": {
+      "bed": [
+        256,
+        256
+      ],
+      "spacing": "6 mm",
+      "parts": [
+        {
+          "id": "back",
+          "select": {
+            "bodies": [
+              "Back"
+            ]
+          }
+        },
+        {
+          "id": "front",
+          "select": {
+            "bodies": [
+              "Front"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                1,
+                0,
+                0
+              ],
+              "angle": "180 deg"
+            }
+          ]
+        }
+      ]
+    },
+    "parts": {
+      "bed": [
+        256,
+        256
+      ],
+      "spacing": "4 mm",
+      "parts": [
+        {
+          "id": "cap0",
+          "select": {
+            "bodies": [
+              "Cap0"
+            ]
+          }
+        },
+        {
+          "id": "cap1",
+          "select": {
+            "bodies": [
+              "Cap1"
+            ]
+          }
+        },
+        {
+          "id": "cap2",
+          "select": {
+            "bodies": [
+              "Cap2"
+            ]
+          }
+        },
+        {
+          "id": "switch-deck",
+          "select": {
+            "bodies": [
+              "SwitchDeck"
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "defaults": false,
+  "requests": [
+    { "id": "print-3mf", "kind": "export", "format": "3mf", "layout": "single" },
+    { "id": "preview-glb", "kind": "export", "format": "glb", "layout": "single" },
+    { "id": "print-stl", "kind": "export", "format": "stl", "layout": "single" },
+    { "id": "print-check", "kind": "commands", "layout": "single",
+      "commands": [ { "command": "inspect.measure", "params": {} } ] },
+    { "id": "single-view", "kind": "snapshot", "layout": "single", "options": { "view": "iso" } }
+  ],
+  "layouts": {
+    "single": { "bed": [256, 256], "parts": [ { "id": "Holder", "select": { "bodies": ["Holder"] } } ] }
+  }
+}

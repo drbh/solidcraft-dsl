@@ -1,0 +1,259 @@
+{
+  "version": 1,
+  "defaults": false,
+  "requests": [
+    {
+      "id": "base-3mf",
+      "kind": "export",
+      "format": "3mf",
+      "layout": "base"
+    },
+    {
+      "id": "base-stl",
+      "kind": "export",
+      "format": "stl",
+      "layout": "base"
+    },
+    {
+      "id": "lid-3mf",
+      "kind": "export",
+      "format": "3mf",
+      "layout": "lid"
+    },
+    {
+      "id": "lid-stl",
+      "kind": "export",
+      "format": "stl",
+      "layout": "lid"
+    },
+    {
+      "id": "small-3mf",
+      "kind": "export",
+      "format": "3mf",
+      "layout": "small"
+    },
+    {
+      "id": "small-stl",
+      "kind": "export",
+      "format": "stl",
+      "layout": "small"
+    },
+    {
+      "id": "preview-glb",
+      "kind": "export",
+      "format": "glb",
+      "layout": "base"
+    },
+    {
+      "id": "print-check",
+      "kind": "commands",
+      "layout": "small",
+      "commands": [
+        {
+          "command": "inspect.measure",
+          "params": {}
+        }
+      ]
+    },
+    {
+      "id": "base-view",
+      "kind": "snapshot",
+      "layout": "base",
+      "options": {
+        "view": "iso"
+      }
+    },
+    {
+      "id": "lid-view",
+      "kind": "snapshot",
+      "layout": "lid",
+      "options": {
+        "view": "iso"
+      }
+    },
+    {
+      "id": "small-view",
+      "kind": "snapshot",
+      "layout": "small",
+      "options": {
+        "view": "iso"
+      }
+    }
+  ],
+  "layouts": {
+    "base": {
+      "bed": [
+        256,
+        256
+      ],
+      "parts": [
+        {
+          "id": "base_tray",
+          "select": {
+            "bodies": [
+              "BaseTray"
+            ]
+          }
+        },
+        {
+          "id": "face_plate",
+          "select": {
+            "bodies": [
+              "FacePlate"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                1,
+                0,
+                0
+              ],
+              "angle": "180 deg"
+            }
+          ]
+        }
+      ]
+    },
+    "lid": {
+      "bed": [
+        256,
+        256
+      ],
+      "parts": [
+        {
+          "id": "bezel",
+          "select": {
+            "bodies": [
+              "Bezel"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                1,
+                0,
+                0
+              ],
+              "angle": "open_angle"
+            }
+          ]
+        },
+        {
+          "id": "lid_tray",
+          "select": {
+            "bodies": [
+              "LidTray"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                1,
+                0,
+                0
+              ],
+              "angle": "open_angle"
+            },
+            {
+              "axis": [
+                1,
+                0,
+                0
+              ],
+              "angle": "180 deg"
+            }
+          ]
+        }
+      ]
+    },
+    "small": {
+      "bed": [
+        256,
+        256
+      ],
+      "parts": [
+        {
+          "id": "dpad",
+          "select": {
+            "bodies": [
+              "DPad"
+            ]
+          }
+        },
+        {
+          "id": "button0",
+          "select": {
+            "bodies": [
+              "Button0"
+            ]
+          }
+        },
+        {
+          "id": "button1",
+          "select": {
+            "bodies": [
+              "Button1"
+            ]
+          }
+        },
+        {
+          "id": "button2",
+          "select": {
+            "bodies": [
+              "Button2"
+            ]
+          }
+        },
+        {
+          "id": "button3",
+          "select": {
+            "bodies": [
+              "Button3"
+            ]
+          }
+        },
+        {
+          "id": "pill0",
+          "select": {
+            "bodies": [
+              "Pill0"
+            ]
+          }
+        },
+        {
+          "id": "pill1",
+          "select": {
+            "bodies": [
+              "Pill1"
+            ]
+          }
+        },
+        {
+          "id": "axlel",
+          "select": {
+            "bodies": [
+              "AxleL"
+            ]
+          }
+        },
+        {
+          "id": "axler",
+          "select": {
+            "bodies": [
+              "AxleR"
+            ]
+          }
+        },
+        {
+          "id": "stylus",
+          "select": {
+            "bodies": [
+              "Stylus"
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

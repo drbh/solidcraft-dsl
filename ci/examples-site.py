@@ -24,6 +24,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 SITE = ROOT / "site"
 
+sys.dont_write_bytecode = True  # importing examples-glb.py would leave ci/__pycache__/
 _spec = importlib.util.spec_from_file_location("examples_glb", ROOT / "ci/examples-glb.py")
 glb_tools = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(glb_tools)

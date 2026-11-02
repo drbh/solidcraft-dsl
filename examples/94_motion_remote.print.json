@@ -1,0 +1,366 @@
+{
+  "version": 1,
+  "defaults": false,
+  "requests": [
+    {
+      "id": "print-case-3mf",
+      "kind": "export",
+      "format": "3mf",
+      "layout": "case"
+    },
+    {
+      "id": "print-case-stl",
+      "kind": "export",
+      "format": "stl",
+      "layout": "case"
+    },
+    {
+      "id": "case-check",
+      "kind": "commands",
+      "layout": "case",
+      "commands": [
+        {
+          "command": "inspect.measure",
+          "params": {}
+        }
+      ]
+    },
+    {
+      "id": "print-nunchuk-3mf",
+      "kind": "export",
+      "format": "3mf",
+      "layout": "nunchuk"
+    },
+    {
+      "id": "print-nunchuk-stl",
+      "kind": "export",
+      "format": "stl",
+      "layout": "nunchuk"
+    },
+    {
+      "id": "nunchuk-check",
+      "kind": "commands",
+      "layout": "nunchuk",
+      "commands": [
+        {
+          "command": "inspect.measure",
+          "params": {}
+        }
+      ]
+    },
+    {
+      "id": "print-parts-3mf",
+      "kind": "export",
+      "format": "3mf",
+      "layout": "parts"
+    },
+    {
+      "id": "print-parts-stl",
+      "kind": "export",
+      "format": "stl",
+      "layout": "parts"
+    },
+    {
+      "id": "parts-check",
+      "kind": "commands",
+      "layout": "parts",
+      "commands": [
+        {
+          "command": "inspect.measure",
+          "params": {}
+        }
+      ]
+    },
+    {
+      "id": "preview-glb",
+      "kind": "export",
+      "format": "glb",
+      "layout": "assembled"
+    },
+    {
+      "id": "assembled-view",
+      "kind": "snapshot",
+      "layout": "assembled",
+      "options": {
+        "view": "iso"
+      }
+    },
+    {
+      "id": "case-view",
+      "kind": "snapshot",
+      "layout": "case",
+      "options": {
+        "view": "top"
+      }
+    },
+    {
+      "id": "nunchuk-view",
+      "kind": "snapshot",
+      "layout": "nunchuk",
+      "options": {
+        "view": "top"
+      }
+    },
+    {
+      "id": "parts-view",
+      "kind": "snapshot",
+      "layout": "parts",
+      "options": {
+        "view": "top"
+      }
+    }
+  ],
+  "layouts": {
+    "case": {
+      "bed": [
+        256,
+        256
+      ],
+      "parts": [
+        {
+          "id": "Top",
+          "select": {
+            "bodies": [
+              "Top"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                1,
+                0,
+                0
+              ],
+              "angle": "180 deg"
+            }
+          ]
+        },
+        {
+          "id": "Bottom",
+          "select": {
+            "bodies": [
+              "Bottom"
+            ]
+          }
+        }
+      ]
+    },
+    "nunchuk": {
+      "bed": [
+        256,
+        256
+      ],
+      "parts": [
+        {
+          "id": "Nunchuk",
+          "select": {
+            "bodies": [
+              "Nunchuk"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                0,
+                1,
+                0
+              ],
+              "angle": "-90 deg"
+            }
+          ]
+        },
+        {
+          "id": "NunchukL",
+          "select": {
+            "bodies": [
+              "NunchukL"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                0,
+                1,
+                0
+              ],
+              "angle": "90 deg"
+            }
+          ]
+        }
+      ]
+    },
+    "parts": {
+      "bed": [
+        256,
+        256
+      ],
+      "parts": [
+        {
+          "id": "DPad",
+          "select": {
+            "bodies": [
+              "DPad"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                1,
+                0,
+                0
+              ],
+              "angle": "180 deg"
+            }
+          ]
+        },
+        {
+          "id": "A",
+          "select": {
+            "bodies": [
+              "A"
+            ]
+          }
+        },
+        {
+          "id": "Minus",
+          "select": {
+            "bodies": [
+              "Minus"
+            ]
+          }
+        },
+        {
+          "id": "Home",
+          "select": {
+            "bodies": [
+              "Home"
+            ]
+          }
+        },
+        {
+          "id": "Plus",
+          "select": {
+            "bodies": [
+              "Plus"
+            ]
+          }
+        },
+        {
+          "id": "One",
+          "select": {
+            "bodies": [
+              "One"
+            ]
+          }
+        },
+        {
+          "id": "Two",
+          "select": {
+            "bodies": [
+              "Two"
+            ]
+          }
+        },
+        {
+          "id": "Power",
+          "select": {
+            "bodies": [
+              "Power"
+            ]
+          }
+        },
+        {
+          "id": "B",
+          "select": {
+            "bodies": [
+              "B"
+            ]
+          }
+        },
+        {
+          "id": "C",
+          "select": {
+            "bodies": [
+              "C"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                1,
+                0,
+                0
+              ],
+              "angle": "90 deg"
+            }
+          ]
+        },
+        {
+          "id": "Z",
+          "select": {
+            "bodies": [
+              "Z"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                1,
+                0,
+                0
+              ],
+              "angle": "90 deg"
+            }
+          ]
+        },
+        {
+          "id": "IrWindow",
+          "select": {
+            "bodies": [
+              "IrWindow"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                1,
+                0,
+                0
+              ],
+              "angle": "90 deg"
+            }
+          ]
+        }
+      ]
+    },
+    "assembled": {
+      "parts": [
+        {
+          "id": "Assembled",
+          "select": {
+            "bodies": [
+              "Top",
+              "Bottom",
+              "DPad",
+              "A",
+              "Minus",
+              "Home",
+              "Plus",
+              "One",
+              "Two",
+              "Power",
+              "B",
+              "IrWindow",
+              "Nunchuk",
+              "NunchukL",
+              "C",
+              "Z",
+              "Stick",
+              "Cable"
+            ]
+          }
+        }
+      ]
+    }
+  }
+}
