@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "defaults": false,
+  "requests": [
+    { "id": "parts-3mf", "kind": "export", "format": "3mf", "layout": "parts" },
+    { "id": "parts-stl", "kind": "export", "format": "stl", "layout": "parts" },
+    { "id": "assembly-glb", "kind": "export", "format": "glb" },
+    { "id": "print-check", "kind": "commands", "layout": "parts",
+      "commands": [ { "command": "inspect.measure", "params": {} } ] },
+    { "id": "parts-view", "kind": "snapshot", "layout": "parts", "options": { "view": "iso" } }
+  ],
+  "layouts": {
+    "parts": {
+      "bed": [256, 256],
+      "spacing": "6 mm",
+      "parts": [
+        { "id": "handle", "select": { "bodies": ["Handle"] } },
+        { "id": "spindle", "select": { "bodies": ["Spindle"] } },
+        { "id": "cap", "select": { "bodies": ["Cap"] } },
+        { "id": "strip", "select": { "bodies": ["Strip"] } },
+        { "id": "rotor", "select": { "bodies": ["Rotor"] } }
+      ]
+    }
+  }
+}

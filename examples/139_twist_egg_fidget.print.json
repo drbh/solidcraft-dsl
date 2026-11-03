@@ -1,0 +1,67 @@
+{
+  "version": 1,
+  "defaults": false,
+  "requests": [
+    {
+      "id": "egg-3mf",
+      "kind": "export",
+      "format": "3mf",
+      "layout": "egg"
+    },
+    {
+      "id": "egg-stl",
+      "kind": "export",
+      "format": "stl",
+      "layout": "egg"
+    },
+    {
+      "id": "egg-check",
+      "kind": "commands",
+      "layout": "egg",
+      "commands": [
+        {
+          "command": "inspect.interference",
+          "params": {}
+        },
+        {
+          "command": "inspect.measure",
+          "params": {}
+        }
+      ]
+    },
+    {
+      "id": "preview-glb",
+      "kind": "export",
+      "format": "glb",
+      "layout": "egg"
+    },
+    {
+      "id": "plate-view",
+      "kind": "snapshot",
+      "layout": "egg",
+      "options": {
+        "view": "iso"
+      }
+    }
+  ],
+  "layouts": {
+    "egg": {
+      "bed": [
+        256,
+        256
+      ],
+      "parts": [
+        {
+          "id": "egg",
+          "select": {
+            "bodies": [
+              "Core",
+              "Mid",
+              "Shell"
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

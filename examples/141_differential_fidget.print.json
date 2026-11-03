@@ -1,0 +1,289 @@
+{
+  "version": 1,
+  "defaults": false,
+  "requests": [
+    {
+      "id": "gears-3mf",
+      "kind": "export",
+      "format": "3mf",
+      "layout": "gears"
+    },
+    {
+      "id": "gears-stl",
+      "kind": "export",
+      "format": "stl",
+      "layout": "gears"
+    },
+    {
+      "id": "gears-check",
+      "kind": "commands",
+      "layout": "gears",
+      "commands": [
+        {
+          "command": "inspect.interference",
+          "params": {}
+        },
+        {
+          "command": "inspect.measure",
+          "params": {}
+        }
+      ]
+    },
+    {
+      "id": "stand-3mf",
+      "kind": "export",
+      "format": "3mf",
+      "layout": "stand"
+    },
+    {
+      "id": "stand-stl",
+      "kind": "export",
+      "format": "stl",
+      "layout": "stand"
+    },
+    {
+      "id": "stand-check",
+      "kind": "commands",
+      "layout": "stand",
+      "commands": [
+        {
+          "command": "inspect.interference",
+          "params": {}
+        },
+        {
+          "command": "inspect.measure",
+          "params": {}
+        }
+      ]
+    },
+    {
+      "id": "preview-glb",
+      "kind": "export",
+      "format": "glb",
+      "layout": "gears"
+    },
+    {
+      "id": "plate-view",
+      "kind": "snapshot",
+      "layout": "gears",
+      "options": {
+        "view": "iso"
+      }
+    }
+  ],
+  "layouts": {
+    "gears": {
+      "bed": [
+        256,
+        256
+      ],
+      "spacing": "5 mm",
+      "parts": [
+        {
+          "id": "side-r",
+          "select": {
+            "bodies": [
+              "SideR"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                0,
+                1,
+                0
+              ],
+              "angle": "90 deg"
+            }
+          ]
+        },
+        {
+          "id": "side-l",
+          "select": {
+            "bodies": [
+              "SideL"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                0,
+                1,
+                0
+              ],
+              "angle": "-90 deg"
+            }
+          ]
+        },
+        {
+          "id": "pinion-a",
+          "select": {
+            "bodies": [
+              "PinionA"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                1,
+                0,
+                0
+              ],
+              "angle": "-90 deg"
+            }
+          ]
+        },
+        {
+          "id": "pinion-b",
+          "select": {
+            "bodies": [
+              "PinionB"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                1,
+                0,
+                0
+              ],
+              "angle": "90 deg"
+            }
+          ]
+        },
+        {
+          "id": "carrier-r",
+          "select": {
+            "bodies": [
+              "CarrierR"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                0,
+                1,
+                0
+              ],
+              "angle": "90 deg"
+            }
+          ]
+        },
+        {
+          "id": "carrier-l",
+          "select": {
+            "bodies": [
+              "CarrierL"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                0,
+                1,
+                0
+              ],
+              "angle": "-90 deg"
+            }
+          ]
+        },
+        {
+          "id": "shaft-r",
+          "select": {
+            "bodies": [
+              "ShaftR"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                0,
+                1,
+                0
+              ],
+              "angle": "90 deg"
+            }
+          ]
+        },
+        {
+          "id": "shaft-l",
+          "select": {
+            "bodies": [
+              "ShaftL"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                0,
+                1,
+                0
+              ],
+              "angle": "-90 deg"
+            }
+          ]
+        },
+        {
+          "id": "crank",
+          "select": {
+            "bodies": [
+              "Crank"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                0,
+                1,
+                0
+              ],
+              "angle": "-90 deg"
+            }
+          ]
+        },
+        {
+          "id": "arm",
+          "select": {
+            "bodies": [
+              "Arm"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                0,
+                1,
+                0
+              ],
+              "angle": "-90 deg"
+            }
+          ]
+        },
+        {
+          "id": "pin",
+          "select": {
+            "bodies": [
+              "CrossPin"
+            ]
+          }
+        }
+      ]
+    },
+    "stand": {
+      "bed": [
+        256,
+        256
+      ],
+      "parts": [
+        {
+          "id": "stand",
+          "select": {
+            "bodies": [
+              "Stand"
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "defaults": false,
+  "requests": [
+    { "id": "print-3mf", "kind": "export", "format": "3mf" },
+    { "id": "preview-glb", "kind": "export", "format": "glb" },
+    { "id": "print-stl", "kind": "export", "format": "stl" },
+    { "id": "print-check", "kind": "commands",
+      "commands": [ { "command": "inspect.measure", "params": {} } ] },
+    { "id": "single-view", "kind": "snapshot", "options": { "view": "top" } }
+  ]
+}

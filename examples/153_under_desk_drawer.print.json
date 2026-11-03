@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "defaults": false,
+  "requests": [
+    { "id": "drawer-3mf", "kind": "export", "format": "3mf", "layout": "drawer" },
+    { "id": "rails-3mf", "kind": "export", "format": "3mf", "layout": "rails" },
+    { "id": "preview-glb", "kind": "export", "format": "glb" },
+    { "id": "drawer-stl", "kind": "export", "format": "stl", "layout": "drawer" },
+    { "id": "rails-stl", "kind": "export", "format": "stl", "layout": "rails" },
+    { "id": "print-check", "kind": "commands", "layout": "rails",
+      "commands": [ { "command": "inspect.measure", "params": {} } ] },
+    { "id": "drawer-view", "kind": "snapshot", "layout": "drawer", "options": { "view": "iso" } },
+    { "id": "rails-view", "kind": "snapshot", "layout": "rails", "options": { "view": "iso" } }
+  ],
+  "layouts": {
+    "drawer": { "bed": [256, 256], "spacing": "6 mm", "parts": [
+      { "id": "drawer", "select": { "bodies": ["Drawer"] } }
+    ] },
+    "rails": { "bed": [256, 256], "spacing": "8 mm", "parts": [
+      { "id": "rail-right", "select": { "bodies": ["Rail0"] },
+        "rotate": [ { "axis": [0, 1, 0], "angle": "90 deg" } ] },
+      { "id": "rail-left", "select": { "bodies": ["Rail1"] },
+        "rotate": [ { "axis": [0, 1, 0], "angle": "-90 deg" } ] }
+    ] }
+  }
+}
