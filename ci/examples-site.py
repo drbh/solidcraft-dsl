@@ -99,6 +99,57 @@ def playground_timings(wasm, sources):
     return timings
 
 
+def hashed(site, folder, name, data):
+    """Write `data` as site/folder/<stem>.<hash>.<ext> and return its URL relative to the site."""
+    stem, _, ext = name.partition(".")
+    digest = hashlib.sha256(data).hexdigest()[:10]
+    path = site / folder / f"{stem}.{digest}.{ext}"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    if not path.exists():
+        path.write_bytes(data)
+    return f"{folder}/{path.name}"
+
+
+HEADERS = """\
+# Content-hashed files never change under the same name.
+/m/*
+  Cache-Control: public, max-age=31536000, immutable
+/t/*
+  Cache-Control: public, max-age=31536000, immutable
+/e/*
+  Cache-Control: public, max-age=31536000, immutable
+"""
+
+
+def write_site(site, write_manifest, npm, out_dir, manifest, engine):
+    """The hosted copy: the same two pages, with their large data as separate files."""
+    if site.exists():
+        shutil.rmtree(site)
+    site.mkdir(parents=True)
+    write_manifest(site)
+    subprocess.run([npm, "run", "build", "--", "--outDir", str(out_dir), "--emptyOutDir"],
+                   cwd=SITE, check=True, stdout=subprocess.DEVNULL,
+                   env={**os.environ, "EXAMPLES_MANIFEST": str(manifest)})
+    shutil.copyfile(out_dir / "index.html", site / "index.html")
+    if engine:
+        engine_url = hashed(site, "e", "engine.wasm.gz", engine.read_bytes())
+        pg_dir = SITE / ".data/playground"
+        subprocess.run([npm, "run", "build", "--", "--outDir", str(pg_dir), "--emptyOutDir"],
+                       cwd=SITE, check=True, stdout=subprocess.DEVNULL,
+                       env={**os.environ, "PAGE": "playground", "PLAYGROUND_ENGINE_URL": engine_url,
+                            "PLAYGROUND_GALLERY": "./",
+                            "PLAYGROUND_TIMINGS": str(engine.with_name("timings.json"))})
+        shutil.copyfile(pg_dir / "playground.html", site / "playground.html")
+    (site / "_headers").write_text(HEADERS)
+    files = [p for p in site.rglob("*") if p.is_file()]
+    largest = max(files, key=lambda p: p.stat().st_size)
+    print(f"wrote {site} ({len(files)} files, {sum(p.stat().st_size for p in files) / 1e6:.1f} MB; "
+          f"largest {largest.relative_to(site)} at {largest.stat().st_size / 1e6:.1f} MB)",
+          file=sys.stderr)
+    if largest.stat().st_size > 25 * 1024 * 1024:
+        sys.exit(f"{largest} is over Cloudflare Pages' 25 MiB file limit")
+
+
 ACRONYMS = {"rc", "pcb", "esp32", "led", "usb", "cd", "tft"}
 SPELLINGS = {"ipod": "iPod", "macbook": "MacBook"}
 
@@ -153,6 +204,10 @@ def main():
                         help="write the manifest for `npm run dev` and stop")
     parser.add_argument("--playground", action="store_true",
                         help="also build the engine (ci/playground-engine.py) and playground.html")
+    parser.add_argument("--site", type=Path,
+                        help="also write a hosted copy here: index.html and playground.html that "
+                             "fetch content-hashed models, thumbnails and the engine from beside "
+                             "them (for Cloudflare Pages, whose files are capped at 25 MiB)")
     parser.add_argument("--no-thumbs", action="store_true",
                         help="don't render missing thumbnails (needs Chrome)")
     args = parser.parse_args()
@@ -201,7 +256,9 @@ def main():
     manifest = SITE / ".data/manifest.json"
     out_dir = SITE / ".data/dist"
 
-    def write_manifest():
+    def write_manifest(site=None):
+        """The page's data. With `site`, models and thumbnails go there as files the page
+        fetches (named by content hash, so they can be cached forever) instead of inline."""
         examples = []
         for source, glb, error in results:
             number, title, summary, text = describe(source)
@@ -211,10 +268,16 @@ def main():
                 view = views[source.stem].read_bytes()
                 entry["triangles"], entry["size"] = stats(glb)
                 entry["glbBytes"] = len(view)
-                entry["glb"] = base64.b64encode(gzip.compress(view, 9, mtime=0)).decode()
+                packed = gzip.compress(view, 9, mtime=0)
                 thumb = thumbs / f"{source.stem}.webp"
-                if thumb.exists():
-                    entry["thumb"] = base64.b64encode(thumb.read_bytes()).decode()
+                if site:
+                    entry["glbUrl"] = hashed(site, "m", f"{source.stem}.glb.gz", packed)
+                    if thumb.exists():
+                        entry["thumbUrl"] = hashed(site, "t", f"{source.stem}.webp", thumb.read_bytes())
+                else:
+                    entry["glb"] = base64.b64encode(packed).decode()
+                    if thumb.exists():
+                        entry["thumb"] = base64.b64encode(thumb.read_bytes()).decode()
             if source.stem in timings:
                 entry["playground_ms"] = timings[source.stem]["ms"]
                 entry["playground_slow"] = timings[source.stem]["ms"] > SLOW_MS
@@ -265,6 +328,9 @@ def main():
         page = args.output.with_name("playground.html")
         shutil.copyfile(pg_dir / "playground.html", page)
         print(f"wrote {page} ({page.stat().st_size / 1e6:.1f} MB)", file=sys.stderr)
+    if args.site:
+        write_site(args.site.resolve(), write_manifest, npm, out_dir, manifest,
+                   engine if playground else None)
     failed = [(s.stem, e) for s, _, e in results if e]
     no_thumb = [e["name"] for e in examples if e.get("glb") and not e.get("thumb")]
     print(f"wrote {args.output} ({len(examples)} examples, "

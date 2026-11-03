@@ -19,7 +19,7 @@
     view = createView(viewport, {
       onState: (s, m = '') => { status = s; message = m; },
     });
-    view.show(loadModel(example.name));
+    view.show(loadModel(example.name, example.glbUrl));
     return () => view.destroy();
   });
 
@@ -46,7 +46,7 @@
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
 
-  const download = async () => save(await glbBlob(example.name), `${example.name}.glb`);
+  const download = async () => save(await glbBlob(example.name, example.glbUrl), `${example.name}.glb`);
   const downloadSource = () =>
     save(new Blob([example.source], { type: 'text/plain' }), `${example.name}.sc`);
 

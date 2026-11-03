@@ -1,6 +1,6 @@
 <script>
   import { onMount } from 'svelte';
-  import { examples, files as bundled, words } from 'virtual:playground';
+  import { examples, files as bundled, words, galleryHref } from 'virtual:playground';
   import { createEditor } from './editor.js';
   import { build, cancel, loadEngine } from './engine.js';
   import { createView, modelFromStl } from '../lib/viewer.js';
@@ -285,7 +285,7 @@
 
 <div class="page">
   <header>
-    <a class="brand" href="examples.html{current ? `#${current.name}` : ''}" title="Back to this example in the gallery">
+    <a class="brand" href="{galleryHref}{current ? `#${current.name}` : ''}" title="Back to this example in the gallery">
       <svg viewBox="0 0 32 32" width="20" height="20" aria-hidden="true">
         <path d="M16 3 28 10v12L16 29 4 22V10z" fill="var(--accent)" />
         <path d="M16 3 28 10 16 17 4 10z" fill="var(--accent-soft)" opacity="0.9" />

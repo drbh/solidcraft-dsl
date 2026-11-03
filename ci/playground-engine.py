@@ -31,16 +31,20 @@ def engine_version():
 
 
 def checkout(src, version):
+    """The engine's sources at tag v<version> in `src`. Works in place, so a restored build
+    cache (src/target) survives, and switching versions only fetches the new tag."""
     tag = f"v{version}"
-    if (src / ".git").exists():
-        have = subprocess.run(["git", "describe", "--tags", "--exact-match"], cwd=src,
-                              capture_output=True, text=True).stdout.strip()
-        if have == tag:
-            return src
-        shutil.rmtree(src)
-    src.parent.mkdir(parents=True, exist_ok=True)
-    subprocess.run(["git", "clone", "--quiet", "--depth", "1", "--branch", tag, REPO, str(src)],
-                   check=True)
+    marker = src / ".playground-tag"
+    if (src / ".git").exists() and marker.exists() and marker.read_text().strip() == tag:
+        return src
+    src.mkdir(parents=True, exist_ok=True)
+    git = lambda *a: subprocess.run(["git", *a], cwd=src, check=True, capture_output=True)
+    if not (src / ".git").exists():
+        git("init", "-q")
+        git("remote", "add", "origin", REPO)
+    git("fetch", "-q", "--depth", "1", "origin", "tag", tag)
+    git("checkout", "-q", "-f", tag)
+    marker.write_text(tag)
     return src
 
 

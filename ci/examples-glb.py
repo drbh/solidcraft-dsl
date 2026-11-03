@@ -9,6 +9,8 @@ and left out. Every example becomes a named node, so viewers list them by name. 
 the ground (y = 0) in rows ordered by file name. No dependencies beyond the standard library.
 """
 import argparse
+import functools
+import hashlib
 import json
 import math
 import os
@@ -23,15 +25,48 @@ REQUEST = json.dumps({"version": 1, "defaults": False,
                       "requests": [{"id": "mesh", "kind": "export", "format": "glb"}]})
 
 
+@functools.cache
+def toolchain_hash():
+    """The compiler's sources and the engine version: a change to either rebuilds every example."""
+    digest = hashlib.sha256()
+    for path in sorted([*ROOT.glob("src/**/*.rs"), *ROOT.glob("crates/**/*.rs"), ROOT / "Cargo.lock"]):
+        digest.update(path.relative_to(ROOT).as_posix().encode() + b"\0" + path.read_bytes())
+    cli = os.environ.get("SOLIDCRAFT_CLI", "solidcraft-cli")
+    try:
+        version = subprocess.run([cli, "--version"], capture_output=True, text=True, timeout=30).stdout
+    except OSError:
+        version = ""
+    digest.update(version.encode())
+    return digest.hexdigest()
+
+
+def inputs_hash(source):
+    """What an example's GLB depends on: the toolchain, the example, and its <name>_* folders
+    (parts it `use`s, art it imports). Content, not mtimes, so a fresh checkout (CI) reuses a
+    restored cache."""
+    digest = hashlib.sha256(toolchain_hash().encode() + source.read_bytes())
+    for folder in sorted(source.parent.glob(f"{source.stem}_*")):
+        for f in sorted(folder.rglob("*")) if folder.is_dir() else []:
+            if f.is_file():
+                digest.update(f.relative_to(source.parent).as_posix().encode() + b"\0" + f.read_bytes())
+    return digest.hexdigest()
+
+
 def build(source, out_dir, binary, force, timeout):
     """Evaluate one example; return the path of its GLB or raise with the reason."""
     glb = next(out_dir.rglob("*.glb"), None) if out_dir.exists() else None
-    # A design's parts (`use` files) live beside it in <name>_parts/; editing one must rebuild it too.
-    parts = source.with_name(f"{source.stem}_parts")
-    inputs = [source, binary] + (sorted(parts.rglob("*.sc")) if parts.is_dir() else [])
-    newest_input = max(p.stat().st_mtime for p in inputs)
-    if glb and not force and glb.stat().st_mtime > newest_input:
-        return glb, "cached"
+    stamp = out_dir / "inputs.sha256"
+    key = inputs_hash(source)
+    if glb and not force:
+        if stamp.exists() and stamp.read_text().strip() == key:
+            return glb, "cached"
+        if not stamp.exists():
+            # A cache from before the stamp: adopt it if it is newer than its sources.
+            parts = source.with_name(f"{source.stem}_parts")
+            inputs = [source, binary] + (sorted(parts.rglob("*.sc")) if parts.is_dir() else [])
+            if glb.stat().st_mtime > max(p.stat().st_mtime for p in inputs):
+                stamp.write_text(key)
+                return glb, "cached"
     for old in out_dir.rglob("*.glb") if out_dir.exists() else []:
         old.unlink()
     proc = subprocess.run(
@@ -46,6 +81,7 @@ def build(source, out_dir, binary, force, timeout):
         except (json.JSONDecodeError, AttributeError):
             reason = None
         raise RuntimeError(reason or (proc.stderr.strip().splitlines() or ["no GLB produced"])[-1])
+    stamp.write_text(key)
     return glb, "built"
 
 

@@ -42,11 +42,13 @@ function examples() {
       const rest = examples.filter((e) => !listed.has(e.name)).map((e) => e.name);
       if (rest.length) sections.push({ title: 'Other', blurb: 'Not yet in a section.', examples: rest });
       const ordered = sections.flatMap((c) => c.examples.map((n) => [c.title, byName.get(n)]));
-      const list = ordered.map(([section, { glb, thumb, ...rest }]) => ({
+      // Inline (one-file page): base64 `glb` and `thumb`. Hosted (--site): `glbUrl` and `thumbUrl`.
+      const list = ordered.map(([section, { glb, thumb, glbUrl, thumbUrl, ...rest }]) => ({
         ...rest,
         section,
-        hasModel: Boolean(glb),
-        thumb: thumb ? `data:image/webp;base64,${thumb}` : null,
+        hasModel: Boolean(glb || glbUrl),
+        glbUrl: glbUrl ?? null,
+        thumb: thumbUrl ?? (thumb ? `data:image/webp;base64,${thumb}` : null),
         html: highlight(highlighter, rest.source, palette),
       }));
       const sectionList = sections.map(({ title, blurb, examples }) => ({ title, blurb, examples }));
@@ -116,6 +118,9 @@ function highlight(highlighter, source, palette) {
 // the editor, and the engine module (built by ci/playground-engine.py) embedded like the GLBs.
 const examplesDir = here('../examples');
 const enginePath = process.env.PLAYGROUND_ENGINE || here('../build/playground/engine.wasm.gz');
+// Hosted (--site): the engine is a file beside the page, and the gallery is the site's index.
+const engineUrl = process.env.PLAYGROUND_ENGINE_URL || null;
+const galleryHref = process.env.PLAYGROUND_GALLERY || 'examples.html';
 const timingsPath = process.env.PLAYGROUND_TIMINGS || here('../build/playground/timings.json');
 const readTimings = () => {
   try { return JSON.parse(readFileSync(timingsPath, 'utf8')); } catch { return {}; }
@@ -194,11 +199,14 @@ function playground() {
       });
       return `export const files = ${JSON.stringify(files)};\n` +
         `export const examples = ${JSON.stringify(list)};\n` +
-        `export const words = ${JSON.stringify(grammarWords())};\n`;
+        `export const words = ${JSON.stringify(grammarWords())};\n` +
+        `export const engineUrl = ${JSON.stringify(engineUrl)};\n` +
+        `export const galleryHref = ${JSON.stringify(galleryHref)};\n`;
     },
     transformIndexHtml: {
       order: 'post',
       handler() {
+        if (engineUrl) return [];
         if (!existsSync(enginePath)) {
           this?.warn?.(`no engine at ${enginePath}`);
           return [];

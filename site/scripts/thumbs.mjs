@@ -23,7 +23,12 @@ if (!chrome) {
 }
 
 mkdirSync(outDir, { recursive: true });
-const browser = await chromium.launch({ executablePath: chrome, args: ['--use-angle=metal', '--enable-gpu', '--ignore-gpu-blocklist'] });
+// macOS renders on the GPU through Metal; a Linux CI runner has no GPU, so WebGL runs on
+// SwiftShader there.
+const gpu = process.platform === 'darwin'
+  ? ['--use-angle=metal', '--enable-gpu', '--ignore-gpu-blocklist']
+  : ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'];
+const browser = await chromium.launch({ executablePath: chrome, args: gpu });
 const tab = await browser.newPage({ viewport: { width: 800, height: 600 } });
 tab.on('pageerror', (e) => console.error('thumbs: page error:', e.message));
 await tab.goto(pathToFileURL(resolve(page)).href, { waitUntil: 'load', timeout: 180000 });

@@ -5,6 +5,8 @@
 
 this is a small domain specific language for writing declarative 3d models in `.sc` files.
 
+every example is browsable (source next to the model) at https://solidcraft-dsl.dholtz.com, and any of them can be edited and rebuilt in the browser in the playground https://solidcraft-dsl.dholtz.com/playground.html
+
 ## why
 
 I've been looking for a nice way to lift 3d modeling into a more declarative and programmatic approach. I want all the niceties of coding; design are just text files, they are reproducible, version controlled, and support computation. 

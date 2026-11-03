@@ -26,7 +26,7 @@ let worker = null;
 let nextJob = 0;
 const jobs = new Map();
 
-function gunzip(text) {
+function gunzip(text, buffer) {
   if (!worker) {
     worker = new GunzipWorker();
     worker.onmessage = ({ data }) => {
@@ -39,22 +39,28 @@ function gunzip(text) {
   return new Promise((resolve, reject) => {
     const id = nextJob++;
     jobs.set(id, { resolve, reject });
-    worker.postMessage({ id, text });
+    worker.postMessage({ id, text, buffer }, buffer ? [buffer] : []);
   });
 }
 
-export function glbBytes(name) {
+/// GLB bytes for an example: fetched from `url` on the hosted site, else from its inline tag.
+export async function glbBytes(name, url = null) {
+  if (url) {
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`${url}: ${response.status}`);
+    return gunzip(null, await response.arrayBuffer());
+  }
   const tag = document.getElementById(`glb-${name}`);
   if (!tag) return Promise.reject(new Error('model missing from page'));
   return gunzip(tag.textContent);
 }
 
-export async function glbBlob(name) {
-  return new Blob([await glbBytes(name)], { type: 'model/gltf-binary' });
+export async function glbBlob(name, url = null) {
+  return new Blob([await glbBytes(name, url)], { type: 'model/gltf-binary' });
 }
 
-export async function loadModel(name) {
-  const gltf = await loader.parseAsync(await glbBytes(name), '');
+export async function loadModel(name, url = null) {
+  const gltf = await loader.parseAsync(await glbBytes(name, url), '');
   const meshes = [];
   gltf.scene.traverse((o) => o.isMesh && meshes.push(o));
   for (const mesh of meshes) prepareMesh(mesh);
