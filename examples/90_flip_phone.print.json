@@ -1,0 +1,34 @@
+{
+  "version": 1,
+  "defaults": false,
+  "requests": [
+    { "id": "print-3mf", "kind": "export", "format": "3mf", "layout": "plate" },
+    { "id": "print-stl", "kind": "export", "format": "stl", "layout": "plate" },
+    { "id": "preview-glb", "kind": "export", "format": "glb", "layout": "plate" },
+    { "id": "keymat-3mf", "kind": "export", "format": "3mf", "layout": "tpu" },
+    { "id": "print-check", "kind": "commands", "layout": "plate",
+      "commands": [ { "command": "inspect.measure", "params": {} } ] },
+    { "id": "plate-view", "kind": "snapshot", "layout": "plate", "options": { "view": "iso" } }
+  ],
+  "layouts": {
+    "plate": {
+      "bed": [256, 256],
+      "parts": [
+        { "id": "base_tray", "select": { "bodies": ["BaseTray"] } },
+        { "id": "face_plate", "select": { "bodies": ["FacePlate"] },
+          "rotate": [ { "axis": [1, 0, 0], "angle": "180 deg" } ] },
+        { "id": "bezel", "select": { "bodies": ["Bezel"] },
+          "rotate": [ { "axis": [1, 0, 0], "angle": "open_angle" } ] },
+        { "id": "lid_tray", "select": { "bodies": ["LidTray"] },
+          "rotate": [ { "axis": [1, 0, 0], "angle": "open_angle" }, { "axis": [1, 0, 0], "angle": "180 deg" } ] }
+      ]
+    },
+    "tpu": {
+      "bed": [256, 256],
+      "parts": [
+        { "id": "key_mat", "select": { "bodies": ["KeyMat"] },
+          "rotate": [ { "axis": [1, 0, 0], "angle": "180 deg" } ] }
+      ]
+    }
+  }
+}

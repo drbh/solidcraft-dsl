@@ -416,6 +416,20 @@ fn names_list(v: Option<&Value>) -> String {
     v.and_then(Value::as_array).map(|a| a.iter().filter_map(Value::as_str).map(name).collect::<Vec<_>>().join(", ")).unwrap_or_default()
 }
 
+/// The features a pattern or mirror copies: names (engines before 0.27) or feature ids (0.27).
+fn feature_list(v: Option<&Value>, names: &HashMap<u64, String>) -> R<String> {
+    let items = v.and_then(Value::as_array).map(Vec::as_slice).unwrap_or_default();
+    let list: Vec<String> = items
+        .iter()
+        .map(|f| match (f.as_str(), f.as_u64()) {
+            (Some(s), _) => Ok(name(s)),
+            (_, Some(id)) => names.get(&id).map(|s| name(s)).ok_or_else(|| format!("unknown feature id {id}")),
+            _ => Err(format!("unexpected feature reference {f}")),
+        })
+        .collect::<R<_>>()?;
+    Ok(list.join(", "))
+}
+
 fn feature(f: &Value, kind: &str, names: &HashMap<u64, String>) -> R<String> {
     let fname = name(s_of(f, "name")?);
     let mut out = String::new();
@@ -615,7 +629,7 @@ fn feature(f: &Value, kind: &str, names: &HashMap<u64, String>) -> R<String> {
                     let _ = write!(out, " bodies {}", names_list(f.get("bodies")));
                 }
                 None => {
-                    let _ = write!(out, " features {}", names_list(f.get("features")));
+                    let _ = write!(out, " features {}", feature_list(f.get("features"), names)?);
                 }
             }
             let p = f.get("plane").ok_or("missing `plane`")?;
@@ -637,7 +651,7 @@ fn feature(f: &Value, kind: &str, names: &HashMap<u64, String>) -> R<String> {
             let bodies = f.get("bodies").and_then(Value::as_array).filter(|b| !b.is_empty());
             let what = match bodies {
                 Some(_) => format!("bodies {}", names_list(f.get("bodies"))),
-                None => format!("features {}", names_list(f.get("features"))),
+                None => format!("features {}", feature_list(f.get("features"), names)?),
             };
             match s_of(p, "type")? {
                 "rectangular" => {

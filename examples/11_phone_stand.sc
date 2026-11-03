@@ -41,6 +41,7 @@ param channel_h = 3 mm
 let cable_y = rest_y - phone_gap/2
 box Notch size cable_w (lip_t+2 mm) lip_h corner (W/2-cable_w/2,lip_y-1 mm,base_t) cut targets Stand
 hole CableHole at (W/2,cable_y,base_t) diameter cable_d depth base_t
-box Channel size cable_d (D-cable_y+1 mm) (channel_h+1 mm) corner (W/2-cable_d/2,cable_y,-1 mm) cut targets Stand
+// A little narrower than the hole: walls tangent to the hole leave the body in two shells.
+box Channel size (cable_d - 0.5 mm) (D-cable_y+1 mm) (channel_h+1 mm) corner (W/2-cable_d/2+0.25 mm,cable_y,-1 mm) cut targets Stand
 param edge_r = 2 mm
 fillet Softening edges (W/4,lip_y,lip_h) (W/4,lip_y+lip_t,lip_h) (3*W/4,lip_y,lip_h) (3*W/4,lip_y+lip_t,lip_h) (W/4,rest_y+run,rise) (W/4,rest_y+shift+run,rise) radius edge_r body Stand

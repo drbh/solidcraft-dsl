@@ -3,7 +3,9 @@
 > [!CAUTION]
 > this project is a personal experiment and is actively being iterated on and may change significantly without notice at any time - repo may be deprecated for a future version or replaced entirely.
 
-this is a small domain specific language for writing declarative 3d models.
+this is a small domain specific language for writing declarative 3d models in `.sc` files.
+
+every example is browsable (source next to the model) at https://solidcraft-dsl.dholtz.com, and any of them can be edited and rebuilt in the browser in the playground https://solidcraft-dsl.dholtz.com/playground.html
 
 ## why
 

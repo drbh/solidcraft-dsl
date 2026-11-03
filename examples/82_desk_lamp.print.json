@@ -1,0 +1,71 @@
+{
+  "version": 1,
+  "defaults": false,
+  "requests": [
+    { "id": "base-3mf", "kind": "export", "format": "3mf", "layout": "base" },
+    { "id": "base-stl", "kind": "export", "format": "stl", "layout": "base" },
+    { "id": "turret-cover-3mf", "kind": "export", "format": "3mf", "layout": "turret_cover" },
+    { "id": "turret-cover-stl", "kind": "export", "format": "stl", "layout": "turret_cover" },
+    { "id": "arms-3mf", "kind": "export", "format": "3mf", "layout": "arms" },
+    { "id": "arms-stl", "kind": "export", "format": "stl", "layout": "arms" },
+    { "id": "head-3mf", "kind": "export", "format": "3mf", "layout": "head" },
+    { "id": "head-stl", "kind": "export", "format": "stl", "layout": "head" },
+    { "id": "preview-glb", "kind": "export", "format": "glb", "layout": "assembled" },
+    { "id": "arms-check", "kind": "commands", "layout": "arms",
+      "commands": [ { "command": "inspect.measure", "params": {} } ] },
+    { "id": "head-check", "kind": "commands", "layout": "head",
+      "commands": [ { "command": "inspect.measure", "params": {} } ] },
+    { "id": "arms-view", "kind": "snapshot", "layout": "arms", "options": { "view": "top" } },
+    { "id": "head-view", "kind": "snapshot", "layout": "head", "options": { "view": "iso" } },
+    { "id": "assembled-view", "kind": "snapshot", "layout": "assembled", "options": { "view": "iso" } }
+  ],
+  "layouts": {
+    "base": {
+      "bed": [256, 256],
+      "parts": [
+        { "id": "Base", "select": { "bodies": ["Base"] },
+          "rotate": [ { "axis": [1, 0, 0], "angle": "180 deg" } ] }
+      ]
+    },
+    "turret_cover": {
+      "bed": [256, 256],
+      "parts": [
+        { "id": "Cover", "select": { "bodies": ["Cover"] } },
+        { "id": "Turret", "select": { "bodies": ["Turret"] },
+          "rotate": [ { "axis": [0, 0, 1], "angle": "-base_yaw" } ] }
+      ]
+    },
+    "arms": {
+      "bed": [256, 256],
+      "parts": [
+        { "id": "LowerL", "select": { "bodies": ["LowerL"] },
+          "rotate": [ { "axis": [0, 0, 1], "angle": "-base_yaw" }, { "axis": [0, 1, 0], "angle": "-lower_angle" },
+                      { "axis": [1, 0, 0], "angle": "90 deg" } ] },
+        { "id": "LowerR", "select": { "bodies": ["LowerR"] },
+          "rotate": [ { "axis": [0, 0, 1], "angle": "-base_yaw" }, { "axis": [0, 1, 0], "angle": "-lower_angle" },
+                      { "axis": [1, 0, 0], "angle": "90 deg" } ] },
+        { "id": "UpperArm", "select": { "bodies": ["UpperArm"] },
+          "rotate": [ { "axis": [0, 0, 1], "angle": "-base_yaw" }, { "axis": [0, 1, 0], "angle": "-lower_angle" },
+                      { "axis": [0, 1, 0], "angle": "upper_angle" }, { "axis": [1, 0, 0], "angle": "90 deg" },
+                      { "axis": [0, 0, 1], "angle": "90 deg" } ] }
+      ]
+    },
+    "head": {
+      "bed": [256, 256],
+      "parts": [
+        { "id": "Shade", "select": { "bodies": ["Shade"] },
+          "rotate": [ { "axis": [0, 0, 1], "angle": "-base_yaw" }, { "axis": [0, 1, 0], "angle": "-lower_angle" },
+                      { "axis": [0, 1, 0], "angle": "upper_angle" }, { "axis": [0, 1, 0], "angle": "head_angle" } ] },
+        { "id": "Carrier", "select": { "bodies": ["Carrier"] },
+          "rotate": [ { "axis": [0, 0, 1], "angle": "-base_yaw" }, { "axis": [0, 1, 0], "angle": "-lower_angle" },
+                      { "axis": [0, 1, 0], "angle": "upper_angle" }, { "axis": [0, 1, 0], "angle": "head_angle" } ] }
+      ]
+    },
+    "assembled": {
+      "parts": [
+        { "id": "Lamp", "select": { "bodies": ["Base", "Cover", "Nipple", "Turret", "LowerL", "LowerR", "UpperArm", "Shade", "Carrier", "Spreader", "Led", "ShoulderBolt", "ElbowBolt", "HeadBolt"] },
+          "on_bed": false }
+      ]
+    }
+  }
+}

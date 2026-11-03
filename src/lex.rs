@@ -34,7 +34,7 @@ pub struct Line {
 }
 
 /// Strip a `//` comment that is not inside a string.
-fn strip_comment(s: &str) -> &str {
+pub fn strip_comment(s: &str) -> &str {
     let mut in_str = false;
     let b = s.as_bytes();
     let mut i = 0;
@@ -108,7 +108,7 @@ pub fn tokenize_line(no: usize, text: &str) -> Result<Vec<Tok>, String> {
             }
             toks.push(Tok::Str(chars[start..i].iter().collect()));
             i += 1;
-        } else if "(),={}.*:-+/^%;°".contains(c) {
+        } else if "(),={}.*:-+/^%;°<>".contains(c) {
             toks.push(Tok::Punct(c));
             i += 1;
         } else {
@@ -127,7 +127,9 @@ pub fn lex(src: &str) -> Result<Vec<Line>, String> {
         if raw.is_empty() {
             continue;
         }
-        out.push(Line { no, toks: tokenize_line(no, raw)?, raw: raw.to_string() });
+        // An `engine` statement's JSON is read from the raw text; only its keyword is a token.
+        let toks = if raw.split_whitespace().next() == Some("engine") { vec![Tok::Ident("engine".into())] } else { tokenize_line(no, raw)? };
+        out.push(Line { no, toks, raw: raw.to_string() });
     }
     Ok(out)
 }

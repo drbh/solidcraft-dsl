@@ -1,0 +1,41 @@
+{
+  "version": 1,
+  "defaults": false,
+  "requests": [
+    { "id": "print-frame-3mf", "kind": "export", "format": "3mf", "layout": "frame" },
+    { "id": "print-frame-stl", "kind": "export", "format": "stl", "layout": "frame" },
+    { "id": "print-parts-3mf", "kind": "export", "format": "3mf", "layout": "parts" },
+    { "id": "print-parts-stl", "kind": "export", "format": "stl", "layout": "parts" },
+    { "id": "preview-glb", "kind": "export", "format": "glb", "layout": "face" },
+    { "id": "frame-check", "kind": "commands", "layout": "frame",
+      "commands": [ { "command": "inspect.measure", "params": {} } ] },
+    { "id": "parts-check", "kind": "commands", "layout": "parts",
+      "commands": [ { "command": "inspect.measure", "params": {} } ] },
+    { "id": "face-view", "kind": "snapshot", "layout": "face", "options": { "view": "iso" } },
+    { "id": "parts-view", "kind": "snapshot", "layout": "parts", "options": { "view": "top" } }
+  ],
+  "layouts": {
+    "frame": {
+      "bed": [256, 256],
+      "parts": [ { "id": "Frame", "select": { "bodies": ["Frame"] } } ]
+    },
+    "parts": {
+      "bed": [256, 256],
+      "parts": [
+        { "id": "Panel", "select": { "bodies": ["Panel"] } },
+        { "id": "Leg", "select": { "bodies": ["Leg"] },
+          "rotate": [ { "axis": [0, 1, 0], "angle": "180 deg" } ] },
+        { "id": "Button0", "select": { "bodies": ["Button0"] } },
+        { "id": "Button1", "select": { "bodies": ["Button1"] } },
+        { "id": "Button2", "select": { "bodies": ["Button2"] } },
+        { "id": "Button3", "select": { "bodies": ["Button3"] } }
+      ]
+    },
+    "face": {
+      "parts": [
+        { "id": "Assembled", "select": { "bodies": ["Frame", "Panel", "Leg", "Button0", "Button1", "Button2", "Button3"] },
+          "rotate": [ { "axis": [0, 1, 0], "angle": "180 deg" } ] }
+      ]
+    }
+  }
+}

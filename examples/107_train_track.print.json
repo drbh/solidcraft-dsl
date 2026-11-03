@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "defaults": false,
+  "requests": [
+    { "id": "loop-3mf", "kind": "export", "format": "3mf", "layout": "loop" },
+    { "id": "loop-stl", "kind": "export", "format": "stl", "layout": "loop" },
+    { "id": "spur-3mf", "kind": "export", "format": "3mf", "layout": "spur" },
+    { "id": "spur-stl", "kind": "export", "format": "stl", "layout": "spur" },
+    { "id": "preview-glb", "kind": "export", "format": "glb", "layout": "loop" },
+    { "id": "print-check", "kind": "commands", "layout": "spur",
+      "commands": [ { "command": "inspect.measure", "params": {} } ] },
+    { "id": "loop-view", "kind": "snapshot", "layout": "loop", "options": { "view": "iso" } },
+    { "id": "spur-view", "kind": "snapshot", "layout": "spur", "options": { "view": "iso" } }
+  ],
+  "layouts": {
+    "loop": {
+      "bed": [256, 256],
+      "parts": [
+        { "id": "Switch", "select": { "bodies": ["Switch_Switch"] } },
+        { "id": "Curve", "select": { "bodies": ["Right0_Curve"] } }
+      ]
+    },
+    "spur": {
+      "bed": [256, 256],
+      "parts": [
+        { "id": "Straight", "select": { "bodies": ["Back_Straight"] },
+          "rotate": [ { "axis": [0, 0, 1], "angle": "180 deg" } ] },
+        { "id": "Ramp", "select": { "bodies": ["Ramp_Ramp"] },
+          "rotate": [ { "axis": [0, 0, 1], "angle": "-45 deg" } ] },
+        { "id": "Buffer", "select": { "bodies": ["Stop_Buffer"] },
+          "rotate": [ { "axis": [0, 0, 1], "angle": "-45 deg" } ] }
+      ]
+    }
+  }
+}

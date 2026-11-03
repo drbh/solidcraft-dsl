@@ -1,0 +1,122 @@
+:root {
+  --bg: #f7f8fa;
+  --panel: #ffffff;
+  --text: #1b1f24;
+  --muted: #5d6673;
+  --border: #dfe3e8;
+  --accent: #4a6cf7;
+  --accent-soft: #e8edff;
+  --code-bg: #ffffff;
+  --viewport: #eef1f5;
+  --model: #a9b6c8;
+  --model-edge: #27303b;
+  --danger: #b42318;
+  --sidebar: 260px;
+  --mono: ui-monospace, 'SF Mono', 'JetBrains Mono', Menlo, Consolas, monospace;
+  --hl-comment: #6e7781;
+  --hl-string: #0a3069;
+  --hl-number: #0550ae;
+  --hl-keyword: #cf222e;
+  --hl-feature: #8250df;
+  --hl-key: #953800;
+  --hl-modifier: #116329;
+  --hl-constant: #0550ae;
+  --hl-ref: #1f6feb;
+  --hl-operator: #57606a;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --bg: #0f1216;
+    --panel: #161a20;
+    --text: #e6e9ed;
+    --muted: #96a0ad;
+    --border: #262c35;
+    --accent: #8aa2ff;
+    --accent-soft: #1d2540;
+    --code-bg: #0d1117;
+    --viewport: #1b2028;
+    --model: #8d9bb0;
+    --model-edge: #0a0d11;
+    --danger: #ff8a7a;
+    --hl-comment: #8b949e;
+    --hl-string: #a5d6ff;
+    --hl-number: #79c0ff;
+    --hl-keyword: #ff7b72;
+    --hl-feature: #d2a8ff;
+    --hl-key: #ffa657;
+    --hl-modifier: #7ee787;
+    --hl-constant: #79c0ff;
+    --hl-ref: #58a6ff;
+    --hl-operator: #8b949e;
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme='dark'] {
+  --bg: #0f1216;
+  --panel: #161a20;
+  --text: #e6e9ed;
+  --muted: #96a0ad;
+  --border: #262c35;
+  --accent: #8aa2ff;
+  --accent-soft: #1d2540;
+  --code-bg: #0d1117;
+  --viewport: #1b2028;
+  --model: #8d9bb0;
+  --model-edge: #0a0d11;
+  --danger: #ff8a7a;
+  --hl-comment: #8b949e;
+  --hl-string: #a5d6ff;
+  --hl-number: #79c0ff;
+  --hl-keyword: #ff7b72;
+  --hl-feature: #d2a8ff;
+  --hl-key: #ffa657;
+  --hl-modifier: #7ee787;
+  --hl-constant: #79c0ff;
+  --hl-ref: #58a6ff;
+  --hl-operator: #8b949e;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+
+html { scroll-padding-top: 16px; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font: 15px/1.5 system-ui, -apple-system, 'Segoe UI', sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Highlighted source: each token class sets --l / --d (see vite.config.js); pick one per theme. */
+.shiki { color: var(--text); }
+.shiki [class^='t'] { color: var(--l); }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .shiki [class^='t'] { color: var(--d); }
+}
+:root[data-theme='dark'] .shiki [class^='t'] { color: var(--d); }
+
+.shiki {
+  margin: 0;
+  padding: 14px 0;
+  font: 12.5px/1.6 var(--mono);
+  counter-reset: line;
+  min-width: max-content;
+}
+.shiki code { display: block; }
+.shiki .line { display: inline-block; width: 100%; padding: 0 16px 0 0; }
+.shiki .line::before {
+  counter-increment: line;
+  content: counter(line);
+  display: inline-block;
+  width: 3.2em;
+  margin-right: 14px;
+  text-align: right;
+  color: var(--muted);
+  opacity: 0.5;
+  user-select: none;
+}

@@ -1,5 +1,20 @@
 # Reusable export and review layouts
 
+## Print orientation in the design
+
+```sc
+print Holder up X              // the side that faces away from the bed
+print RollerA, RollerB up Y    // bodies in one statement stay together
+print Lid up (0, 0, -1)
+print bed (250, 210)           // optional: fail if the plate overflows
+```
+
+`print` statements describe a layout named `print`: each group is turned so its `up` points
+away from the bed, and the groups are arranged automatically. Without a requests file,
+`evaluate` exports it as `print-3mf` and `print-glb`, with a `print-view` image. A recipe can
+use `"layout": "print"` too, unless it defines its own layout of that name. Overhang checks
+without `up` use the same orientation, so a part's print pose is stated once.
+
 A `.sc` file describes a design. A request recipe describes the outputs you want from that
 design, including optional manufacturing layouts. Keep authored `*.print.json` recipes beside
 the examples; put generated scripts, reports, meshes and images in the evaluation output folder.
@@ -154,8 +169,8 @@ Failed transfer checks and layout errors fail required requests. Optional reques
 warnings, as with all other artifact requests.
 
 The request schema and `capabilities --json` describe these fields. Body layouts need engine
-`occurrence.properties`; instance selection additionally needs its `world_name` field, added
-by the [compatible engine patch](assemblies.md#engine-compatibility). That field resolves exact export selection without guessing
+`occurrence.properties`; instance selection additionally needs its `world_name` field, which no
+release has yet ([engine compatibility](assemblies.md#engine-compatibility)). That field resolves exact export selection without guessing
 display names for repeated instances. Unsupported engines produce explicit request errors.
 
 The four migrated print recipes preserve their part selections and rotations. Their plate

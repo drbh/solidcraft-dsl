@@ -1,0 +1,144 @@
+{
+  "version": 1,
+  "defaults": false,
+  "requests": [
+    {
+      "id": "print-3mf",
+      "kind": "export",
+      "format": "3mf",
+      "layout": "plate"
+    },
+    {
+      "id": "preview-glb",
+      "kind": "export",
+      "format": "glb",
+      "layout": "plate"
+    },
+    {
+      "id": "print-stl",
+      "kind": "export",
+      "format": "stl",
+      "layout": "plate"
+    },
+    {
+      "id": "print-check",
+      "kind": "commands",
+      "layout": "plate",
+      "commands": [
+        {
+          "command": "inspect.measure",
+          "params": {}
+        }
+      ]
+    },
+    {
+      "id": "plate-view",
+      "kind": "snapshot",
+      "layout": "plate",
+      "options": {
+        "view": "iso"
+      }
+    }
+  ],
+  "layouts": {
+    "plate": {
+      "bed": [
+        256,
+        256
+      ],
+      "spacing": "6 mm",
+      "parts": [
+        {
+          "id": "ShellB",
+          "select": {
+            "bodies": [
+              "ShellB"
+            ]
+          }
+        },
+        {
+          "id": "ShellA",
+          "select": {
+            "bodies": [
+              "ShellA"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                1,
+                0,
+                0
+              ],
+              "angle": "180 deg"
+            }
+          ]
+        },
+        {
+          "id": "Hub0",
+          "select": {
+            "bodies": [
+              "Hub0"
+            ]
+          }
+        },
+        {
+          "id": "Hub1",
+          "select": {
+            "bodies": [
+              "Hub1"
+            ]
+          }
+        },
+        {
+          "id": "Roller0",
+          "select": {
+            "bodies": [
+              "Roller0"
+            ]
+          }
+        },
+        {
+          "id": "Roller1",
+          "select": {
+            "bodies": [
+              "Roller1"
+            ]
+          }
+        },
+        {
+          "id": "Clip0",
+          "select": {
+            "bodies": [
+              "Clip0"
+            ]
+          }
+        },
+        {
+          "id": "Clip1",
+          "select": {
+            "bodies": [
+              "Clip1"
+            ]
+          }
+        },
+        {
+          "id": "WindowA",
+          "select": {
+            "bodies": [
+              "WindowA"
+            ]
+          }
+        },
+        {
+          "id": "WindowB",
+          "select": {
+            "bodies": [
+              "WindowB"
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

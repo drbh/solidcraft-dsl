@@ -1,0 +1,141 @@
+{
+  "version": 1,
+  "defaults": false,
+  "requests": [
+    {
+      "id": "preview-glb",
+      "kind": "export",
+      "format": "glb"
+    },
+    {
+      "id": "flat-3mf",
+      "kind": "export",
+      "format": "3mf",
+      "layout": "flat"
+    },
+    {
+      "id": "flat-stl",
+      "kind": "export",
+      "format": "stl",
+      "layout": "flat"
+    },
+    {
+      "id": "flat-measure",
+      "kind": "commands",
+      "layout": "flat",
+      "commands": [
+        {
+          "command": "inspect.measure",
+          "params": {}
+        }
+      ]
+    },
+    {
+      "id": "flat-view",
+      "kind": "snapshot",
+      "layout": "flat",
+      "options": {
+        "view": "iso"
+      }
+    },
+    {
+      "id": "towers-3mf",
+      "kind": "export",
+      "format": "3mf",
+      "layout": "towers"
+    },
+    {
+      "id": "towers-stl",
+      "kind": "export",
+      "format": "stl",
+      "layout": "towers"
+    },
+    {
+      "id": "towers-measure",
+      "kind": "commands",
+      "layout": "towers",
+      "commands": [
+        {
+          "command": "inspect.measure",
+          "params": {}
+        }
+      ]
+    },
+    {
+      "id": "towers-view",
+      "kind": "snapshot",
+      "layout": "towers",
+      "options": {
+        "view": "iso"
+      }
+    }
+  ],
+  "layouts": {
+    "flat": {
+      "bed": [
+        256,
+        256
+      ],
+      "parts": [
+        {
+          "id": "Base",
+          "select": {
+            "bodies": [
+              "Base"
+            ]
+          }
+        },
+        {
+          "id": "Splitter",
+          "select": {
+            "bodies": [
+              "Splitter"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                1,
+                0,
+                0
+              ],
+              "angle": "90 deg"
+            }
+          ]
+        }
+      ]
+    },
+    "towers": {
+      "bed": [
+        256,
+        256
+      ],
+      "parts": [
+        {
+          "id": "Drop",
+          "select": {
+            "bodies": [
+              "Drop"
+            ]
+          }
+        },
+        {
+          "id": "Spiral",
+          "select": {
+            "bodies": [
+              "Spiral"
+            ]
+          }
+        },
+        {
+          "id": "Funnel",
+          "select": {
+            "bodies": [
+              "Funnel"
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

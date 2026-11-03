@@ -1,0 +1,44 @@
+{
+  "version": 1,
+  "defaults": false,
+  "requests": [
+    { "id": "base-3mf", "kind": "export", "format": "3mf", "layout": "base" },
+    { "id": "lid-3mf", "kind": "export", "format": "3mf", "layout": "lid" },
+    { "id": "parts-3mf", "kind": "export", "format": "3mf", "layout": "parts" },
+    { "id": "base-stl", "kind": "export", "format": "stl", "layout": "base" },
+    { "id": "lid-stl", "kind": "export", "format": "stl", "layout": "lid" },
+    { "id": "parts-stl", "kind": "export", "format": "stl", "layout": "parts" },
+    { "id": "parts-glb", "kind": "export", "format": "glb", "layout": "parts" },
+    { "id": "print-check", "kind": "commands", "layout": "parts",
+      "commands": [ { "command": "inspect.measure", "params": {} } ] },
+    { "id": "base-view", "kind": "snapshot", "layout": "base", "options": { "view": "iso" } },
+    { "id": "lid-view", "kind": "snapshot", "layout": "lid", "options": { "view": "iso" } },
+    { "id": "parts-view", "kind": "snapshot", "layout": "parts", "options": { "view": "iso" } }
+  ],
+  "layouts": {
+    "base": {
+      "bed": [256, 256],
+      "parts": [ { "id": "Base", "select": { "bodies": ["Base"] } } ]
+    },
+    "lid": {
+      "bed": [256, 256],
+      "parts": [
+        { "id": "Lid", "select": { "bodies": ["Lid"] },
+          "rotate": [ { "axis": [1, 0, 0], "angle": "lid_angle + 180 deg" } ] }
+      ]
+    },
+    "parts": {
+      "bed": [256, 256],
+      "parts": [
+        { "id": "Deck", "select": { "bodies": ["Deck"] } },
+        { "id": "Disc", "select": { "bodies": ["Disc"] } },
+        { "id": "Pane", "select": { "bodies": ["Pane"] },
+          "rotate": [ { "axis": [1, 0, 0], "angle": "lid_angle" } ] },
+        { "id": "Cap0", "select": { "bodies": ["Cap0"] }, "rotate": [ { "axis": [1, 0, 0], "angle": "-90 deg" } ] },
+        { "id": "Cap1", "select": { "bodies": ["Cap1"] }, "rotate": [ { "axis": [1, 0, 0], "angle": "-90 deg" } ] },
+        { "id": "Cap2", "select": { "bodies": ["Cap2"] }, "rotate": [ { "axis": [1, 0, 0], "angle": "-90 deg" } ] },
+        { "id": "Cap3", "select": { "bodies": ["Cap3"] }, "rotate": [ { "axis": [1, 0, 0], "angle": "-90 deg" } ] }
+      ]
+    }
+  }
+}

@@ -42,6 +42,14 @@ pub struct Param {
     pub line: usize,
 }
 
+impl Param {
+    /// `param label = "TEXT"`: a text parameter's words, for `text label …`.
+    pub fn text(&self) -> Option<&str> {
+        let e = self.expr.trim();
+        (e.len() >= 2 && e.starts_with('"') && e.ends_with('"')).then(|| &e[1..e.len() - 1])
+    }
+}
+
 #[derive(Debug, Clone)]
 pub enum Plane {
     /// `XY`, `XZ`, `YZ` or a construction plane's name.
@@ -146,6 +154,88 @@ pub enum SketchKind {
         pts: Vec<Pt>,
         periodic: bool,
     },
+    /// `curve c = (x(t), y(t)) t from a to b [points n] [closed]`: an equation curve, sampled when
+    /// compiling into a fit-point spline (lowered to `Spline` before compiling).
+    Curve {
+        name: String,
+        x: String,
+        y: String,
+        from: String,
+        to: String,
+        points: Option<String>,
+        closed: bool,
+    },
+    /// `ellipse e = (cx,cy) major (x,y) minor r`: `major` is the end of the major axis.
+    Ellipse {
+        name: String,
+        center: [Comp; 2],
+        major: [Comp; 2],
+        minor: String,
+    },
+    /// `text "LABEL" at (x,y) [height h] [angle a] [align left|center|right] [font "F"] [bold] [italic]`.
+    /// The engine numbers glyph curves from the same counters as everything else, so text
+    /// comes last in its sketch.
+    Text {
+        /// The words, or with `expression` a text expression over text parameters.
+        text: String,
+        expression: bool,
+        at: [Comp; 2],
+        height: Option<String>,
+        angle: Option<String>,
+        align: Option<String>,
+        font: Option<String>,
+        bold: bool,
+        italic: bool,
+    },
+    /// `offset a b distance d [side (x,y)] [symmetric]`: an offset copy of whole entities or of
+    /// curves, kept at the distance (a live dimension) as they change.
+    Offset {
+        refs: Vec<Ref>,
+        distance: String,
+        side: Option<[Comp; 2]>,
+        symmetric: bool,
+    },
+    /// `mirror a b about l`: copies held symmetric to the originals about line `l`.
+    Mirror {
+        refs: Vec<Ref>,
+        about: Ref,
+    },
+    /// `pattern circular a count n [center (x,y) | center p] [angle a]`, or
+    /// `pattern rectangular a count n spacing s [dir (x,y)] [count2 m spacing2 t [dir2 (x,y)]]`.
+    /// Counts include the original.
+    Pattern {
+        refs: Vec<Ref>,
+        circular: bool,
+        count: String,
+        /// Coordinates make a free centre point; name a fixed point to hold the pattern still.
+        center: Option<Pt>,
+        angle: Option<String>,
+        spacing: Option<String>,
+        dir: Option<[Comp; 2]>,
+        count2: Option<String>,
+        spacing2: Option<String>,
+        dir2: Option<[Comp; 2]>,
+    },
+    /// `svg "file.svg" [at (x,y)] [scale s]` or `dxf "file.dxf" …`: curves drawn by another tool,
+    /// read relative to the design file when it is built.
+    Import {
+        format: String,
+        path: String,
+        at: Option<[Comp; 2]>,
+        scale: Option<String>,
+    },
+    /// `project face|edge|vertex (x,y,z) [body B]` or `project body B` (its silhouette): body
+    /// geometry projected onto the sketch plane, as sketch curves (linked: they follow the body).
+    Project {
+        what: String,
+        point: Option<Vec<Comp>>,
+        body: Option<String>,
+    },
+    /// `engine sketch.command {json}` inside a sketch: any sketch command, passed through.
+    Engine {
+        command: String,
+        params: String,
+    },
     /// `dim [type] a [-> b] = expr`
     Dim {
         kind: Option<String>,
@@ -161,6 +251,13 @@ pub enum SketchKind {
     Fillet {
         point: Ref,
         radius: String,
+    },
+    /// `chamfer corner distance d [distance2 d2 | angle a]`: a corner of two lines cut by a line.
+    Chamfer {
+        point: Ref,
+        distance: String,
+        distance2: Option<String>,
+        angle: Option<String>,
     },
     /// `fix a b …` (points or curves)
     Fix {
@@ -180,6 +277,8 @@ pub enum Val {
     /// A sketch entity reference, `Sketch.a` or `a`.
     Ref(Ref),
     Flag,
+    /// Verbatim JSON (an `engine` statement's parameters), untouched by expression passes.
+    Raw(String),
 }
 
 #[derive(Debug, Clone)]
@@ -208,6 +307,53 @@ pub struct Design {
     pub connectors: Vec<Connector>,
     pub grounds: Vec<(String, usize)>,
     pub joints: Vec<Joint>,
+    pub checks: Vec<Check>,
+    /// `print A, B up X`: how bodies lie on the print bed.
+    pub prints: Vec<Print>,
+    /// `print bed (w, d)`
+    pub print_bed: Option<(Vec<Comp>, usize)>,
+}
+
+/// `use Alias from "part.sc" [with (p = expr, …)] [rotate X|Y|Z|(x,y,z) <angle>] [at (x,y,z)]
+/// [join targets A | -> body Name]`: another design's geometry, expanded into this one.
+#[derive(Debug, Clone)]
+pub struct Use {
+    pub alias: String,
+    pub file: String,
+    pub overrides: Vec<(String, String)>,
+    pub rotate: Option<(Vec<Comp>, String)>,
+    pub at: Option<Vec<Comp>>,
+    pub join: Option<Vec<String>>,
+    pub body: Option<String>,
+}
+
+/// `print A, B up <direction>`: these bodies print together, `up` (in design coordinates)
+/// pointing away from the bed.
+#[derive(Debug, Clone)]
+pub struct Print {
+    pub bodies: Vec<String>,
+    pub up: Vec<Comp>,
+    pub line: usize,
+}
+
+/// `check Body quantity [Other] op value [unit] [up axis]`: a property of a built body that
+/// `evaluate` verifies, e.g. `check Cap clearance Bottle >= 0.2 mm`.
+#[derive(Debug, Clone)]
+pub struct Check {
+    pub body: String,
+    /// shells, volume, area, mass, size.x|y|z, clearance or overhang
+    pub quantity: String,
+    /// The second body of a clearance check.
+    pub other: Option<String>,
+    pub op: String,
+    pub value: String,
+    /// A unit the expression language has no word for: mm2, mm3, cm3, g or kg.
+    pub unit: Option<String>,
+    /// The print direction of an overhang check; empty for the body's `print` direction, or Z.
+    pub up: Vec<Comp>,
+    /// The longest bridge an overhang check accepts.
+    pub bridge: Option<String>,
+    pub line: usize,
 }
 
 #[derive(Debug, Clone)]
@@ -215,6 +361,9 @@ pub struct Component {
     pub name: String,
     pub design: Design,
     pub line: usize,
+    /// `component Name from "part.sc"`: the part file whose design this component links to,
+    /// as written (relative to the file that names it). Its block holds connectors only.
+    pub source: Option<String>,
 }
 
 #[derive(Debug, Clone)]

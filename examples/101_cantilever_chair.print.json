@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "defaults": false,
+  "requests": [
+    { "id": "glides-3mf", "kind": "export", "format": "3mf", "layout": "glides" },
+    { "id": "glides-stl", "kind": "export", "format": "stl", "layout": "glides" },
+    { "id": "glides-glb", "kind": "export", "format": "glb", "layout": "glides" },
+    { "id": "glides-check", "kind": "commands", "layout": "glides",
+      "commands": [ { "command": "inspect.measure", "params": {} } ] },
+    { "id": "glides-view", "kind": "snapshot", "layout": "glides", "options": { "view": "iso" } }
+  ],
+  "layouts": {
+    "glides": {
+      "bed": [256, 256],
+      "parts": [
+        { "id": "Glide0", "select": { "bodies": ["Glide0"] } },
+        { "id": "Glide1", "select": { "bodies": ["Glide1"] } },
+        { "id": "Glide2", "select": { "bodies": ["Glide2"] } },
+        { "id": "Glide3", "select": { "bodies": ["Glide3"] } }
+      ]
+    }
+  }
+}

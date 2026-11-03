@@ -1,0 +1,207 @@
+{
+  "version": 1,
+  "defaults": false,
+  "requests": [
+    {
+      "id": "base-3mf",
+      "kind": "export",
+      "format": "3mf",
+      "layout": "base"
+    },
+    {
+      "id": "base-stl",
+      "kind": "export",
+      "format": "stl",
+      "layout": "base"
+    },
+    {
+      "id": "base-check",
+      "kind": "commands",
+      "layout": "base",
+      "commands": [
+        {
+          "command": "inspect.interference",
+          "params": {}
+        },
+        {
+          "command": "inspect.measure",
+          "params": {}
+        }
+      ]
+    },
+    {
+      "id": "parts-3mf",
+      "kind": "export",
+      "format": "3mf",
+      "layout": "parts"
+    },
+    {
+      "id": "parts-stl",
+      "kind": "export",
+      "format": "stl",
+      "layout": "parts"
+    },
+    {
+      "id": "parts-check",
+      "kind": "commands",
+      "layout": "parts",
+      "commands": [
+        {
+          "command": "inspect.interference",
+          "params": {}
+        },
+        {
+          "command": "inspect.measure",
+          "params": {}
+        }
+      ]
+    },
+    {
+      "id": "preview-glb",
+      "kind": "export",
+      "format": "glb",
+      "layout": "parts"
+    },
+    {
+      "id": "plate-view",
+      "kind": "snapshot",
+      "layout": "parts",
+      "options": {
+        "view": "iso"
+      }
+    }
+  ],
+  "layouts": {
+    "base": {
+      "bed": [
+        256,
+        256
+      ],
+      "parts": [
+        {
+          "id": "base",
+          "select": {
+            "bodies": [
+              "Base"
+            ]
+          }
+        }
+      ]
+    },
+    "parts": {
+      "bed": [
+        256,
+        256
+      ],
+      "spacing": "6 mm",
+      "parts": [
+        {
+          "id": "jaw",
+          "select": {
+            "bodies": [
+              "MovingJaw"
+            ]
+          }
+        },
+        {
+          "id": "screw",
+          "select": {
+            "bodies": [
+              "Screw"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                0,
+                1,
+                0
+              ],
+              "angle": "90 deg"
+            }
+          ]
+        },
+        {
+          "id": "nut",
+          "select": {
+            "bodies": [
+              "Nut"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                0,
+                1,
+                0
+              ],
+              "angle": "90 deg"
+            }
+          ]
+        },
+        {
+          "id": "fixed-pad",
+          "select": {
+            "bodies": [
+              "FixedPad"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                0,
+                1,
+                0
+              ],
+              "angle": "-90 deg"
+            }
+          ]
+        },
+        {
+          "id": "moving-pad",
+          "select": {
+            "bodies": [
+              "MovingPad"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                0,
+                1,
+                0
+              ],
+              "angle": "90 deg"
+            }
+          ]
+        },
+        {
+          "id": "handle",
+          "select": {
+            "bodies": [
+              "Handle"
+            ]
+          }
+        },
+        {
+          "id": "handle-cap",
+          "select": {
+            "bodies": [
+              "HandleCap"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                1,
+                0,
+                0
+              ],
+              "angle": "-90 deg"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

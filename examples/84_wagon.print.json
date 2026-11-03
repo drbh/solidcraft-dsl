@@ -1,0 +1,71 @@
+{
+  "version": 1,
+  "defaults": false,
+  "requests": [
+    { "id": "bed-3mf", "kind": "export", "format": "3mf", "layout": "bed" },
+    { "id": "bed-stl", "kind": "export", "format": "stl", "layout": "bed" },
+    { "id": "gear-3mf", "kind": "export", "format": "3mf", "layout": "gear" },
+    { "id": "gear-stl", "kind": "export", "format": "stl", "layout": "gear" },
+    { "id": "tyres-3mf", "kind": "export", "format": "3mf", "layout": "tyres" },
+    { "id": "tyres-stl", "kind": "export", "format": "stl", "layout": "tyres" },
+    { "id": "preview-glb", "kind": "export", "format": "glb", "layout": "assembled" },
+    { "id": "gear-check", "kind": "commands", "layout": "gear",
+      "commands": [ { "command": "inspect.measure", "params": {} } ] },
+    { "id": "gear-view", "kind": "snapshot", "layout": "gear", "options": { "view": "iso" } },
+    { "id": "assembled-view", "kind": "snapshot", "layout": "assembled", "options": { "view": "iso" } }
+  ],
+  "layouts": {
+    "bed": {
+      "bed": [256, 256],
+      "parts": [ { "id": "Bed", "select": { "bodies": ["Bed"] } } ]
+    },
+    "gear": {
+      "bed": [256, 256],
+      "parts": [
+        { "id": "Handle", "select": { "bodies": ["Handle"] },
+          "rotate": [ { "axis": [0, 0, 1], "angle": "-steer" }, { "axis": [0, 1, 0], "angle": "handle_angle" },
+                      { "axis": [1, 0, 0], "angle": "90 deg" } ] },
+        { "id": "RearBolster", "select": { "bodies": ["RearBolster"] },
+          "rotate": [ { "axis": [0, 1, 0], "angle": "-90 deg" } ] },
+        { "id": "FrontBolster", "select": { "bodies": ["FrontBolster"] },
+          "rotate": [ { "axis": [0, 0, 1], "angle": "-steer" }, { "axis": [0, 1, 0], "angle": "-90 deg" } ] },
+        { "id": "Wheel0", "select": { "bodies": ["Wheel0"] },
+          "rotate": [ { "axis": [0, 0, 1], "angle": "-steer" }, { "axis": [1, 0, 0], "angle": "90 deg" } ] },
+        { "id": "Wheel1", "select": { "bodies": ["Wheel1"] },
+          "rotate": [ { "axis": [0, 0, 1], "angle": "-steer" }, { "axis": [1, 0, 0], "angle": "90 deg" } ] },
+        { "id": "Wheel2", "select": { "bodies": ["Wheel2"] },
+          "rotate": [ { "axis": [1, 0, 0], "angle": "90 deg" } ] },
+        { "id": "Wheel3", "select": { "bodies": ["Wheel3"] },
+          "rotate": [ { "axis": [1, 0, 0], "angle": "90 deg" } ] },
+        { "id": "Washer", "select": { "bodies": ["Washer"] } },
+        { "id": "Cap0", "select": { "bodies": ["Cap0"] },
+          "rotate": [ { "axis": [0, 0, 1], "angle": "-steer" }, { "axis": [1, 0, 0], "angle": "90 deg" } ] },
+        { "id": "Cap1", "select": { "bodies": ["Cap1"] },
+          "rotate": [ { "axis": [0, 0, 1], "angle": "-steer" }, { "axis": [1, 0, 0], "angle": "-90 deg" } ] },
+        { "id": "Cap2", "select": { "bodies": ["Cap2"] },
+          "rotate": [ { "axis": [1, 0, 0], "angle": "90 deg" } ] },
+        { "id": "Cap3", "select": { "bodies": ["Cap3"] },
+          "rotate": [ { "axis": [1, 0, 0], "angle": "-90 deg" } ] }
+      ]
+    },
+    "tyres": {
+      "bed": [256, 256],
+      "parts": [
+        { "id": "Tyre0", "select": { "bodies": ["Tyre0"] },
+          "rotate": [ { "axis": [0, 0, 1], "angle": "-steer" }, { "axis": [1, 0, 0], "angle": "90 deg" } ] },
+        { "id": "Tyre1", "select": { "bodies": ["Tyre1"] },
+          "rotate": [ { "axis": [0, 0, 1], "angle": "-steer" }, { "axis": [1, 0, 0], "angle": "90 deg" } ] },
+        { "id": "Tyre2", "select": { "bodies": ["Tyre2"] },
+          "rotate": [ { "axis": [1, 0, 0], "angle": "90 deg" } ] },
+        { "id": "Tyre3", "select": { "bodies": ["Tyre3"] },
+          "rotate": [ { "axis": [1, 0, 0], "angle": "90 deg" } ] }
+      ]
+    },
+    "assembled": {
+      "parts": [
+        { "id": "Wagon", "select": { "bodies": ["Bed", "RearBolster", "Washer", "FrontBolster", "Wheel0", "Tyre0", "Cap0", "Wheel1", "Tyre1", "Cap1", "Wheel2", "Tyre2", "Cap2", "Wheel3", "Tyre3", "Cap3", "FrontAxle", "RearAxle", "Handle"] },
+          "on_bed": false }
+      ]
+    }
+  }
+}

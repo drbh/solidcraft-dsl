@@ -1,0 +1,284 @@
+{
+  "version": 1,
+  "defaults": false,
+  "requests": [
+    {
+      "id": "deck-3mf",
+      "kind": "export",
+      "format": "3mf",
+      "layout": "deck"
+    },
+    {
+      "id": "deck-stl",
+      "kind": "export",
+      "format": "stl",
+      "layout": "deck"
+    },
+    {
+      "id": "deck-glb",
+      "kind": "export",
+      "format": "glb",
+      "layout": "deck"
+    },
+    {
+      "id": "deck-check",
+      "kind": "commands",
+      "layout": "deck",
+      "commands": [
+        {
+          "command": "inspect.measure",
+          "params": {}
+        }
+      ]
+    },
+    {
+      "id": "deck-view",
+      "kind": "snapshot",
+      "layout": "deck",
+      "options": {
+        "view": "iso"
+      }
+    },
+    {
+      "id": "trucks-3mf",
+      "kind": "export",
+      "format": "3mf",
+      "layout": "trucks"
+    },
+    {
+      "id": "trucks-stl",
+      "kind": "export",
+      "format": "stl",
+      "layout": "trucks"
+    },
+    {
+      "id": "trucks-glb",
+      "kind": "export",
+      "format": "glb",
+      "layout": "trucks"
+    },
+    {
+      "id": "trucks-check",
+      "kind": "commands",
+      "layout": "trucks",
+      "commands": [
+        {
+          "command": "inspect.measure",
+          "params": {}
+        }
+      ]
+    },
+    {
+      "id": "trucks-view",
+      "kind": "snapshot",
+      "layout": "trucks",
+      "options": {
+        "view": "iso"
+      }
+    },
+    {
+      "id": "fit-check",
+      "kind": "commands",
+      "commands": [
+        {
+          "command": "inspect.interference",
+          "params": {}
+        }
+      ]
+    }
+  ],
+  "layouts": {
+    "deck": {
+      "bed": [
+        256,
+        256
+      ],
+      "spacing": "6 mm",
+      "parts": [
+        {
+          "id": "deck",
+          "select": {
+            "bodies": [
+              "Deck"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                1,
+                0,
+                0
+              ],
+              "angle": "90 deg"
+            }
+          ]
+        }
+      ]
+    },
+    "trucks": {
+      "bed": [
+        256,
+        256
+      ],
+      "spacing": "4 mm",
+      "parts": [
+        {
+          "id": "baseplate",
+          "select": {
+            "bodies": [
+              "Baseplate"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                1,
+                0,
+                0
+              ],
+              "angle": "180 deg"
+            }
+          ]
+        },
+        {
+          "id": "hanger",
+          "select": {
+            "bodies": [
+              "Hanger"
+            ]
+          }
+        },
+        {
+          "id": "bush-top",
+          "select": {
+            "bodies": [
+              "BushTop"
+            ]
+          }
+        },
+        {
+          "id": "bush-bot",
+          "select": {
+            "bodies": [
+              "BushBot"
+            ]
+          }
+        },
+        {
+          "id": "wheel-l",
+          "select": {
+            "bodies": [
+              "WheelL"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                1,
+                0,
+                0
+              ],
+              "angle": "90 deg"
+            }
+          ]
+        },
+        {
+          "id": "wheel-r",
+          "select": {
+            "bodies": [
+              "WheelR"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                1,
+                0,
+                0
+              ],
+              "angle": "90 deg"
+            }
+          ]
+        },
+        {
+          "id": "baseplate-rear",
+          "select": {
+            "bodies": [
+              "Baseplate (2)"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                1,
+                0,
+                0
+              ],
+              "angle": "180 deg"
+            }
+          ]
+        },
+        {
+          "id": "hanger-rear",
+          "select": {
+            "bodies": [
+              "Hanger (2)"
+            ]
+          }
+        },
+        {
+          "id": "bush-top-rear",
+          "select": {
+            "bodies": [
+              "BushTop (2)"
+            ]
+          }
+        },
+        {
+          "id": "bush-bot-rear",
+          "select": {
+            "bodies": [
+              "BushBot (2)"
+            ]
+          }
+        },
+        {
+          "id": "wheel-l-rear",
+          "select": {
+            "bodies": [
+              "WheelL (2)"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                1,
+                0,
+                0
+              ],
+              "angle": "90 deg"
+            }
+          ]
+        },
+        {
+          "id": "wheel-r-rear",
+          "select": {
+            "bodies": [
+              "WheelR (2)"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                1,
+                0,
+                0
+              ],
+              "angle": "90 deg"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

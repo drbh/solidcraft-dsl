@@ -1,0 +1,166 @@
+{
+  "version": 1,
+  "defaults": false,
+  "requests": [
+    {
+      "id": "plate-3mf",
+      "kind": "export",
+      "format": "3mf",
+      "layout": "plate"
+    },
+    {
+      "id": "plate-stl",
+      "kind": "export",
+      "format": "stl",
+      "layout": "plate"
+    },
+    {
+      "id": "plate-glb",
+      "kind": "export",
+      "format": "glb",
+      "layout": "plate"
+    },
+    {
+      "id": "plate-check",
+      "kind": "commands",
+      "layout": "plate",
+      "commands": [
+        {
+          "command": "inspect.measure",
+          "params": {}
+        }
+      ]
+    },
+    {
+      "id": "plate-view",
+      "kind": "snapshot",
+      "layout": "plate",
+      "options": {
+        "view": "iso"
+      }
+    }
+  ],
+  "layouts": {
+    "plate": {
+      "bed": [
+        256,
+        256
+      ],
+      "spacing": "4 mm",
+      "parts": [
+        {
+          "id": "plate",
+          "select": {
+            "bodies": [
+              "Plate"
+            ]
+          }
+        },
+        {
+          "id": "bolt-m6",
+          "select": {
+            "bodies": [
+              "BoltM6"
+            ]
+          }
+        },
+        {
+          "id": "bolt-m8",
+          "select": {
+            "bodies": [
+              "BoltM8"
+            ]
+          }
+        },
+        {
+          "id": "bolt-m10",
+          "select": {
+            "bodies": [
+              "BoltM10"
+            ]
+          }
+        },
+        {
+          "id": "leaf-r1",
+          "select": {
+            "bodies": [
+              "Leaf1"
+            ]
+          }
+        },
+        {
+          "id": "leaf-r2",
+          "select": {
+            "bodies": [
+              "Leaf2"
+            ]
+          }
+        },
+        {
+          "id": "leaf-r3",
+          "select": {
+            "bodies": [
+              "Leaf3"
+            ]
+          }
+        },
+        {
+          "id": "leaf-r4",
+          "select": {
+            "bodies": [
+              "Leaf4"
+            ]
+          }
+        },
+        {
+          "id": "leaf-r5",
+          "select": {
+            "bodies": [
+              "Leaf5"
+            ]
+          }
+        },
+        {
+          "id": "leaf-r6",
+          "select": {
+            "bodies": [
+              "Leaf6"
+            ]
+          }
+        },
+        {
+          "id": "leaf-r7",
+          "select": {
+            "bodies": [
+              "Leaf7"
+            ]
+          }
+        },
+        {
+          "id": "leaf-r8",
+          "select": {
+            "bodies": [
+              "Leaf8"
+            ]
+          }
+        },
+        {
+          "id": "leaf-r9",
+          "select": {
+            "bodies": [
+              "Leaf9"
+            ]
+          }
+        },
+        {
+          "id": "leaf-r10",
+          "select": {
+            "bodies": [
+              "Leaf10"
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

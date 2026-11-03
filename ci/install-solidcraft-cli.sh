@@ -2,7 +2,7 @@
 # Install solidcraft-cli from a SolidCraft GitHub release into a directory.
 #
 #   ci/install-solidcraft-cli.sh latest  DIR     the newest release
-#   ci/install-solidcraft-cli.sh 0.19.0  DIR     that version
+#   ci/install-solidcraft-cli.sh 0.28.0  DIR     that version (the one flake.nix pins)
 #
 # Downloads are checked against the release's SHA256SUMS.txt. Needs curl, and unzip (macOS)
 # or tar (Linux). Prints the installed binary's path last.
@@ -17,7 +17,15 @@ need() { command -v "$1" >/dev/null 2>&1 || { echo "error: $1 is required" >&2; 
 need curl
 
 if [ "$VERSION" = latest ]; then
-  TAG="$(curl -fsSL "$API/latest" | sed -n 's/.*"tag_name": *"\([^"]*\)".*/\1/p' | head -1)"
+  # Unauthenticated API calls share a 60/hour limit per IP, which CI runners hit; send a token
+  # when there is one (GITHUB_TOKEN in Actions).
+  TOKEN="${GITHUB_TOKEN:-${GH_TOKEN:-}}"
+  if [ -n "$TOKEN" ]; then
+    RELEASE="$(curl -fsSL -H "Authorization: Bearer $TOKEN" "$API/latest")"
+  else
+    RELEASE="$(curl -fsSL "$API/latest")"
+  fi
+  TAG="$(printf '%s' "$RELEASE" | sed -n 's/.*"tag_name": *"\([^"]*\)".*/\1/p' | head -1)"
   [ -n "$TAG" ] || { echo "error: cannot find the latest release of $REPO" >&2; exit 1; }
 else
   TAG="v${VERSION#v}"

@@ -1,0 +1,800 @@
+{
+  "version": 1,
+  "defaults": false,
+  "requests": [
+    {
+      "id": "chassis-3mf",
+      "kind": "export",
+      "format": "3mf",
+      "layout": "chassis"
+    },
+    {
+      "id": "chassis-top",
+      "kind": "snapshot",
+      "layout": "chassis",
+      "options": {
+        "view": "top"
+      }
+    },
+    {
+      "id": "chassis-iso",
+      "kind": "snapshot",
+      "layout": "chassis",
+      "options": {
+        "view": "iso"
+      }
+    },
+    {
+      "id": "chassis-check",
+      "kind": "commands",
+      "layout": "chassis",
+      "commands": [
+        {
+          "command": "inspect.interference",
+          "params": {}
+        },
+        {
+          "command": "inspect.measure",
+          "params": {}
+        }
+      ]
+    },
+    {
+      "id": "wheels-3mf",
+      "kind": "export",
+      "format": "3mf",
+      "layout": "wheels"
+    },
+    {
+      "id": "wheels-top",
+      "kind": "snapshot",
+      "layout": "wheels",
+      "options": {
+        "view": "top"
+      }
+    },
+    {
+      "id": "wheels-iso",
+      "kind": "snapshot",
+      "layout": "wheels",
+      "options": {
+        "view": "iso"
+      }
+    },
+    {
+      "id": "wheels-check",
+      "kind": "commands",
+      "layout": "wheels",
+      "commands": [
+        {
+          "command": "inspect.interference",
+          "params": {}
+        },
+        {
+          "command": "inspect.measure",
+          "params": {}
+        }
+      ]
+    },
+    {
+      "id": "corners-3mf",
+      "kind": "export",
+      "format": "3mf",
+      "layout": "corners"
+    },
+    {
+      "id": "corners-top",
+      "kind": "snapshot",
+      "layout": "corners",
+      "options": {
+        "view": "top"
+      }
+    },
+    {
+      "id": "corners-iso",
+      "kind": "snapshot",
+      "layout": "corners",
+      "options": {
+        "view": "iso"
+      }
+    },
+    {
+      "id": "corners-check",
+      "kind": "commands",
+      "layout": "corners",
+      "commands": [
+        {
+          "command": "inspect.interference",
+          "params": {}
+        },
+        {
+          "command": "inspect.measure",
+          "params": {}
+        }
+      ]
+    },
+    {
+      "id": "drive-3mf",
+      "kind": "export",
+      "format": "3mf",
+      "layout": "drive"
+    },
+    {
+      "id": "drive-top",
+      "kind": "snapshot",
+      "layout": "drive",
+      "options": {
+        "view": "top"
+      }
+    },
+    {
+      "id": "drive-iso",
+      "kind": "snapshot",
+      "layout": "drive",
+      "options": {
+        "view": "iso"
+      }
+    },
+    {
+      "id": "drive-check",
+      "kind": "commands",
+      "layout": "drive",
+      "commands": [
+        {
+          "command": "inspect.interference",
+          "params": {}
+        },
+        {
+          "command": "inspect.measure",
+          "params": {}
+        }
+      ]
+    },
+    {
+      "id": "fit_test-3mf",
+      "kind": "export",
+      "format": "3mf",
+      "layout": "fit_test"
+    },
+    {
+      "id": "fit_test-top",
+      "kind": "snapshot",
+      "layout": "fit_test",
+      "options": {
+        "view": "top"
+      }
+    },
+    {
+      "id": "fit_test-iso",
+      "kind": "snapshot",
+      "layout": "fit_test",
+      "options": {
+        "view": "iso"
+      }
+    },
+    {
+      "id": "fit_test-check",
+      "kind": "commands",
+      "layout": "fit_test",
+      "commands": [
+        {
+          "command": "inspect.interference",
+          "params": {}
+        },
+        {
+          "command": "inspect.measure",
+          "params": {}
+        }
+      ]
+    }
+  ],
+  "layouts": {
+    "chassis": {
+      "bed": [
+        256,
+        256
+      ],
+      "spacing": "5 mm",
+      "parts": [
+        {
+          "id": "chassis",
+          "select": {
+            "bodies": [
+              "Chassis"
+            ]
+          }
+        }
+      ]
+    },
+    "wheels": {
+      "bed": [
+        256,
+        256
+      ],
+      "spacing": "6 mm",
+      "parts": [
+        {
+          "id": "wheel_fr",
+          "select": {
+            "bodies": [
+              "WheelFR"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                1,
+                0,
+                0
+              ],
+              "angle": "-90 deg"
+            }
+          ]
+        },
+        {
+          "id": "wheel_fl",
+          "select": {
+            "bodies": [
+              "WheelFL"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                1,
+                0,
+                0
+              ],
+              "angle": "90 deg"
+            }
+          ]
+        },
+        {
+          "id": "wheel_rr",
+          "select": {
+            "bodies": [
+              "WheelRR"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                1,
+                0,
+                0
+              ],
+              "angle": "-90 deg"
+            }
+          ]
+        },
+        {
+          "id": "wheel_rl",
+          "select": {
+            "bodies": [
+              "WheelRL"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                1,
+                0,
+                0
+              ],
+              "angle": "90 deg"
+            }
+          ]
+        }
+      ]
+    },
+    "corners": {
+      "bed": [
+        256,
+        256
+      ],
+      "spacing": "5 mm",
+      "parts": [
+        {
+          "id": "knuckle_fr",
+          "select": {
+            "bodies": [
+              "KnuckleFR"
+            ]
+          }
+        },
+        {
+          "id": "knuckle_fl",
+          "select": {
+            "bodies": [
+              "KnuckleFL"
+            ]
+          }
+        },
+        {
+          "id": "knuckle_rr",
+          "select": {
+            "bodies": [
+              "KnuckleRR"
+            ]
+          }
+        },
+        {
+          "id": "knuckle_rl",
+          "select": {
+            "bodies": [
+              "KnuckleRL"
+            ]
+          }
+        },
+        {
+          "id": "stub_fr",
+          "select": {
+            "bodies": [
+              "StubFR"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                1,
+                0,
+                0
+              ],
+              "angle": "90 deg"
+            }
+          ]
+        },
+        {
+          "id": "stub_fl",
+          "select": {
+            "bodies": [
+              "StubFL"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                1,
+                0,
+                0
+              ],
+              "angle": "-90 deg"
+            }
+          ]
+        },
+        {
+          "id": "stub_rr",
+          "select": {
+            "bodies": [
+              "StubRR"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                1,
+                0,
+                0
+              ],
+              "angle": "90 deg"
+            }
+          ]
+        },
+        {
+          "id": "stub_rl",
+          "select": {
+            "bodies": [
+              "StubRL"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                1,
+                0,
+                0
+              ],
+              "angle": "-90 deg"
+            }
+          ]
+        },
+        {
+          "id": "yokecap_fr",
+          "select": {
+            "bodies": [
+              "YokeCapFR"
+            ]
+          }
+        },
+        {
+          "id": "yokecap_fl",
+          "select": {
+            "bodies": [
+              "YokeCapFL"
+            ]
+          }
+        },
+        {
+          "id": "yokecap_rr",
+          "select": {
+            "bodies": [
+              "YokeCapRR"
+            ]
+          }
+        },
+        {
+          "id": "yokecap_rl",
+          "select": {
+            "bodies": [
+              "YokeCapRL"
+            ]
+          }
+        },
+        {
+          "id": "horn_f",
+          "select": {
+            "bodies": [
+              "HornF"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                0,
+                1,
+                0
+              ],
+              "angle": "-90 deg"
+            }
+          ]
+        },
+        {
+          "id": "horn_r",
+          "select": {
+            "bodies": [
+              "HornR"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                0,
+                1,
+                0
+              ],
+              "angle": "90 deg"
+            }
+          ]
+        }
+      ]
+    },
+    "drive": {
+      "bed": [
+        256,
+        256
+      ],
+      "spacing": "5 mm",
+      "parts": [
+        {
+          "id": "tierod_f",
+          "select": {
+            "bodies": [
+              "TieRodF"
+            ]
+          }
+        },
+        {
+          "id": "tierod_r",
+          "select": {
+            "bodies": [
+              "TieRodR"
+            ]
+          }
+        },
+        {
+          "id": "axle",
+          "select": {
+            "bodies": [
+              "Axle"
+            ]
+          }
+        },
+        {
+          "id": "gear",
+          "select": {
+            "bodies": [
+              "Gear"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                1,
+                0,
+                0
+              ],
+              "angle": "90 deg"
+            }
+          ]
+        },
+        {
+          "id": "idler",
+          "select": {
+            "bodies": [
+              "Idler"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                1,
+                0,
+                0
+              ],
+              "angle": "90 deg"
+            }
+          ]
+        },
+        {
+          "id": "pinion",
+          "select": {
+            "bodies": [
+              "Pinion"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                1,
+                0,
+                0
+              ],
+              "angle": "90 deg"
+            }
+          ]
+        },
+        {
+          "id": "axlecup_r",
+          "select": {
+            "bodies": [
+              "AxleCupR"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                1,
+                0,
+                0
+              ],
+              "angle": "-90 deg"
+            }
+          ]
+        },
+        {
+          "id": "axlecup_l",
+          "select": {
+            "bodies": [
+              "AxleCupL"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                1,
+                0,
+                0
+              ],
+              "angle": "90 deg"
+            }
+          ]
+        },
+        {
+          "id": "bone_r",
+          "select": {
+            "bodies": [
+              "BoneR"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                1,
+                0,
+                0
+              ],
+              "angle": "90 deg"
+            }
+          ]
+        },
+        {
+          "id": "bone_l",
+          "select": {
+            "bodies": [
+              "BoneL"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                1,
+                0,
+                0
+              ],
+              "angle": "90 deg"
+            }
+          ]
+        }
+      ]
+    },
+    "fit_test": {
+      "bed": [
+        256,
+        256
+      ],
+      "spacing": "5 mm",
+      "parts": [
+        {
+          "id": "wall",
+          "select": {
+            "bodies": [
+              "FitTestWall"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                1,
+                0,
+                0
+              ],
+              "angle": "90 deg"
+            }
+          ]
+        },
+        {
+          "id": "hub",
+          "select": {
+            "bodies": [
+              "FitTestHub"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                1,
+                0,
+                0
+              ],
+              "angle": "-90 deg"
+            }
+          ]
+        },
+        {
+          "id": "knuckle",
+          "select": {
+            "bodies": [
+              "KnuckleFR"
+            ]
+          }
+        },
+        {
+          "id": "stub",
+          "select": {
+            "bodies": [
+              "StubFR"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                1,
+                0,
+                0
+              ],
+              "angle": "90 deg"
+            }
+          ]
+        },
+        {
+          "id": "axlecup",
+          "select": {
+            "bodies": [
+              "AxleCupR"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                1,
+                0,
+                0
+              ],
+              "angle": "-90 deg"
+            }
+          ]
+        },
+        {
+          "id": "bone",
+          "select": {
+            "bodies": [
+              "BoneR"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                1,
+                0,
+                0
+              ],
+              "angle": "90 deg"
+            }
+          ]
+        },
+        {
+          "id": "gear",
+          "select": {
+            "bodies": [
+              "Gear"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                1,
+                0,
+                0
+              ],
+              "angle": "90 deg"
+            }
+          ]
+        },
+        {
+          "id": "idler",
+          "select": {
+            "bodies": [
+              "Idler"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                1,
+                0,
+                0
+              ],
+              "angle": "90 deg"
+            }
+          ]
+        },
+        {
+          "id": "pinion",
+          "select": {
+            "bodies": [
+              "Pinion"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                1,
+                0,
+                0
+              ],
+              "angle": "90 deg"
+            }
+          ]
+        },
+        {
+          "id": "axle",
+          "select": {
+            "bodies": [
+              "Axle"
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

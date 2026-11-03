@@ -13,6 +13,7 @@ pub mod artifacts;
 pub mod assembly;
 pub mod ast;
 pub mod check;
+pub mod checks;
 pub mod compile;
 pub mod control;
 pub mod decompile;
@@ -21,8 +22,10 @@ pub mod expressions;
 mod glb;
 pub mod layout;
 pub mod lex;
+pub mod link;
 pub mod native;
 pub mod parse;
+pub mod reuse;
 pub mod units;
 pub mod watch;
 
@@ -35,14 +38,53 @@ pub fn decompile(design: &serde_json::Value) -> Result<String, String> {
 }
 pub use parse::parse;
 
+/// Build the design in the file at `path` (whose text is `src`): like `build`, after expanding
+/// the parts it `use`s, with lines and errors mapped back to the original files.
+pub fn build_file(src: &str, path: &std::path::Path) -> Result<Compiled, String> {
+    build_at(src, Some(path))
+}
+
+fn build_at(src: &str, path: Option<&std::path::Path>) -> Result<Compiled, String> {
+    let starts = |w: &str| src.lines().any(|l| l.trim_start().starts_with(w));
+    // `use` needs the file's location; without it, parsing explains. `for` needs none.
+    if native::is_source(src) || !(starts("for ") || starts("if ") || (path.is_some() && starts("use "))) {
+        return build_plain(src);
+    }
+    let x = reuse::expand(src, path.unwrap_or(std::path::Path::new("design.sc")))?;
+    let mut c = build_plain(&x.text).map_err(|e| x.error(e))?;
+    let line = |n: usize| x.origin.get(n.wrapping_sub(1)).map(reuse::Origin::line).unwrap_or(n);
+    for n in c.lines.iter_mut() {
+        *n = line(*n);
+    }
+    for n in c.dims.iter_mut().flatten() {
+        *n = line(*n);
+    }
+    for k in c.checks.iter_mut() {
+        k.line = line(k.line);
+    }
+    for site in c.expressions["sites"].as_array_mut().into_iter().flatten() {
+        if let Some(n) = site["line"].as_u64() {
+            site["line"] = serde_json::json!(line(n as usize));
+        }
+    }
+    Ok(c)
+}
+
 /// Parse, check and compile a `.sc` source.
 pub fn build(src: &str) -> Result<Compiled, String> {
+    build_at(src, None)
+}
+
+fn build_plain(src: &str) -> Result<Compiled, String> {
     if native::is_source(src) {
         return native::Native::from_source(src).map(native::Native::compiled);
     }
     let d = parse(src)?;
     check(&d)?;
-    compile(&d)
+    let mut c = compile(&d)?;
+    c.checks = checks::lower(&d)?;
+    c.print_layout = checks::print_layout(&d)?;
+    Ok(c)
 }
 
 #[cfg(test)]
@@ -62,7 +104,8 @@ mod tests {
         for name in std::fs::read_dir(concat!(env!("CARGO_MANIFEST_DIR"), "/examples")).unwrap().flatten() {
             let n = name.file_name();
             let n = n.to_string_lossy();
-            if n.ends_with(".print.json") || n.ends_with(".checks.json") {
+            // Directories hold an example's companion code (firmware, simulation).
+            if name.path().is_dir() || n.ends_with(".print.json") || n.ends_with(".checks.json") || n.ends_with(".scad") {
                 continue;
             }
             assert!(n.ends_with(&format!(".{FILE_EXTENSION}")), "examples/{n} does not end in .{FILE_EXTENSION}");

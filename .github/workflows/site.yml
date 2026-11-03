@@ -1,0 +1,81 @@
+name: Site
+
+# Builds the examples gallery and the playground and deploys them to Cloudflare Pages
+# (solidcraft-dsl.dholtz.com). Needs the repository secrets CLOUDFLARE_API_TOKEN (a token with
+# Cloudflare Pages: Edit) and CLOUDFLARE_ACCOUNT_ID.
+#
+# A cold build evaluates every example (the heavy ones take minutes each); the models,
+# thumbnails, playground timings and both cargo targets are cached by content, so later runs
+# only rebuild what changed.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "examples/**"
+      - "site/**"
+      - "src/**"
+      - "crates/**"
+      - "ci/examples-site.py"
+      - "ci/examples-glb.py"
+      - "ci/playground-engine.py"
+      - "Cargo.lock"
+      - "flake.nix"
+      - ".github/workflows/site.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: site
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 300
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-wasip1
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: |
+            . -> target
+            build/solidcraft-src -> target
+          cache-directories: build/solidcraft-src/target
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: site/package-lock.json
+
+      - name: Install the pinned solidcraft-cli
+        run: |
+          version=$(sed -n 's/.*version = "\([0-9.]*\)".*/\1/p' flake.nix | head -1)
+          cli=$(ci/install-solidcraft-cli.sh "$version" "$RUNNER_TEMP/solidcraft" | tail -1)
+          echo "SOLIDCRAFT_CLI=$cli" >> "$GITHUB_ENV"
+
+      - name: Build the compiler
+        run: cargo build --locked
+
+      - uses: actions/cache@v4
+        with:
+          path: |
+            build/all-examples
+            build/playground
+          key: site-${{ hashFiles('examples/**', 'src/**', 'crates/**', 'Cargo.lock', 'flake.nix', 'site/playground/**') }}
+          restore-keys: site-
+
+      - name: Build the gallery and the playground
+        run: python3 ci/examples-site.py --playground --site build/site -j 4 --bin target/debug/solidcraft-dsl
+
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy build/site --project-name=solidcraft-dsl --branch=main

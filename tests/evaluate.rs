@@ -136,6 +136,49 @@ fn engine_failure_maps_back_to_source_and_cli_exits_nonzero() {
 }
 
 #[test]
+fn design_checks_catch_split_bodies_overhangs_and_tight_clearances() {
+    let Some(cli) = cli() else { return };
+    let w = Workspace::new();
+    let source = "design Checks units mm\n\
+        box Base size 20 20 10 corner (0,0,0) -> body Part\n\
+        box Stray size 5 5 5 corner (40,0,0) join targets Part\n\
+        box Post size 10 10 30 corner (0,40,0) -> body Shelf\n\
+        box Arm size 20 10 3 corner (10,40,27) join targets Shelf\n\
+        box Wall size 40 4 30 corner (0,70,0) -> body Window\n\
+        box Cut size 8 6 8 corner (16,69,10) cut targets Window\n\
+        check Shelf clearance Window >= 20 mm\n\
+        check Shelf clearance Window >= 30 mm\n\
+        check Shelf overhang <= 45 deg\n\
+        check Window overhang <= 45 deg\n\
+        check Window overhang <= 45 deg bridge 5 mm\n\
+        check Shelf volume == 3600 mm3\n";
+    let report = evaluate(&w.options(source, &cli)).unwrap();
+    let checks: Vec<(&str, bool)> =
+        report["design_checks"].as_array().unwrap().iter().map(|c| (c["statement"].as_str().unwrap(), c["passed"].as_bool().unwrap())).collect();
+    assert_eq!(
+        checks,
+        [
+            ("check Shelf clearance Window >= 20 mm", true),
+            ("check Shelf clearance Window >= 30 mm", false),
+            ("check Shelf overhang <= 45 deg up (0, 0, 1)", false),
+            ("check Window overhang <= 45 deg up (0, 0, 1)", true),
+            ("check Window overhang <= 45 deg up (0, 0, 1) bridge 5 mm", false),
+            ("check Shelf volume == 3600 mm3", true),
+            ("check Part shells == 1", false),
+            ("check Shelf shells == 1", true),
+            ("check Window shells == 1", true),
+        ],
+        "{report}"
+    );
+    assert_eq!(report["ok"], false);
+    let lines: Vec<&Value> = report["diagnostics"].as_array().unwrap().iter().filter(|d| d["stage"] == "check").map(|d| &d["line"]).collect();
+    // The split body is reported where it is created.
+    assert_eq!(lines, [&json!(9), &json!(10), &json!(12), &json!(2)], "{report}");
+    assert_eq!(report["design_checks"][2]["regions"][0]["kind"], "overhang");
+    assert_eq!(report["design_checks"][4]["regions"][0]["span_mm"], 8.0);
+}
+
+#[test]
 fn review_images_and_underconstrained_sketch_warning() {
     let Some(cli) = cli() else {
         eprintln!("no solidcraft-cli: skipped");

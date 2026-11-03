@@ -1,0 +1,161 @@
+{
+  "version": 1,
+  "defaults": false,
+  "requests": [
+    {
+      "id": "print-3mf",
+      "kind": "export",
+      "format": "3mf",
+      "layout": "plate"
+    },
+    {
+      "id": "print-stl",
+      "kind": "export",
+      "format": "stl",
+      "layout": "plate"
+    },
+    {
+      "id": "preview-glb",
+      "kind": "export",
+      "format": "glb",
+      "layout": "plate"
+    },
+    {
+      "id": "print-check",
+      "kind": "commands",
+      "layout": "plate",
+      "commands": [
+        {
+          "command": "inspect.measure",
+          "params": {}
+        }
+      ]
+    },
+    {
+      "id": "fit-check",
+      "kind": "commands",
+      "commands": [
+        {
+          "command": "inspect.interference",
+          "params": {}
+        }
+      ]
+    },
+    {
+      "id": "plate-view",
+      "kind": "snapshot",
+      "layout": "plate",
+      "options": {
+        "view": "iso"
+      }
+    }
+  ],
+  "layouts": {
+    "plate": {
+      "bed": [
+        256,
+        256
+      ],
+      "spacing": "6 mm",
+      "parts": [
+        {
+          "id": "Tray",
+          "select": {
+            "bodies": [
+              "Tray"
+            ]
+          }
+        },
+        {
+          "id": "Deck",
+          "select": {
+            "bodies": [
+              "Deck"
+            ]
+          }
+        },
+        {
+          "id": "LidBack",
+          "select": {
+            "bodies": [
+              "LidBack"
+            ]
+          }
+        },
+        {
+          "id": "Bezel",
+          "select": {
+            "bodies": [
+              "Bezel"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                1,
+                0,
+                0
+              ],
+              "angle": "180 deg"
+            }
+          ]
+        },
+        {
+          "id": "Fork",
+          "select": {
+            "bodies": [
+              "Fork"
+            ]
+          }
+        },
+        {
+          "id": "Keys",
+          "select": {
+            "bodies": [
+              "Key00",
+              "Key01",
+              "Key02",
+              "Key03",
+              "Key04",
+              "Key05",
+              "Key06",
+              "Key07",
+              "Key08",
+              "Key09",
+              "Key10",
+              "Key11",
+              "Key12",
+              "Key13",
+              "Key14",
+              "Key15",
+              "Key16",
+              "Key17",
+              "Key18",
+              "Key19",
+              "Key20",
+              "Key21",
+              "Key22",
+              "Key23",
+              "Key24",
+              "Key25",
+              "Key26",
+              "Key27",
+              "Key28",
+              "Key29",
+              "Key30",
+              "Key31",
+              "Key32",
+              "Key33",
+              "Key34",
+              "Key35",
+              "Key36",
+              "Key37",
+              "Key38",
+              "Key39"
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

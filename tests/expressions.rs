@@ -61,7 +61,7 @@ fn all_stress_examples_compile_and_fix_accepts_entity_lists() {
         if path.extension().is_none_or(|ext| ext != "sc") {
             continue;
         }
-        let result = build(&std::fs::read_to_string(&path).unwrap());
+        let result = solidcraft_dsl::build_file(&std::fs::read_to_string(&path).unwrap(), &path);
         assert!(result.is_ok(), "{}: {result:?}", path.display());
     }
 }

@@ -33,6 +33,8 @@ const LENGTH_KEYS: &[&str] = &[
     "thickness",
     "spacing",
     "spacing2",
+    "top_radius",
+    "top_diameter",
 ];
 /// Feature options that take an angle.
 const ANGLE_KEYS: &[&str] = &["angle", "taper"];
@@ -41,7 +43,31 @@ const COUNT_KEYS: &[(&str, f64)] = &[("count", 1.0), ("count2", 1.0), ("sides", 
 /// Options whose literal value must be positive.
 const POSITIVE_KEYS: &[&str] = &["diameter", "radius", "depth", "height", "width", "length", "major", "minor", "thickness", "spacing", "spacing2"];
 /// Features whose `body` option names the body they create (`-> body NAME`), not an existing one.
-const CREATORS: &[&str] = &["extrude", "revolve", "box", "cylinder", "sphere", "torus"];
+const CREATORS: &[&str] = &[
+    "extrude",
+    "revolve",
+    "box",
+    "cylinder",
+    "sphere",
+    "torus",
+    "loft",
+    "sweep",
+    "pipe",
+    "coil",
+    "cone",
+    "thicken",
+    "patch",
+    "engine",
+    "offset_surface",
+];
+
+/// Does `f` create the body its `body` option names? A flange does when it is a base flange
+/// (`from <sketch>`); edge flanges name the sheet they bend. A split names the piece it cuts off.
+fn creates_body(f: &Feature) -> bool {
+    CREATORS.contains(&f.kind.as_str())
+        || (f.kind == "flange" && f.opts.iter().any(|(k, _)| k == "from"))
+        || (f.kind == "split" && f.opts.iter().any(|(k, _)| k == "body"))
+}
 
 /// What a top-level name denotes, for error messages when the wrong kind is named.
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -56,6 +82,8 @@ struct Checker {
     params: HashMap<String, solidcraft_expr::Value>,
     names: HashMap<String, Named>,
     bodies: Vec<String>,
+    /// Construction planes defined so far, after the origin planes.
+    planes: Vec<String>,
 }
 
 impl Checker {
@@ -115,6 +143,12 @@ impl Checker {
                 SketchKind::Polygon { radius, .. } => len("`radius`", radius)?,
                 SketchKind::Slot { width, .. } => len("`width`", width)?,
                 SketchKind::Fillet { radius, .. } => len("`radius`", radius)?,
+                SketchKind::Chamfer { distance, distance2, .. } => {
+                    len("`distance`", distance)?;
+                    if let Some(d) = distance2 {
+                        len("`distance2`", d)?;
+                    }
+                }
                 SketchKind::Dim { kind, value, .. } => match kind.as_deref() {
                     Some("angle") => {
                         self.expect(line, "an angle dimension", value, &Class::Angle)?;
@@ -132,6 +166,14 @@ impl Checker {
             }
         }
         Ok(())
+    }
+
+    /// A name given where a plane is expected: an origin plane or a `plane` defined above.
+    fn plane_ref(&self, line: usize, key: &str, name: &str) -> R<()> {
+        if self.planes.iter().any(|p| p == name) {
+            return Ok(());
+        }
+        Err(err(line, format!("`{key}`: unknown plane `{name}`; planes so far: {}", self.planes.join(", "))))
     }
 
     /// A name given where a body is expected.
@@ -181,7 +223,7 @@ impl Checker {
                     } else if let Some((_, min)) = COUNT_KEYS.iter().find(|(c, _)| *c == key) {
                         self.expect(line, &format!("`{key}`"), e, &Class::Number)?;
                         Self::count(line, &format!("`{key}`"), e, *min)?;
-                    } else if key == "target" || (key == "body" && !CREATORS.contains(&f.kind.as_str())) {
+                    } else if key == "target" || (key == "body" && !creates_body(f)) {
                         self.body_ref(line, key, e)?;
                     }
                 }
@@ -232,11 +274,11 @@ impl Checker {
                         }
                     }
                 }
-                Val::Ref(_) | Val::Flag => {}
+                Val::Ref(_) | Val::Flag | Val::Raw(_) => {}
             }
         }
         // The body a creator names.
-        if CREATORS.contains(&f.kind.as_str())
+        if creates_body(f)
             && let Some((_, Val::Expr(b))) = f.opts.iter().find(|(k, _)| k == "body")
         {
             if self.bodies.iter().any(|x| x == b) {
@@ -277,19 +319,54 @@ pub fn check(d: &Design) -> R<()> {
 pub(crate) fn check_geometry(d: &Design) -> R<()> {
     let env = crate::expressions::Environment::new(d)?;
     crate::expressions::lower(d)?;
-    let mut c = Checker { params: env.values.into_iter().collect(), names: HashMap::new(), bodies: Vec::new() };
+    let mut c = Checker {
+        params: env.values.into_iter().collect(),
+        names: HashMap::new(),
+        bodies: Vec::new(),
+        planes: ["XY", "XZ", "YZ"].map(String::from).to_vec(),
+    };
     for p in &d.params {
         c.names.insert(p.name.clone(), Named::Param);
     }
     for item in &d.items {
         match item {
             Item::Sketch(s) => {
+                if let Plane::Named(n) = &s.plane {
+                    c.plane_ref(s.line, "on", n)?;
+                }
                 c.sketch(s)?;
                 c.names.insert(s.name.clone(), Named::Sketch);
             }
             Item::Feature(f) => {
+                for (k, v) in &f.opts {
+                    match (k.as_str(), v) {
+                        ("on" | "plane", Val::Expr(n)) => c.plane_ref(f.line, k, n)?,
+                        ("between", Val::List(ns)) => ns.iter().try_for_each(|n| c.plane_ref(f.line, k, n))?,
+                        _ => {}
+                    }
+                }
                 c.feature(f)?;
                 c.names.insert(f.name.clone(), Named::Feature);
+                // A plane, or a construction plane made by an `engine` statement, that sketches use.
+                let constructs_plane = f.kind == "engine"
+                    && f.opts.iter().any(|(k, v)| k == "command" && matches!(v, Val::Raw(id) if id.starts_with("construct.plane")));
+                if f.kind == "plane" || constructs_plane {
+                    c.planes.push(f.name.clone());
+                }
+            }
+        }
+    }
+    for k in &d.checks {
+        for body in std::iter::once(&k.body).chain(&k.other) {
+            c.body_ref(k.line, "check", body)?;
+        }
+    }
+    let mut printed = HashMap::new();
+    for p in &d.prints {
+        for body in &p.bodies {
+            c.body_ref(p.line, "print", body)?;
+            if let Some(first) = printed.insert(body.as_str(), p.line) {
+                return Err(err(p.line, format!("`{body}` already has a print orientation (line {first})")));
             }
         }
     }
@@ -362,6 +439,9 @@ mod tests {
         let e = fails("box A size 10 10 10 -> body Blk\nremove R bodies Blk, Other");
         assert!(e.contains("unknown body `Other`; bodies so far: Blk"), "{e}");
         ok("box A size 10 10 10 -> body Blk\ncylinder C radius 2 height 20 cut targets Blk\nremove R bodies Body2");
+        let e = fails("box A size 10 10 10 -> body Blk\ncheck Blok volume >= 5 mm3");
+        assert!(e.contains("line 2: `check`: unknown body `Blok`; bodies so far: Blk"), "{e}");
+        ok("box A size 10 10 10 -> body Blk\nbox B size 1 1 1 -> body Two\ncheck Blk clearance Two >= 1 mm");
         ok("box A size 10 10 10\nbox B size 5 5 5\ncombine J target Body1 tools Body2");
     }
 }

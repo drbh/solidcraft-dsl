@@ -28,6 +28,23 @@ const EXPR_KEYS: &[&str] = &[
     "sides",
     "distance2",
     "size",
+    "designation",
+    "turns",
+    "pitch",
+    "section_size",
+    "twist",
+    "scale",
+    "wall",
+    "k_factor",
+    "bend_radius",
+    "start_angle",
+    "fraction",
+    "factor",
+    "gap",
+    "margin",
+    "top_radius",
+    "top_diameter",
+    "crown",
 ];
 const TUPLE_KEYS: &[&str] = &[
     "profiles",
@@ -45,9 +62,34 @@ const TUPLE_KEYS: &[&str] = &[
     "position",
     "counterbore",
     "countersink",
+    "face",
+    "through",
+    "edge",
+    "pull",
+    "factors",
+    "bends",
+    "axis_face",
+    "axis_edge",
 ];
-const LIST_KEYS: &[&str] = &["targets", "features", "bodies", "tools", "points"];
-const IDENT_KEYS: &[&str] = &["from", "body", "axis", "plane", "target", "sketch", "type", "direction", "alignment", "alignment2"];
+const LIST_KEYS: &[&str] = &["targets", "features", "bodies", "tools", "points", "sections", "between", "curves"];
+const IDENT_KEYS: &[&str] = &[
+    "from",
+    "body",
+    "axis",
+    "plane",
+    "target",
+    "sketch",
+    "type",
+    "direction",
+    "alignment",
+    "alignment2",
+    "rule",
+    "section_position",
+    "on",
+    "neutral",
+    "of",
+    "continuity",
+];
 const FLAGS: &[&str] = &[
     "symmetric",
     "negative",
@@ -70,11 +112,59 @@ const FLAGS: &[&str] = &[
     "keep_tools",
     "flip",
     "chain",
+    "modeled",
+    "deboss",
+    "square",
+    "parallel",
+    "clockwise",
+    "left",
+    "internal",
+    "external",
+    "surface",
 ];
 
-const FEATURES: &[&str] = &[
-    "extrude", "revolve", "hole", "box", "cylinder", "sphere", "torus", "fillet", "chamfer", "shell", "mirror", "pattern", "combine", "move",
-    "remove", "sweep", "loft",
+pub const FEATURES: &[&str] = &[
+    "extrude",
+    "revolve",
+    "hole",
+    "box",
+    "cylinder",
+    "sphere",
+    "torus",
+    "fillet",
+    "chamfer",
+    "shell",
+    "mirror",
+    "pattern",
+    "combine",
+    "move",
+    "remove",
+    "sweep",
+    "loft",
+    "pipe",
+    "thread",
+    "coil",
+    "emboss",
+    "sheet_rule",
+    "flange",
+    "plane",
+    "split",
+    "rib",
+    "web",
+    "draft",
+    "offset_faces",
+    "scale",
+    "hem",
+    "path_flange",
+    "cone",
+    "perforate",
+    "thicken",
+    "convert",
+    "patch",
+    "stitch",
+    "press_pull",
+    "split_face",
+    "offset_surface",
 ];
 
 struct P<'a> {
@@ -273,6 +363,96 @@ fn tok_text(t: &Tok) -> String {
     }
 }
 
+/// One `use` line (see `ast::Use`); `reuse::expand` replaces it with the other design.
+pub fn parse_use(line: &Line) -> R<Use> {
+    let mut c = Cur::new(line);
+    if c.ident("`use`")? != "use" {
+        return Err(err(line.no, "expected `use`"));
+    }
+    let alias = c.ident("the name for the part's copy")?;
+    if !c.eat_ident("from") {
+        return Err(err(line.no, "expected `from \"part.sc\"`"));
+    }
+    let file = match c.next() {
+        Some(Tok::Str(s)) if !s.trim().is_empty() => s.clone(),
+        _ => return Err(err(line.no, "expected the part file in quotes: `from \"part.sc\"`")),
+    };
+    let mut u = Use { alias, file, overrides: vec![], rotate: None, at: None, join: None, body: None };
+    while !c.done() {
+        if c.peek() == Some(&Tok::Arrow) {
+            c.i += 1;
+            if !c.eat_ident("body") {
+                return Err(err(line.no, "expected `-> body <name>`"));
+            }
+            u.body = Some(c.ident("the body name")?);
+            continue;
+        }
+        match c.ident("a use option: with, rotate, at, join or -> body")?.as_str() {
+            "with" => {
+                c.expect_punct('(')?;
+                loop {
+                    let name = c.ident("a parameter of the part")?;
+                    c.expect_punct('=')?;
+                    // Up to the next top-level `,` or the closing `)`.
+                    let mut depth = 0;
+                    let mut text = String::new();
+                    loop {
+                        match c.next() {
+                            Some(Tok::Punct('(')) => {
+                                depth += 1;
+                                text.push('(');
+                            }
+                            Some(Tok::Punct(')')) if depth > 0 => {
+                                depth -= 1;
+                                text.push(')');
+                            }
+                            Some(Tok::Punct(')' | ',')) => {
+                                c.i -= 1;
+                                break;
+                            }
+                            Some(t) => {
+                                if !text.is_empty() && !text.ends_with('(') {
+                                    text.push(' ');
+                                }
+                                text.push_str(&tok_text(t));
+                            }
+                            None => return Err(err(line.no, "unterminated `with (…)`")),
+                        }
+                    }
+                    if text.is_empty() {
+                        return Err(err(line.no, format!("`{name} =` needs a value")));
+                    }
+                    u.overrides.push((name, text));
+                    if c.eat_punct(')') {
+                        break;
+                    }
+                    c.expect_punct(',')?;
+                }
+            }
+            "rotate" => {
+                let axis = parse_axis(&mut c)?;
+                u.rotate = Some((axis, c.expr1("the rotation angle")?));
+            }
+            "at" => u.at = Some(c.tuple()?),
+            "join" => {
+                if !c.eat_ident("targets") {
+                    return Err(err(line.no, "expected `join targets <body>`"));
+                }
+                let mut targets = vec![c.ident("a body")?];
+                while c.eat_punct(',') {
+                    targets.push(c.ident("a body")?);
+                }
+                u.join = Some(targets);
+            }
+            other => return Err(err(line.no, format!("unknown use option `{other}`"))),
+        }
+    }
+    if u.join.is_some() && u.body.is_some() {
+        return Err(err(line.no, "a used part either joins a body or is named with `-> body`, not both"));
+    }
+    Ok(u)
+}
+
 pub fn parse(src: &str) -> R<Design> {
     let lines = lex(src)?;
     let mut p = P { lines: &lines, i: 0 };
@@ -298,10 +478,21 @@ fn parse_design(p: &mut P, open: Option<usize>) -> R<Design> {
                     return Err(err(l.no, "define components at the top level; nest them with instances"));
                 }
                 let name = c.ident("the component name")?;
+                let source = if c.eat_ident("from") {
+                    match c.next() {
+                        Some(Tok::Str(s)) if !s.trim().is_empty() => Some(s.clone()),
+                        _ => return Err(err(l.no, "expected a quoted part file after `from`, e.g. `from \"wheel.sc\"`")),
+                    }
+                } else {
+                    None
+                };
                 c.expect_punct('{')?;
                 c.end()?;
                 let design = parse_design(p, Some(l.no))?;
-                d.components.push(Component { name, design, line: l.no });
+                if source.is_some() && (!design.items.is_empty() || !design.instances.is_empty()) {
+                    return Err(err(l.no, "a component linked `from` a part file holds connectors only; its geometry is the part's"));
+                }
+                d.components.push(Component { name, design, line: l.no, source });
             }
             "instance" => {
                 let name = c.ident("the instance name")?;
@@ -338,6 +529,84 @@ fn parse_design(p: &mut P, open: Option<usize>) -> R<Design> {
                 let name = c.ident("an instance name")?;
                 c.end()?;
                 d.grounds.push((name, l.no));
+            }
+            // `color A, B "#rrggbb"`, `material A, B "PLA"`
+            "color" | "material" => {
+                let mut bodies = vec![c.ident("a body name")?];
+                while c.eat_punct(',') {
+                    bodies.push(c.ident("a body name")?);
+                }
+                let value = c.expr1(if head == "color" { "a colour, \"#rrggbb\"" } else { "a material name" })?;
+                let mut opts = vec![("bodies".to_string(), Val::List(bodies)), ("value".to_string(), Val::Expr(value))];
+                // `color Body "#rrggbb" faces (x,y,z) …`: only those faces.
+                if head == "color" && c.eat_ident("faces") {
+                    let mut faces = vec![c.tuple()?];
+                    while c.peek() == Some(&Tok::Punct('(')) {
+                        faces.push(c.tuple()?);
+                    }
+                    opts.push(("faces".to_string(), Val::Tuples(faces)));
+                }
+                c.end()?;
+                d.items.push(Item::Feature(Feature { kind: head.clone(), name: format!("{head}@{}", l.no), opts, line: l.no }));
+            }
+            // `print A, B up X` or `print bed (w, d)`
+            "print" => {
+                if open.is_some() {
+                    return Err(err(l.no, "print setup belongs at the top level"));
+                }
+                if c.eat_ident("bed") {
+                    let bed = c.tuple()?;
+                    if bed.len() != 2 {
+                        return Err(err(l.no, "`print bed (width, depth)`"));
+                    }
+                    c.end()?;
+                    d.print_bed = Some((bed, l.no));
+                } else {
+                    let mut bodies = vec![c.ident("a body name")?];
+                    while c.eat_punct(',') {
+                        bodies.push(c.ident("a body name")?);
+                    }
+                    if !c.eat_ident("up") {
+                        return Err(err(l.no, "expected `up X|Y|Z|(x,y,z)`: the direction that points away from the bed"));
+                    }
+                    let up = parse_axis(&mut c)?;
+                    c.end()?;
+                    d.prints.push(Print { bodies, up, line: l.no });
+                }
+            }
+            "for" | "if" => {
+                return Err(err(l.no, format!("`{head}` blocks are expanded before parsing: build the design with `build` or from its file")));
+            }
+            "use" => {
+                return Err(err(l.no, "`use` reads another file relative to this one: build the design from its file (`run`, `evaluate`, `watch`)"));
+            }
+            // `engine command.id {json}`: any engine command, passed through as written.
+            "engine" => {
+                let (id, params) = engine_line(l.no, &l.raw)?;
+                let obj = params.as_object().cloned().unwrap_or_default();
+                let name = obj.get("name").and_then(|n| n.as_str()).map(str::to_string).unwrap_or_else(|| format!("engine@{}", l.no));
+                let mut opts = vec![("command".to_string(), Val::Raw(id.to_string())), ("params".to_string(), Val::Raw(params.to_string()))];
+                // A body it names, so later statements can refer to it.
+                if let Some(b) = obj.get("body_name").and_then(|n| n.as_str()) {
+                    opts.push(("body".to_string(), Val::Expr(b.to_string())));
+                }
+                d.items.push(Item::Feature(Feature { kind: "engine".into(), name, opts, line: l.no }));
+            }
+            // `suppress A, B`: build these features, then switch them off (SolidCraft can turn them on).
+            "suppress" => {
+                let mut features = vec![c.ident("a feature name")?];
+                while c.eat_punct(',') {
+                    features.push(c.ident("a feature name")?);
+                }
+                c.end()?;
+                let opts = vec![("features".to_string(), Val::List(features))];
+                d.items.push(Item::Feature(Feature { kind: "suppress".into(), name: format!("suppress@{}", l.no), opts, line: l.no }));
+            }
+            "check" => {
+                if open.is_some() {
+                    return Err(err(l.no, "checks belong at the top level"));
+                }
+                d.checks.push(parse_check(&mut c, l.no)?);
             }
             "joint" => {
                 if open.is_some() {
@@ -440,6 +709,58 @@ fn parse_axis(c: &mut Cur) -> R<Vec<Comp>> {
     Ok(axis3(&axis))
 }
 
+/// `check Body quantity [Other] op value [unit] [up axis]`
+fn parse_check(c: &mut Cur, line: usize) -> R<Check> {
+    let body = c.ident("a body name")?;
+    let mut quantity = c.ident("what to check: shells, volume, area, mass, size.x, clearance or overhang")?;
+    if quantity == "size" {
+        c.expect_punct('.')?;
+        quantity = format!("size.{}", c.ident("x, y or z")?);
+    }
+    if !matches!(quantity.as_str(), "shells" | "volume" | "area" | "mass" | "size.x" | "size.y" | "size.z" | "clearance" | "overhang") {
+        return Err(err(line, format!("cannot check `{quantity}`: use shells, volume, area, mass, size.x|y|z, clearance or overhang")));
+    }
+    let other = if quantity == "clearance" { Some(c.ident("the body to measure the clearance to")?) } else { None };
+    let op = match c.next() {
+        Some(Tok::Punct(p @ ('<' | '>' | '='))) => {
+            let p = *p;
+            if c.eat_punct('=') {
+                format!("{p}=")
+            } else if p == '=' {
+                return Err(err(line, "write `==` to compare for equality"));
+            } else {
+                p.to_string()
+            }
+        }
+        _ => return Err(err(line, "expected a comparison: ==, <=, >=, < or >")),
+    };
+    let value = c.expr1("the value to compare with")?;
+    let unit = match c.peek() {
+        Some(Tok::Ident(u)) if matches!(u.as_str(), "mm2" | "mm3" | "cm3" | "g" | "kg") => {
+            let u = u.clone();
+            c.i += 1;
+            Some(u)
+        }
+        _ => None,
+    };
+    let mut up = Vec::new();
+    let mut bridge = None;
+    loop {
+        if c.eat_ident("up") {
+            up = parse_axis(c)?;
+        } else if c.eat_ident("bridge") {
+            bridge = Some(c.expr1("the longest bridge")?);
+        } else {
+            break;
+        }
+    }
+    if quantity != "overhang" && (bridge.is_some() || !up.is_empty()) {
+        return Err(err(line, "`up` and `bridge` belong to overhang checks"));
+    }
+    c.end()?;
+    Ok(Check { body, quantity, other, op, value, unit, up, bridge, line })
+}
+
 fn parse_sketch_head(c: &mut Cur, line: usize) -> R<Sketch> {
     let name = c.ident("the sketch name")?;
     if !c.eat_ident("on") {
@@ -488,6 +809,43 @@ fn parse_points(c: &mut Cur, min: usize) -> R<Vec<Pt>> {
         return Err(err(c.no, format!("expected at least {min} points `(x,y)`")));
     }
     Ok(pts)
+}
+
+/// The entities an offset, mirror or pattern copies: references, optionally comma-separated,
+/// up to the keyword that follows them.
+fn derived_refs(c: &mut Cur, line: usize, until: &[&str]) -> R<Vec<Ref>> {
+    let mut refs = Vec::new();
+    while !c.peek_ident().is_some_and(|w| until.contains(&w)) {
+        if c.done() {
+            return Err(err(line, format!("expected `{}` after the entities", until[0])));
+        }
+        refs.push(c.reference()?);
+        c.eat_punct(',');
+    }
+    c.i += 1;
+    if refs.is_empty() {
+        return Err(err(line, "name the entities to copy"));
+    }
+    Ok(refs)
+}
+
+/// `engine command.id {json}`: the command id and its parameters, a JSON object.
+fn engine_line(no: usize, raw: &str) -> R<(String, serde_json::Value)> {
+    let text = crate::lex::strip_comment(raw).trim();
+    let rest = text.strip_prefix("engine").unwrap_or("").trim_start();
+    let (id, json) = rest.split_once(char::is_whitespace).map(|(a, b)| (a, b.trim())).unwrap_or((rest, ""));
+    if id.is_empty() || !id.contains('.') {
+        return Err(err(no, "expected `engine command.id {…}`, for example `engine solid.split_face {\"faces\": [[0,0,5]]}`"));
+    }
+    let params: serde_json::Value = if json.is_empty() {
+        serde_json::json!({})
+    } else {
+        serde_json::from_str(json).map_err(|e| err(no, format!("the parameters must be one JSON object: {e}")))?
+    };
+    if !params.is_object() {
+        return Err(err(no, "the parameters must be a JSON object"));
+    }
+    Ok((id.to_string(), params))
 }
 
 fn parse_sketch_stmt(c: &mut Cur) -> R<SketchStmt> {
@@ -644,6 +1002,119 @@ fn parse_sketch_stmt(c: &mut Cur) -> R<SketchStmt> {
             let periodic = has("periodic") || c.eat_ident("periodic");
             SketchKind::Spline { name, pts, periodic }
         }
+        "engine" => {
+            let (command, params) = engine_line(line, c.raw)?;
+            c.i = c.toks.len();
+            SketchKind::Engine { command, params: params.to_string() }
+        }
+        "project" => {
+            let what = c.ident("what to project: face, edge, vertex or body")?;
+            let (point, body) = match what.as_str() {
+                "face" | "edge" | "vertex" => {
+                    let p = c.tuple()?;
+                    if p.len() != 3 {
+                        return Err(err(line, format!("`project {what}` takes a point (x,y,z) on it")));
+                    }
+                    let body = if c.eat_ident("body") { Some(c.ident("the body name")?) } else { None };
+                    (Some(p), body)
+                }
+                "body" => (None, Some(c.ident("the body name")?)),
+                other => return Err(err(line, format!("`project` takes face, edge, vertex or body, not `{other}`"))),
+            };
+            SketchKind::Project { what, point, body }
+        }
+        "svg" | "dxf" => {
+            let path = match c.next() {
+                Some(Tok::Str(s)) => s.clone(),
+                _ => return Err(err(line, format!("expected the file in quotes: `{head} \"drawing.{head}\"`"))),
+            };
+            let (mut at, mut scale) = (None, None);
+            while !c.done() {
+                match c.ident("an import option: at or scale")?.as_str() {
+                    "at" => at = Some(c.point2()?),
+                    "scale" => scale = Some(c.expr1("the scale")?),
+                    other => return Err(err(line, format!("unknown {head} option `{other}`"))),
+                }
+            }
+            SketchKind::Import { format: head.clone(), path, at, scale }
+        }
+        "curve" => {
+            let name = c.ident("the curve name")?;
+            c.expect_punct('=')?;
+            let xy = c.tuple()?;
+            let [x, y]: [Comp; 2] = xy.try_into().map_err(|_| err(line, "a curve is `(x(t), y(t))`"))?;
+            if !(c.eat_ident("t") && c.eat_ident("from")) {
+                return Err(err(line, "expected `t from <start> to <end>` after the curve's `(x(t), y(t))`"));
+            }
+            let from = c.expr1("the start of t")?;
+            if !c.eat_ident("to") {
+                return Err(err(line, "expected `to <end>`"));
+            }
+            let to = c.expr1("the end of t")?;
+            let (mut points, mut closed) = (None, false);
+            while !c.done() {
+                match c.ident("a curve option: points or closed")?.as_str() {
+                    "points" => points = Some(c.expr1("the number of points")?),
+                    "closed" => closed = true,
+                    other => return Err(err(line, format!("unknown curve option `{other}`"))),
+                }
+            }
+            let text = |c: Comp| match c {
+                Comp::Num(_, s) | Comp::Expr(s) => s,
+            };
+            SketchKind::Curve { name, x: text(x), y: text(y), from, to, points, closed }
+        }
+        "ellipse" => {
+            let name = c.ident("the ellipse name")?;
+            c.expect_punct('=')?;
+            let center = c.point2()?;
+            if !c.eat_ident("major") {
+                return Err(err(line, "expected `major (x, y)`: the end of the major axis"));
+            }
+            let major = c.point2()?;
+            if !c.eat_ident("minor") {
+                return Err(err(line, "expected `minor <radius>`"));
+            }
+            SketchKind::Ellipse { name, center, major, minor: c.expr1("the minor radius")? }
+        }
+        "text" => {
+            // `text "WORDS"`, `text label` (a text parameter) or `text (label + " - L")`.
+            let (text, expression) = match c.next() {
+                Some(Tok::Str(s)) => (s.clone(), false),
+                Some(Tok::Ident(s)) => (s.clone(), true),
+                Some(Tok::Punct('(')) => {
+                    let mut e = String::new();
+                    loop {
+                        match c.next() {
+                            Some(Tok::Punct(')')) => break,
+                            Some(Tok::Str(s)) => e.push_str(&format!("'{s}'")),
+                            Some(t) => e.push_str(&tok_text(t)),
+                            None => return Err(err(line, "unterminated `(` in the text expression")),
+                        }
+                        e.push(' ');
+                    }
+                    (e.trim().to_string(), true)
+                }
+                _ => return Err(err(line, "expected the text in quotes: `text \"LABEL\" at (x, y)`, or a text parameter")),
+            };
+            if !c.eat_ident("at") {
+                return Err(err(line, "expected `at (x, y)`: the start of the baseline"));
+            }
+            let at = c.point2()?;
+            let (mut height, mut angle, mut align, mut font, mut bold, mut italic) = (None, None, None, None, false, false);
+            while !c.done() {
+                match c.ident("a text option")?.as_str() {
+                    "height" => height = Some(c.expr1("the height")?),
+                    "angle" => angle = Some(c.expr1("the angle")?),
+                    "align" => align = Some(c.ident("left, center or right")?),
+                    "font" => font = Some(c.expr1("the font")?),
+                    "bold" => bold = true,
+                    "italic" => italic = true,
+                    other => return Err(err(line, format!("unknown text option `{other}`"))),
+                }
+            }
+            SketchKind::Text { text, expression, at, height, angle, align, font, bold, italic }
+        }
         "dim" => {
             let kind = match c.peek_ident() {
                 Some(k @ ("auto" | "distance" | "horizontal" | "vertical" | "length" | "radius" | "diameter" | "angle")) => {
@@ -662,6 +1133,51 @@ fn parse_sketch_stmt(c: &mut Cur) -> R<SketchStmt> {
             let value = c.rest_after_eq()?;
             SketchKind::Dim { kind, refs, value }
         }
+        "offset" => {
+            let refs = derived_refs(c, line, &["distance"])?;
+            let distance = c.expr1("the offset distance")?;
+            let (mut side, mut symmetric) = (None, false);
+            while !c.done() {
+                match c.ident("an offset option: side or symmetric")?.as_str() {
+                    "side" => side = Some(c.point2()?),
+                    "symmetric" => symmetric = true,
+                    other => return Err(err(line, format!("unknown offset option `{other}`"))),
+                }
+            }
+            SketchKind::Offset { refs, distance, side, symmetric }
+        }
+        "mirror" => {
+            let refs = derived_refs(c, line, &["about"])?;
+            SketchKind::Mirror { refs, about: c.reference()? }
+        }
+        "pattern" => {
+            let circular = match c.ident("circular or rectangular")?.as_str() {
+                "circular" => true,
+                "rectangular" => false,
+                other => return Err(err(line, format!("expected `pattern circular` or `pattern rectangular`, found `{other}`"))),
+            };
+            let refs = derived_refs(c, line, &["count"])?;
+            let count = c.expr1("the count")?;
+            let (mut center, mut angle, mut spacing, mut dir, mut count2, mut spacing2, mut dir2) = (None, None, None, None, None, None, None);
+            while !c.done() {
+                match (c.ident("a pattern option")?.as_str(), circular) {
+                    ("center", true) => center = Some(if c.peek() == Some(&Tok::Punct('(')) { Pt::Xy(c.point2()?) } else { Pt::Ref(c.reference()?) }),
+                    ("angle", true) => angle = Some(c.expr1("the total angle")?),
+                    ("spacing", false) => spacing = Some(c.expr1("the spacing")?),
+                    ("dir", false) => dir = Some(c.point2()?),
+                    ("count2", false) => count2 = Some(c.expr1("the second count")?),
+                    ("spacing2", false) => spacing2 = Some(c.expr1("the second spacing")?),
+                    ("dir2", false) => dir2 = Some(c.point2()?),
+                    (other, _) => {
+                        return Err(err(line, format!("unknown {} pattern option `{other}`", if circular { "circular" } else { "rectangular" })));
+                    }
+                }
+            }
+            if !circular && (spacing.is_none() || count2.is_some() != spacing2.is_some()) {
+                return Err(err(line, "a rectangular pattern needs `spacing`, and `count2` goes with `spacing2`"));
+            }
+            SketchKind::Pattern { refs, circular, count, center, angle, spacing, dir, count2, spacing2, dir2 }
+        }
         "fix" => {
             let mut refs = vec![c.reference()?];
             while !c.done() {
@@ -675,6 +1191,20 @@ fn parse_sketch_stmt(c: &mut Cur) -> R<SketchStmt> {
                 return Err(err(line, "expected `radius <expr>`"));
             }
             SketchKind::Fillet { point, radius: c.expr1("the radius")? }
+        }
+        "chamfer" => {
+            let point = c.reference()?;
+            if !c.eat_ident("distance") {
+                return Err(err(line, "expected `distance <expr>`"));
+            }
+            let distance = c.expr1("the distance")?;
+            let (mut distance2, mut angle) = (None, None);
+            if c.eat_ident("distance2") {
+                distance2 = Some(c.expr1("the second distance")?);
+            } else if c.eat_ident("angle") {
+                angle = Some(c.expr1("the angle")?);
+            }
+            SketchKind::Chamfer { point, distance, distance2, angle }
         }
         k @ ("horizontal" | "vertical" | "coincident" | "tangent" | "equal" | "parallel" | "perpendicular" | "concentric" | "collinear"
         | "midpoint" | "symmetric" | "curvature") => {
@@ -737,9 +1267,9 @@ fn parse_feature(c: &mut Cur, kind: &str) -> R<Feature> {
             let a = c.expr1("a diameter")?;
             let b = c.expr1(if k == "counterbore" { "a depth" } else { "an angle" })?;
             Val::List(vec![a, b])
-        } else if k == "at" {
-            // `at Sketch`, `at Sketch.a, Sketch.b`, `at (x,y,z)`
-            if c.peek() == Some(&Tok::Punct('(')) {
+        } else if k == "at" || k == "path" {
+            // `at Sketch`, `at Sketch.a, Sketch.b`, `at (x,y,z)`; `path Sketch.a, Sketch.b`
+            if k == "at" && c.peek() == Some(&Tok::Punct('(')) {
                 Val::Tuples(vec![c.tuple()?])
             } else {
                 let mut refs = vec![c.reference()?];

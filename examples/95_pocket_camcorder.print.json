@@ -1,0 +1,46 @@
+{
+  "version": 1,
+  "defaults": false,
+  "requests": [
+    { "id": "print-case-3mf", "kind": "export", "format": "3mf", "layout": "case" },
+    { "id": "print-case-stl", "kind": "export", "format": "stl", "layout": "case" },
+    { "id": "print-parts-3mf", "kind": "export", "format": "3mf", "layout": "parts" },
+    { "id": "print-parts-stl", "kind": "export", "format": "stl", "layout": "parts" },
+    { "id": "preview-glb", "kind": "export", "format": "glb", "layout": "assembled" },
+    { "id": "case-check", "kind": "commands", "layout": "case",
+      "commands": [ { "command": "inspect.measure", "params": {} } ] },
+    { "id": "parts-check", "kind": "commands", "layout": "parts",
+      "commands": [ { "command": "inspect.measure", "params": {} } ] },
+    { "id": "assembled-view", "kind": "snapshot", "layout": "assembled", "options": { "view": "iso" } },
+    { "id": "case-view", "kind": "snapshot", "layout": "case", "options": { "view": "top" } }
+  ],
+  "layouts": {
+    "case": {
+      "bed": [256, 256],
+      "parts": [
+        { "id": "Back", "select": { "bodies": ["Back"] } },
+        { "id": "Front", "select": { "bodies": ["Front"] },
+          "rotate": [ { "axis": [1, 0, 0], "angle": "180 deg" } ] }
+      ]
+    },
+    "parts": {
+      "bed": [256, 256],
+      "parts": [
+        { "id": "Record", "select": { "bodies": ["Record"] } },
+        { "id": "KeyUp", "select": { "bodies": ["KeyUp"] } },
+        { "id": "KeyDown", "select": { "bodies": ["KeyDown"] } },
+        { "id": "KeyLeft", "select": { "bodies": ["KeyLeft"] } },
+        { "id": "KeyRight", "select": { "bodies": ["KeyRight"] } },
+        { "id": "KeyPlay", "select": { "bodies": ["KeyPlay"] } },
+        { "id": "KeyDelete", "select": { "bodies": ["KeyDelete"] } },
+        { "id": "UsbArm", "select": { "bodies": ["UsbArm"] } },
+        { "id": "LensRing", "select": { "bodies": ["LensRing"] } }
+      ]
+    },
+    "assembled": {
+      "parts": [
+        { "id": "Camcorder", "select": { "bodies": ["Back", "Front", "Record", "KeyUp", "KeyDown", "KeyLeft", "KeyRight", "KeyPlay", "KeyDelete", "UsbArm", "UsbPlug", "LensRing", "Tft"] } }
+      ]
+    }
+  }
+}

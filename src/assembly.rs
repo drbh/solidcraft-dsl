@@ -58,7 +58,10 @@ fn geometry(d: &Design, params: &[Param], scope: Option<&str>) -> R<Design> {
         if let Item::Feature(f) = item {
             for (k, v) in &f.opts {
                 if k == "body"
-                    && matches!(f.kind.as_str(), "extrude" | "revolve" | "box" | "cylinder" | "sphere" | "torus")
+                    && matches!(
+                        f.kind.as_str(),
+                        "extrude" | "revolve" | "box" | "cylinder" | "sphere" | "torus" | "loft" | "sweep" | "pipe" | "coil" | "cone"
+                    )
                     && let Val::Expr(n) = v
                 {
                     validate_name(n, f.line)?;
@@ -155,6 +158,8 @@ struct Builder<'a> {
     env: Environment,
     compiled: Compiled,
     moves: Vec<(String, Transform, usize)>,
+    /// The first occurrence made, which engines from 0.27 ground (see `compile`).
+    first: Option<(String, usize)>,
     root: HashMap<String, (&'a Component, Transform)>,
 }
 impl Builder<'_> {
@@ -215,10 +220,29 @@ impl Builder<'_> {
             let axis = unit(self.vector(&instance.axis, Kind::Unitless, instance.line, "placement_axis")?, instance.line)?;
             let angle = self.scalar(&instance.angle, Kind::Angle, instance.line, "placement", false)?;
             let transform = Transform { at, axis, angle };
+            if self.first.is_none() {
+                self.first = Some((occurrence.clone(), instance.line));
+            }
             if self.visiting.contains(&definition.name) {
                 return Err(error(instance.line, format!("cyclic component instances: {} -> {}", self.visiting.join(" -> "), definition.name)));
             }
-            if self.built.insert(definition.name.clone()) {
+            if !self.built.insert(definition.name.clone()) {
+                self.emit(
+                    "occurrence.copy",
+                    json!({"component":definition.name,"occurrence_name":occurrence,"parent":scope.unwrap_or("root")}),
+                    instance.line,
+                );
+            } else if let Some(source) = &definition.source {
+                // A linked part: the engine reads its bodies from the part's own design, which
+                // link::prepare builds from `source` and substitutes for this path.
+                let command = self.compiled.lines.len();
+                self.emit(
+                    "component.insert_design",
+                    json!({"path":source,"name":definition.name,"occurrence_name":occurrence,"parent":scope.unwrap_or("root")}),
+                    instance.line,
+                );
+                self.compiled.links.push(crate::compile::Link { command, source: source.clone(), line: definition.line });
+            } else {
                 self.emit(
                     "component.create",
                     json!({"name":definition.name,"occurrence_name":occurrence,"parent":scope.unwrap_or("root")}),
@@ -242,12 +266,6 @@ impl Builder<'_> {
                 self.visiting.push(definition.name.clone());
                 self.scope(&definition.design, Some(&definition.name), depth + 1)?;
                 self.visiting.pop();
-            } else {
-                self.emit(
-                    "occurrence.copy",
-                    json!({"component":definition.name,"occurrence_name":occurrence,"parent":scope.unwrap_or("root")}),
-                    instance.line,
-                );
             }
             self.moves.push((occurrence, transform, instance.line));
             if scope.is_none() {
@@ -363,6 +381,7 @@ pub fn compile(d: &Design) -> R<Compiled> {
         env: Environment::new(d)?,
         compiled,
         moves: vec![],
+        first: None,
         root: HashMap::new(),
     };
     let site_count = b.compiled.expressions["sites"].as_array().map_or(0, Vec::len);
@@ -385,6 +404,11 @@ pub fn compile(d: &Design) -> R<Compiled> {
         sites.truncate(site_count);
     }
     b.scope(d, None, 0)?;
+    // Engines from 0.27 ground the design's first part when it is made; earlier ones ground
+    // nothing. Only `ground` statements ground a part here, on every engine.
+    if let Some((name, line)) = b.first.clone() {
+        b.emit("occurrence.ground", json!({"occurrence":name,"grounded":false}), line);
+    }
     for (name, t, line) in b.moves.clone() {
         b.emit("occurrence.move", json!({"occurrence":name,"translate":t.at,"axis":t.axis,"angle":t.angle,"capture":true}), line);
     }
@@ -456,29 +480,226 @@ pub fn compile(d: &Design) -> R<Compiled> {
     b.compiled.expressions["assembly"] = json!({"definitions":b.built.len(),"instances":b.moves.len(),"joints":d.joints.len()});
     if let Some(requires) = b.compiled.expressions["requires"].as_array_mut() {
         requires.push(json!("authored_occurrence_names"));
+        if !b.compiled.links.is_empty() {
+            requires.push(json!("linked_occurrence_names"));
+        }
     }
     Ok(b.compiled)
 }
 
 /// Check required command capabilities before mutating a document.
-pub fn check_capabilities(c: &Compiled, commands: &Value) -> R<()> {
+/// The capabilities `c` requires that the engine (its `commands` listing) lacks.
+fn missing(c: &Compiled, commands: &Value) -> R<Vec<(String, &'static str, &'static str)>> {
+    let mut out = Vec::new();
     for required in c.expressions["requires"].as_array().into_iter().flatten() {
         let specs: &[(&str, &str)] = match required.as_str() {
             Some("persistent_sketch_point_expressions") => &[("sketch.point", "expression")],
             Some("authored_occurrence_names") => &[("component.create", "occurrence_name"), ("occurrence.copy", "occurrence_name")],
+            Some("linked_occurrence_names") => &[("component.insert_design", "occurrence_name")],
+            Some("solid_cone") => &[("solid.cone", "top_radius")],
+            Some("thread_handedness") => &[("solid.thread", "handedness")],
+            Some("text_parameters") => &[("sketch.text", "text_expression")],
+            Some("sheet_path_flange") => &[("sheet.path_flange", "edge")],
+            Some("model_axes") => &[("solid.pattern.circular", "{edge|face")],
+            Some("construction_axes") => &[("solid.pattern.circular", "construction axis name")],
             _ => return Err(format!("unknown required engine capability {required}")),
         };
         for (id, field) in specs {
             if !commands.as_array().is_some_and(|a| a.iter().any(|c| c["id"] == *id && c["params"].as_str().is_some_and(|s| s.contains(field)))) {
-                return Err(format!(
-                    "this design requires engine capability {required} ({id}: {field}); use a compatible development build via SOLIDCRAFT_CLI or update the running app"
-                ));
+                out.push((required.as_str().unwrap_or("").to_string(), *id, *field));
+                break;
+            }
+        }
+    }
+    Ok(out)
+}
+
+pub fn check_capabilities(c: &Compiled, commands: &Value) -> R<()> {
+    match missing(c, commands)?.first() {
+        None => Ok(()),
+        Some((required, id, field)) => Err(format!(
+            "this design requires engine capability {required} ({id}: {field}); use a compatible development build via SOLIDCRAFT_CLI or update the running app"
+        )),
+    }
+}
+
+/// Fit `script` (compiled as `c`) to an engine with these `commands`. An engine that can't take
+/// authored occurrence names still builds the assembly: it names occurrences `Component:k`, k
+/// counting that component's occurrences in the order they are made, so the script uses those
+/// names instead. Any other missing capability is an error.
+pub fn fit_script(c: &Compiled, script: &mut Value, commands: &Value) -> R<()> {
+    let names = [
+        "authored_occurrence_names",
+        "linked_occurrence_names",
+        "text_parameters",
+        "thread_handedness",
+        "sheet_path_flange",
+        "persistent_sketch_point_expressions",
+    ];
+    let missing = missing(c, commands)?;
+    if let Some((required, id, field)) = missing.iter().find(|(r, ..)| !names.contains(&r.as_str())) {
+        return Err(format!(
+            "this design requires engine capability {required} ({id}: {field}); use a compatible development build via SOLIDCRAFT_CLI or update the running app"
+        ));
+    }
+    if missing.iter().any(|(r, ..)| r.ends_with("occurrence_names")) {
+        default_occurrence_names(script);
+    }
+    if missing.iter().any(|(r, ..)| r == "thread_handedness") {
+        left_thread_fallback(c, script);
+    }
+    if missing.iter().any(|(r, ..)| r == "text_parameters") {
+        literal_text(script)?;
+    }
+    if missing.iter().any(|(r, ..)| r == "sheet_path_flange") {
+        path_flange_fallback(c, script)?;
+    }
+    if missing.iter().any(|(r, ..)| r == "persistent_sketch_point_expressions") {
+        literal_points(c, script)?;
+    }
+    Ok(())
+}
+
+/// For an engine without expression-bound sketch points: place each bound point at its current
+/// value. The design builds; the points stay where they are when a parameter changes. Bound
+/// points are the only sketch points whose coordinates are left as expressions, and their
+/// binding sites are recorded in the same order, x then y.
+pub fn literal_points(c: &Compiled, script: &mut Value) -> R<()> {
+    let mut values = c.expressions["sites"].as_array().into_iter().flatten().filter(|s| s["role"] == "binding").map(|s| s["value"].as_f64());
+    let Some(commands) = script["commands"].as_array_mut() else { return Ok(()) };
+    for command in commands.iter_mut().filter(|c| c["command"] == "sketch.point") {
+        let Some(point) = command["params"]["point"].as_array_mut() else { continue };
+        if !point.iter().any(Value::is_string) {
+            continue;
+        }
+        for v in point.iter_mut() {
+            *v = json!(values.next().flatten().ok_or("a bound sketch point has no recorded value")?);
+        }
+    }
+    Ok(())
+}
+
+/// For an engine without path flanges: each path flange as the chain of edge flanges the compiler
+/// worked out (see `compile::path_flange_chain`), in the command's place and the slots after it.
+pub fn path_flange_fallback(c: &Compiled, script: &mut Value) -> R<()> {
+    let Some(commands) = script["commands"].as_array_mut() else { return Ok(()) };
+    for (i, chain) in &c.path_flanges {
+        let chain = chain.as_ref().map_err(|e| format!("{e} (this engine has no path flanges)"))?;
+        for (k, cmd) in chain.iter().enumerate() {
+            if let Some(slot) = commands.get_mut(i + k) {
+                *slot = cmd.clone();
             }
         }
     }
     Ok(())
 }
-pub fn check_engine(cli: &str, c: &Compiled) -> R<()> {
+
+/// For an engine without thread handedness: cut each left-hand thread as the mirror image of a
+/// right-hand one. Mirror the body through a plane at the thread's face point (the point stays on
+/// the mirrored face), cut the thread, mirror back; the rest of the body ends where it was. Fills
+/// the five slots the compiler left after the thread command.
+pub fn left_thread_fallback(c: &Compiled, script: &mut Value) {
+    let Some(commands) = script["commands"].as_array_mut() else { return };
+    for (i, body) in &c.left_threads {
+        let Some(thread) = commands.get(*i).cloned() else { continue };
+        let name = thread["params"]["name"].as_str().unwrap_or("Thread").to_string();
+        let plane = json!({"origin": thread["params"]["face"], "normal": [1, 0, 0]});
+        let mut right = thread.clone();
+        if let Some(p) = right["params"].as_object_mut() {
+            p.remove("handedness");
+        }
+        let copy = format!("{body} (2)");
+        let fill = [
+            json!({"command": "solid.mirror", "params": {"name": format!("{name}Flip"), "bodies": [body], "plane": plane}}),
+            json!({"command": "solid.remove", "params": {"name": format!("{name}Drop"), "bodies": [body]}}),
+            right,
+            json!({"command": "solid.mirror", "params": {"name": format!("{name}Back"), "bodies": [copy], "plane": plane}}),
+            json!({"command": "solid.remove", "params": {"name": format!("{name}DropFlip"), "bodies": [copy]}}),
+            json!({"command": "body.rename", "params": {"body": format!("{copy} (2)"), "name": body}}),
+        ];
+        for (k, cmd) in fill.into_iter().enumerate() {
+            if let Some(slot) = commands.get_mut(i + k) {
+                *slot = cmd;
+            }
+        }
+    }
+}
+
+/// For an engine without text parameters: draw each text expression's current words, and turn
+/// the text parameters' definitions into a read-only command (keeping every command's index,
+/// which the source map follows). The design builds; relabelling needs a newer engine.
+pub fn literal_text(script: &mut Value) -> R<()> {
+    let Some(commands) = script["commands"].as_array_mut() else { return Ok(()) };
+    let mut words: HashMap<String, String> = HashMap::new();
+    for cmd in commands.iter_mut() {
+        if cmd["command"] == "parameters.add" && cmd["params"]["unit"] == "text" {
+            let name = cmd["params"]["name"].as_str().unwrap_or("").to_string();
+            words.insert(name, cmd["params"]["expression"].as_str().unwrap_or("").to_string());
+            *cmd = json!({"command": "document.inspect", "params": {"measure": false}});
+        }
+    }
+    for cmd in commands.iter_mut() {
+        let Some(expr) = cmd["params"]["text_expression"].as_str().map(str::to_string) else { continue };
+        let mut text = String::new();
+        // `name + 'words' + …`: split on the `+`s outside quotes.
+        let mut quoted = false;
+        let mut part = String::new();
+        let mut parts = Vec::new();
+        for ch in expr.chars() {
+            match ch {
+                '\'' => {
+                    quoted = !quoted;
+                    part.push(ch);
+                }
+                '+' if !quoted => parts.push(std::mem::take(&mut part)),
+                _ => part.push(ch),
+            }
+        }
+        parts.push(part);
+        for p in parts {
+            let p = p.trim();
+            if let Some(q) = p.strip_prefix('\'').and_then(|q| q.strip_suffix('\'')) {
+                text.push_str(q);
+            } else {
+                text.push_str(words.get(p).ok_or_else(|| format!("text `{expr}`: `{p}` is not a text parameter"))?);
+            }
+        }
+        if let Some(params) = cmd["params"].as_object_mut() {
+            params.remove("text_expression");
+            params.insert("text".into(), json!(text));
+        }
+    }
+    Ok(())
+}
+
+/// Replace authored occurrence names with the engine's own (`Component:k`).
+pub fn default_occurrence_names(script: &mut Value) {
+    let mut counts: HashMap<String, usize> = HashMap::new();
+    let mut names: HashMap<String, String> = HashMap::new();
+    let Some(commands) = script["commands"].as_array_mut() else { return };
+    for cmd in commands.iter_mut() {
+        let component = match cmd["command"].as_str() {
+            Some("component.create" | "component.insert_design") => cmd["params"]["name"].as_str(),
+            Some("occurrence.copy") => cmd["params"]["component"].as_str(),
+            _ => None,
+        };
+        let Some(component) = component.map(str::to_string) else { continue };
+        let Some(authored) = cmd["params"].as_object_mut().and_then(|p| p.remove("occurrence_name")) else { continue };
+        let k = counts.entry(component.clone()).or_default();
+        *k += 1;
+        if let Some(authored) = authored.as_str() {
+            names.insert(authored.to_string(), format!("{component}:{k}"));
+        }
+    }
+    for cmd in commands.iter_mut() {
+        if let Some(name) = cmd["params"]["occurrence"].as_str().and_then(|n| names.get(n)) {
+            cmd["params"]["occurrence"] = json!(name);
+        }
+    }
+}
+
+/// Fit `script` to the engine at `cli`; see `fit_script`.
+pub fn fit_engine(cli: &str, c: &Compiled, script: &mut Value) -> R<()> {
     if c.expressions["requires"].as_array().is_none_or(|r| r.is_empty()) {
         return Ok(());
     }
@@ -487,5 +708,5 @@ pub fn check_engine(cli: &str, c: &Compiled) -> R<()> {
         return Err(format!("cannot discover engine capabilities: {}", String::from_utf8_lossy(&out.stderr)));
     }
     let commands: Value = serde_json::from_slice(&out.stdout).map_err(|e| e.to_string())?;
-    check_capabilities(c, &commands)
+    fit_script(c, script, &commands)
 }

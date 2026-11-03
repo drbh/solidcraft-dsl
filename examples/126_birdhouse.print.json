@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "defaults": false,
+  "requests": [
+    { "id": "body-3mf", "kind": "export", "format": "3mf", "layout": "body" },
+    { "id": "door-3mf", "kind": "export", "format": "3mf", "layout": "door" },
+    { "id": "roof-3mf", "kind": "export", "format": "3mf", "layout": "roof" },
+    { "id": "body-stl", "kind": "export", "format": "stl", "layout": "body" },
+    { "id": "door-stl", "kind": "export", "format": "stl", "layout": "door" },
+    { "id": "roof-stl", "kind": "export", "format": "stl", "layout": "roof" },
+    { "id": "preview-glb", "kind": "export", "format": "glb", "layout": "assembled" },
+    { "id": "print-check", "kind": "commands", "layout": "body",
+      "commands": [ { "command": "inspect.measure", "params": {} } ] },
+    { "id": "body-view", "kind": "snapshot", "layout": "body", "options": { "view": "iso" } }
+  ],
+  "layouts": {
+    "body": { "bed": [256, 256], "parts": [
+      { "id": "Body", "select": { "bodies": ["Body"] }, "rotate": [ { "axis": [0, 1, 0], "angle": "-90 deg" } ] } ] },
+    "door": { "bed": [256, 256], "parts": [
+      { "id": "Door", "select": { "bodies": ["Door"] }, "rotate": [ { "axis": [0, 1, 0], "angle": "-90 deg" } ] } ] },
+    "roof": { "bed": [256, 256], "parts": [
+      { "id": "Roof", "select": { "bodies": ["Roof"] }, "rotate": [ { "axis": [1, 0, 0], "angle": "-roof_angle" } ] } ] },
+    "assembled": { "parts": [ { "id": "Birdhouse", "select": { "bodies": ["Body", "Door", "Roof"] } } ] }
+  }
+}

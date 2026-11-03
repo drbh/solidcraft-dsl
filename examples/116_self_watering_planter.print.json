@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "defaults": false,
+  "requests": [
+    { "id": "reservoir-3mf", "kind": "export", "format": "3mf", "layout": "reservoir" },
+    { "id": "reservoir-stl", "kind": "export", "format": "stl", "layout": "reservoir" },
+    { "id": "pot-3mf", "kind": "export", "format": "3mf", "layout": "pot" },
+    { "id": "pot-stl", "kind": "export", "format": "stl", "layout": "pot" },
+    { "id": "preview-glb", "kind": "export", "format": "glb", "layout": "assembled" },
+    { "id": "pot-check", "kind": "commands", "layout": "pot",
+      "commands": [ { "command": "inspect.measure", "params": {} } ] },
+    { "id": "assembled-view", "kind": "snapshot", "layout": "assembled", "options": { "view": "iso" } }
+  ],
+  "layouts": {
+    "reservoir": {
+      "bed": [256, 256],
+      "parts": [ { "id": "Reservoir", "select": { "bodies": ["Reservoir"] } } ]
+    },
+    "pot": {
+      "bed": [256, 256],
+      "parts": [
+        { "id": "Pot", "select": { "bodies": ["Pot"] } },
+        { "id": "WickCup", "select": { "bodies": ["WickCup"] },
+          "rotate": [ { "axis": [1, 0, 0], "angle": "180 deg" } ] },
+        { "id": "Spout", "select": { "bodies": ["Spout"] },
+          "rotate": [ { "axis": [1, 0, 0], "angle": "180 deg" } ] }
+      ]
+    },
+    "assembled": {
+      "parts": [ { "id": "Planter", "select": { "bodies": ["Reservoir", "Pot", "WickCup", "Spout"] } } ]
+    }
+  }
+}

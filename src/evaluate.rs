@@ -89,7 +89,7 @@ pub fn evaluate(opts: &Options) -> Result<Value, String> {
     let mut report = json!({
         "schema_version": 1, "ok": false, "source": opts.source, "source_sha256": hash,
         "attempt": attempt, "report": dir.join("report.json"),
-        "diagnostics": [], "checks": [], "measurements": null, "sketches": [],
+        "diagnostics": [], "checks": [], "design_checks": [], "measurements": null, "sketches": [],
         "artifacts": {"source": dir.join("source.sc")},
         "previous_success": previous.as_ref().map(|r| &r["report"]),
         "validity": {"status": "not_checked", "reason": "No independent solid-validity check is performed."}
@@ -99,7 +99,7 @@ pub fn evaluate(opts: &Options) -> Result<Value, String> {
         Err(e) => diagnostics.push(diagnostic("expectations", e, None, &source)),
         Ok(checks) => {
             write_json(&dir.join("expectations.json"), &checks)?;
-            match crate::build(&source) {
+            match crate::build_file(&source, &opts.source) {
                 Err(e) => diagnostics.push(diagnostic("compile", &e, compile_line(&e), &source)),
                 Ok(c) => {
                     if let Err(e) = build(opts, &dir, &source, &c, &checks, &mut report, &mut diagnostics) {
@@ -116,6 +116,8 @@ pub fn evaluate(opts: &Options) -> Result<Value, String> {
         });
     }
     report["ok"] = json!(!diagnostics.iter().any(|d| d["severity"] == "error"));
+    // Errors first (in the order they happened), then warnings such as the engine's age.
+    diagnostics.sort_by_key(|d| d["severity"] != "error");
     report["diagnostics"] = json!(diagnostics);
     write_json(&dir.join("report.json"), &report)?;
     publish(&root, "latest.json", &attempt, &report)?;
@@ -134,7 +136,9 @@ fn build(
     report: &mut Value,
     diagnostics: &mut Vec<Value>,
 ) -> Result<(), String> {
-    let plan = match crate::artifacts::Plan::load(opts.requests.as_deref()) {
+    let plan = match crate::artifacts::Plan::load(opts.requests.as_deref())
+        .and_then(|p| p.with_print_layout(c.print_layout.as_ref(), opts.requests.is_some()))
+    {
         Ok(plan) => plan,
         Err(e) => {
             diagnostics.push(diagnostic("requests", e, None, source));
@@ -142,8 +146,27 @@ fn build(
         }
     };
     report["expressions"] = c.expressions.clone();
-    crate::assembly::check_engine(&opts.cli, c)?;
+    if let Some(warning) = engine_age(&opts.cli) {
+        let mut d = diagnostic("engine", warning, None, source);
+        d["severity"] = json!("warning");
+        diagnostics.push(d);
+    }
     let mut script = if c.native.is_some() { json!({"commands":[]}) } else { c.script.clone() };
+    crate::assembly::fit_engine(&opts.cli, c, &mut script)?;
+    if let Err(e) = crate::link::inline_files(&mut script, &opts.source) {
+        diagnostics.push(diagnostic("compile", e, None, source));
+        return Ok(());
+    }
+    if !c.links.is_empty() {
+        // Parts are cached across attempts beside them, keyed by source hash.
+        let mut parts = crate::link::Parts::new(&opts.cli, &dir.parent().unwrap_or(dir).join("parts"), crate::link::Naming::Cache);
+        if let Err(e) = parts.prepare(&mut script, &c.links, &opts.source) {
+            diagnostics.push(diagnostic("parts", &e, compile_line(&e), source));
+            return Ok(());
+        }
+        report["parts"] =
+            json!(parts.parts().iter().map(|p| json!({"source": p.source, "design": p.design, "sha256": p.sha256})).collect::<Vec<_>>());
+    }
     let cmds = script["commands"].as_array_mut().ok_or("compiler did not emit commands")?;
     let count = cmds.len();
     let assembly = c.expressions["assembly"].is_object() || c.native.as_ref().is_some_and(|n| n.document["assembly"].is_object());
@@ -228,8 +251,22 @@ fn build(
             diagnostics.push(diagnostic("measurement", e, None, source));
         }
     }
+    // Sketches with an imported drawing, or drawn by `engine` lines: their curves are free by
+    // design (the file, or the engine command, is their source).
+    let mut imported = std::collections::HashSet::new();
+    let mut current = None;
+    let from_engine =
+        |i: usize| c.lines.get(i).and_then(|l| source.lines().nth(l.saturating_sub(1))).is_some_and(|t| t.trim_start().starts_with("engine "));
+    for (i, cmd) in script["commands"].as_array().into_iter().flatten().enumerate() {
+        match cmd["command"].as_str() {
+            Some("sketch.create") => current = cmd["params"]["name"].as_str(),
+            Some("sketch.insert_svg" | "sketch.insert_dxf") => imported.extend(current),
+            Some(id) if id.starts_with("sketch.") && from_engine(i) => imported.extend(current),
+            _ => {}
+        }
+    }
     for sketch in doc["sketches"].as_array().into_iter().flatten() {
-        if sketch["dof"].as_u64().is_some_and(|n| n > 0) {
+        if sketch["dof"].as_u64().is_some_and(|n| n > 0) && !sketch["name"].as_str().is_some_and(|n| imported.contains(n)) {
             let mut d = diagnostic(
                 "sketch",
                 format!("{} has {} degrees of freedom", sketch["name"], sketch["dof"]),
@@ -248,6 +285,8 @@ fn build(
         return Err("engine reported success without saving the design".into());
     }
     report["artifacts"]["design"] = json!(design);
+    let bodies = measures["bodies"].as_array().cloned().unwrap_or_default();
+    diagnostics.extend(design_checks(opts, dir, &design, source, c, &bodies, report)?);
     diagnostics.extend(crate::artifacts::execute(&opts.cli, &design, dir, &plan.expanded(opts.previews), report)?);
     let check_results: Vec<Value> = checks.as_array().into_iter().flatten().map(|check| {
         let pointer = check["pointer"].as_str().unwrap_or("");
@@ -269,6 +308,102 @@ fn build(
     report["checks"] = json!(check_results);
 
     Ok(())
+}
+
+/// The engine version this repository pins (flake.nix) and is tested against.
+pub const PINNED_ENGINE: [u32; 3] = [0, 28, 0];
+
+/// A warning when the engine is older than the pinned version. Older engines build some designs
+/// differently (0.15 silently drops a join of a piece that doesn't touch the body), and the DSL
+/// writes some features for them as workarounds that don't follow parameter changes.
+fn engine_age(cli: &str) -> Option<String> {
+    let out = Command::new(cli).arg("--version").output().ok()?;
+    let text = String::from_utf8_lossy(&out.stdout);
+    let version = text.split_whitespace().last()?;
+    let parts: Vec<u32> = version.split('.').map(|p| p.parse().ok()).collect::<Option<_>>()?;
+    let found: [u32; 3] = parts.try_into().ok()?;
+    (found < PINNED_ENGINE).then(|| {
+        let [a, b, c] = PINNED_ENGINE;
+        format!(
+            "engine {version} is older than {a}.{b}.{c}, which this DSL is tested against: older engines build some designs differently, and some features fall back to workarounds that don't follow parameter changes; install it with `ci/install-solidcraft-cli.sh {a}.{b}.{c}`"
+        )
+    })
+}
+
+/// Verify the design's `check` statements and every body's implied one-piece check. Clearance
+/// and overhang checks need one more engine run on the saved design, for clearances and meshes.
+fn design_checks(
+    opts: &Options,
+    dir: &Path,
+    design: &Path,
+    source: &str,
+    c: &crate::Compiled,
+    bodies: &[Value],
+    report: &mut Value,
+) -> Result<Vec<Value>, String> {
+    let exists = |n: &str| bodies.iter().any(|b| b["name"] == n);
+    let asked = |k: &crate::checks::Check| k.needs_engine() && exists(&k.body) && k.other.as_deref().is_none_or(exists);
+    let mut commands = Vec::new();
+    let mut meshes = std::collections::BTreeMap::new();
+    for k in c.checks.iter().filter(|k| asked(k)) {
+        if k.quantity == "clearance" {
+            commands.push(crate::checks::clearance_command(k));
+        } else if !meshes.contains_key(&k.body) {
+            let path = dir.join(format!("check-{}.stl", meshes.len()));
+            commands.push(json!({"command": "file.export", "params": {"path": path, "format": "stl", "bodies": [k.body]}}));
+            meshes.insert(k.body.clone(), path);
+        }
+    }
+    let mut replies = Vec::new();
+    if !commands.is_empty() {
+        let script = dir.join("checks.json");
+        write_json(&script, &json!({"commands": commands}))?;
+        let output = Command::new(&opts.cli)
+            .arg("run")
+            .arg(&script)
+            .arg("--in")
+            .arg(design)
+            .args(["--results", "--quiet"])
+            .output()
+            .map_err(|e| format!("cannot run `{}`: {e}", opts.cli))?;
+        if !output.status.success() {
+            let message = format!("checks: {}", String::from_utf8_lossy(&output.stderr).trim());
+            return Ok(vec![diagnostic("check", message, None, source)]);
+        }
+        let raw: Value = serde_json::from_slice(&output.stdout).map_err(|e| format!("invalid engine JSON: {e}"))?;
+        replies = raw.get("results").unwrap_or(&raw).as_array().cloned().unwrap_or_default();
+    }
+    // Replies to clearance queries, aligned with the clearance checks (null where not asked).
+    let mut answers = replies.iter().zip(&commands).filter(|(_, cmd)| cmd["command"] == "inspect.clearance").map(|(r, _)| r.clone());
+    let clearances: Vec<Value> = c
+        .checks
+        .iter()
+        .filter(|k| k.quantity == "clearance")
+        .map(|k| if asked(k) { answers.next().unwrap_or(Value::Null) } else { Value::Null })
+        .collect();
+    let mesh = |body: &str| -> Result<Vec<u8>, String> {
+        let path = meshes.get(body).ok_or("the body was not exported")?;
+        std::fs::read(path).map_err(|e| format!("reading the body's mesh: {e}"))
+    };
+    let outcomes = crate::checks::verify(&c.checks, &crate::checks::Evidence { bodies, clearances: &clearances, mesh: &mesh });
+    let mut diagnostics = Vec::new();
+    for o in &outcomes {
+        if let Some(message) = &o.failure {
+            let line = o.entry["line"].as_u64().map(|n| n as usize).or_else(|| o.entry["body"].as_str().and_then(|b| body_line(source, b)));
+            let mut d = diagnostic("check", message, line, source);
+            if o.approximate {
+                d["severity"] = json!("warning");
+            }
+            diagnostics.push(d);
+        }
+    }
+    report["design_checks"] = json!(outcomes.into_iter().map(|o| o.entry).collect::<Vec<_>>());
+    Ok(diagnostics)
+}
+
+/// The line whose statement creates `body` (`-> body Name`).
+fn body_line(source: &str, body: &str) -> Option<usize> {
+    source.lines().position(|l| l.split("->").nth(1).is_some_and(|t| t.split_whitespace().eq(["body", body]))).map(|i| i + 1)
 }
 
 /// Gather more evidence from a saved evaluation or native design without reading/recompiling

@@ -106,31 +106,68 @@ outside the concise assembly grammar. `decompile --readable` is still a limited 
 reconstruction, not an assembly reconstruction. `watch` reflects parameter/dimension edits;
 arbitrary browser moves and joint edits are not written back into concise source.
 
-## Engine compatibility
+## Linked parts: one file per part
 
-This implementation adds optional `occurrence_name` arguments to engine `component.create`
-and `occurrence.copy` in the compatible SolidCraft build. This addresses occurrences by authored
-names without guessing global IDs. The arguments use the existing saved name field; no file
-schema change is needed. Names must be unique, nonnumeric, and different from `root`.
+A component can come from another `.sc` file instead of its own block, so each part is designed
+and built on its own and an assembly file places them:
 
-Assembly execution requires an engine/app containing this command addition. Stock 0.19.0 still
-does not provide it. `check` and `compile` work without the engine; `run`, `pack`,
-`evaluate` and `watch` check capabilities before execution. For direct command-script replay,
-use the same compatible engine.
-
-```sh
-# From the DSL repository, with Rust 1.95 or newer:
-git clone https://github.com/tangency-labs/solidcraft.git build/engine
-git -C build/engine checkout --detach 3d3dd27439995f37eaed1feaa1c53a0e42d2fe39
-git -C build/engine apply ../../ci/solidcraft-assembly.patch
-cargo build --manifest-path build/engine/Cargo.toml --locked -p solidcraft-cli --bin solidcraft-cli
-export SOLIDCRAFT_CLI="$PWD/build/engine/target/debug/solidcraft-cli"
-ci/check-compatibility.sh
-cargo run -- evaluate examples/assembly_hinge.sc --output-dir build/hinge --json
-cargo run -- explain examples/assembly_hinge.sc --json
+```sc
+design BalanceBot units mm
+component Wheel from "wheel.sc" {
+  connector axle at (0,0,0) axis Z
+}
+component Leg from "lower_leg.sc" {
+  connector hub at (69,63.02,0) axis Z
+}
+instance leg = Leg
+ground leg
+instance wheel = Wheel at (69,63.02,3.9)
+joint spin revolute between leg.hub and wheel.axle
 ```
 
-The patch also exposes `world_name` in occurrence properties so layouts can select repeated
-instances precisely. It changes no saved-document fields. This is upstream SolidCraft plus
-two local API additions, not an unmodified release. The `full-engine` CI job builds this exact
-revision and patch; the release jobs separately test the stock binary.
+This is SolidCraft's Insert Design: the part is built into its own `.solidcraft` design and
+the assembly holds a component linked to it (`component.insert_design`), as a Fusion assembly
+holds linked designs. Further instances copy that component, and placements, grounding,
+connectors and joints work as for any component. The `from` path is relative to the file that
+names it; a part may itself link parts, and cycles are reported with the files involved.
+
+- The block holds connectors only: the geometry, parameters and timeline stay in the part
+  file. Parameters are not shared, so a part and an assembly can each have their own `L`.
+- A part file is one component. Parts that move independently (the links of a mechanism)
+  need one file each.
+- `run`, `evaluate` and `watch` build parts into a cache keyed by a hash of the part's source
+  and the parts it links (`<output-dir>/parts/` for `evaluate`, the system temporary
+  directory otherwise), so an unchanged part is not rebuilt. `evaluate` lists them under
+  `parts` in its report.
+- `pack -o asm.solidcraft` saves each part as `<part>.solidcraft` beside the assembly and
+  links to it by relative path. Open the assembly in SolidCraft and use **Update Links** after
+  editing a part, or pack again.
+- `watch` watches the part files too, and rebuilds the assembly when one is saved.
+- `compile` emits `component.insert_design` with the part's `.sc` path; a raw script replay
+  needs the parts built first, so use `run`, `pack` or `evaluate` for linked assemblies.
+- Errors in a part name the part and its line: `robot.sc:6: wheel.sc: line 12: …`.
+
+Linked occurrences take their authored names only on an engine whose `component.insert_design`
+accepts `occurrence_name` (the `linked_occurrence_names` capability); no release does yet, so they
+get the engine's own names (see below).
+
+## Engine compatibility
+
+Released engines can't take authored occurrence names. On those engines the DSL builds the
+assembly anyway, using the names the engine gives occurrences itself: `Component:k`, where `k`
+counts that component's occurrences in the order they are made. Placements, grounding, joints
+and checks work the same way. The difference is in naming: occurrence paths in body names read
+`(Pair:2/Block:1)` instead of `(second/left)`, and a layout must select bodies, not
+`instance` paths.
+
+Authored names need engine additions that no release has yet (up to 0.30.1): an optional
+`occurrence_name` on `component.create`, `occurrence.copy` and `component.insert_design`, and
+`world_name` in occurrence properties. `run`, `pack`, `evaluate` and `watch` read the engine's
+capabilities before running and use authored names wherever the engine has them, so assemblies
+pick them up when a release adds them. `check` and `compile` work without the engine.
+
+To see what an engine is missing, run the opt-in capability test against it:
+
+```sh
+SOLIDCRAFT_REQUIRE_FULL_SUPPORT=1 SOLIDCRAFT_CLI=path/to/solidcraft-cli cargo test --test compatibility
+```

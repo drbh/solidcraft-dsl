@@ -27,11 +27,20 @@ impl Environment {
                 return Err(error(p.line, "parameter", format!("`{}` is defined twice", p.name)));
             }
         }
-        let defs: Vec<ParamDef> = d.params.iter().map(|p| ParamDef { name: p.name.clone(), expr: p.expr.clone(), unit: "auto".into() }).collect();
+        // Text parameters hold words, not numbers; only `text` statements use them.
+        let defs: Vec<ParamDef> = d
+            .params
+            .iter()
+            .filter(|p| p.text().is_none())
+            .map(|p| ParamDef { name: p.name.clone(), expr: p.expr.clone(), unit: "auto".into() })
+            .collect();
         let (values, errors) = eval_params(&defs, 1.0);
         for p in &d.params {
             if let Some(e) = errors.get(&p.name) {
                 return Err(error(p.line, &format!("parameter `{}`", p.name), e));
+            }
+            if p.local && p.text().is_some() {
+                return Err(error(p.line, "parameter", "text belongs in a `param`, not a `let`"));
             }
             if !p.local && values.get(&p.name).is_some_and(|v| v.kind().is_none()) {
                 return Err(error(
@@ -92,6 +101,52 @@ pub fn text(c: &Comp) -> &str {
     }
 }
 
+/// An equation curve's fit points: `t` runs evenly from `from` to `to` (a closed curve leaves out
+/// the end, which is its start), and `x`, `y` are lengths of `t` and the parameters.
+#[allow(clippy::too_many_arguments)]
+fn sample_curve(
+    env: &Environment,
+    line: usize,
+    name: &str,
+    x: &str,
+    y: &str,
+    from: &str,
+    to: &str,
+    points: Option<&str>,
+    closed: bool,
+) -> R<SketchKind> {
+    let (t0, t1) = (env.eval(from).map_err(|e| error(line, "curve start", e))?, env.eval(to).map_err(|e| error(line, "curve end", e))?);
+    if (t0.len, t0.ang) != (t1.len, t1.ang) {
+        return Err(error(line, "curve", "`t` must start and end in the same unit"));
+    }
+    let n = match points {
+        Some(p) => env.number(p, Kind::Unitless, line, "points")?,
+        None => 24.0,
+    };
+    if n.fract() != 0. || !(3. ..=200.).contains(&n) {
+        return Err(error(line, "points", "must be a whole number from 3 through 200"));
+    }
+    let n = n as usize;
+    let steps = if closed { n } else { n - 1 };
+    let mut pts = Vec::with_capacity(n);
+    for i in 0..n {
+        let t = Value { v: t0.v + (t1.v - t0.v) * i as f64 / steps as f64, ..t0 };
+        let lookup = |s: &str| {
+            if s == "t" {
+                return Ok(t);
+            }
+            env.values.get(s).copied().ok_or_else(|| solidcraft_expr::Error(format!("unknown parameter `{s}`")))
+        };
+        let coord = |e: &str| -> R<f64> {
+            let v = eval_with(e, &lookup).map_err(|err| error(line, "curve", format!("`{e}` at t = {}: {}", t.v, err.0)))?;
+            v.to_kind(Kind::Length).map_err(|_| error(line, "curve", format!("`{e}` must be a length")))
+        };
+        let p = [coord(x)?, coord(y)?];
+        pts.push(Pt::Xy(p.map(|v| Comp::Num(v, v.to_string()))));
+    }
+    Ok(SketchKind::Spline { name: name.to_string(), pts, periodic: closed })
+}
+
 pub struct Lowered {
     pub design: Design,
     pub explanation: Json,
@@ -127,6 +182,11 @@ pub fn lower(d: &Design) -> R<Lowered> {
                 }
                 for st in &mut s.stmts {
                     let line = st.line;
+                    if let SketchKind::Curve { name, x, y, from, to, points, closed } = &st.kind {
+                        let spline = sample_curve(&env, line, name, x, y, from, to, points.as_deref(), *closed)?;
+                        sites.push(json!({"line":line,"role":"seed","expression":format!("({x}, {y})"),"persistent":false,"depends_on":references(&format!("{x} {y} {from} {to}"))}));
+                        st.kind = spline;
+                    }
                     let mut point = |p: &mut Pt| -> R<()> {
                         if let Pt::Xy(c) = p {
                             coords(c, &env, line, "seed", Kind::Length, false, &mut sites)?;
@@ -157,6 +217,65 @@ pub fn lower(d: &Design) -> R<Lowered> {
                         SketchKind::Point { p, bound, .. } => {
                             coords(p, &env, line, if *bound { "binding" } else { "seed" }, Kind::Length, *bound, &mut sites)?
                         }
+                        // The engine keeps text placement as expressions, like a bound point.
+                        SketchKind::Text { at, .. } => coords(at, &env, line, "placement", Kind::Length, true, &mut sites)?,
+                        SketchKind::Ellipse { center, major, .. } => {
+                            coords(center, &env, line, "seed", Kind::Length, false, &mut sites)?;
+                            coords(major, &env, line, "seed", Kind::Length, false, &mut sites)?;
+                        }
+                        SketchKind::Offset { side: Some(side), .. } => coords(side, &env, line, "seed", Kind::Length, false, &mut sites)?,
+                        // A projected face, edge or vertex is picked by a point, like a feature's edges.
+                        SketchKind::Project { point: Some(p), .. } => coords(p, &env, line, "selection", Kind::Length, false, &mut sites)?,
+                        SketchKind::Import { at, scale, .. } => {
+                            if let Some(at) = at {
+                                coords(at, &env, line, "seed", Kind::Length, false, &mut sites)?;
+                            }
+                            if let Some(k) = scale {
+                                *k = env.number(k, Kind::Unitless, line, "scale")?.to_string();
+                            }
+                        }
+                        // The engine takes a sketch pattern's counts, spacings and angle as numbers.
+                        SketchKind::Pattern { count, center, angle, spacing, dir, count2, spacing2, dir2, .. } => {
+                            if let Some(Pt::Xy(c)) = center {
+                                coords(c, &env, line, "seed", Kind::Length, false, &mut sites)?;
+                            }
+                            for c in [dir, dir2].into_iter().flatten() {
+                                coords(c, &env, line, "direction", Kind::Unitless, false, &mut sites)?;
+                            }
+                            for n in [Some(count), count2.as_mut()].into_iter().flatten() {
+                                let v = env.number(n, Kind::Unitless, line, "count")?;
+                                if v.fract() != 0. || !(2. ..=500.).contains(&v) {
+                                    return Err(error(line, "count", "must be a whole number from 2 through 500"));
+                                }
+                                sites.push(
+                                    json!({"line":line,"role":"topology","expression":n,"value":v,"persistent":false,"depends_on":references(n)}),
+                                );
+                                *n = (v as usize).to_string();
+                            }
+                            for e in [spacing, spacing2].into_iter().flatten() {
+                                let v = env.number(e, Kind::Length, line, "spacing")?;
+                                sites.push(json!({"line":line,"role":"seed","expression":e,"value":v,"unit":"mm","persistent":false,"depends_on":references(e)}));
+                                *e = v.to_string();
+                            }
+                            if let Some(a) = angle {
+                                let v = env.number(a, Kind::Angle, line, "angle")?.to_degrees();
+                                sites.push(json!({"line":line,"role":"seed","expression":a,"value":v,"unit":"deg","persistent":false,"depends_on":references(a)}));
+                                *a = v.to_string();
+                            }
+                        }
+                        // The engine takes a sketch chamfer's sizes as numbers.
+                        SketchKind::Chamfer { distance, distance2, angle, .. } => {
+                            for e in [Some(distance), distance2.as_mut()].into_iter().flatten() {
+                                let v = env.number(e, Kind::Length, line, "chamfer distance")?;
+                                sites.push(json!({"line":line,"role":"seed","expression":e,"value":v,"unit":"mm","persistent":false,"depends_on":references(e)}));
+                                *e = v.to_string();
+                            }
+                            if let Some(a) = angle {
+                                let v = env.number(a, Kind::Angle, line, "chamfer angle")?.to_degrees();
+                                sites.push(json!({"line":line,"role":"seed","expression":a,"value":v,"unit":"deg","persistent":false,"depends_on":references(a)}));
+                                *a = v.to_string();
+                            }
+                        }
                         SketchKind::Polygon { center, sides, .. } => {
                             coords(center, &env, line, "seed", Kind::Length, false, &mut sites)?;
                             let n = env.number(sides, Kind::Unitless, line, "sides")?;
@@ -173,7 +292,8 @@ pub fn lower(d: &Design) -> R<Lowered> {
                     let seed_size = match &mut st.kind {
                         SketchKind::Circle { size: CircleSize::Radius(e) | CircleSize::Diameter(e), .. }
                         | SketchKind::Polygon { radius: e, .. }
-                        | SketchKind::Slot { width: e, .. } => Some(e),
+                        | SketchKind::Slot { width: e, .. }
+                        | SketchKind::Ellipse { minor: e, .. } => Some(e),
                         _ => None,
                     };
                     if let Some(e) = seed_size {
@@ -186,6 +306,29 @@ pub fn lower(d: &Design) -> R<Lowered> {
                 }
             }
             Item::Feature(f) => {
+                // A cone's profile is drawn at these sizes; its dimensions keep the expressions.
+                if f.kind == "cone" {
+                    let size = |keys: [&str; 2], half: bool| -> R<Option<f64>> {
+                        let found = f.opts.iter().find(|(k, _)| keys.contains(&k.as_str()));
+                        match found {
+                            Some((k, Val::Expr(e))) => {
+                                let v = env.number(e, Kind::Length, f.line, k)?;
+                                Ok(Some(if half && k.ends_with("diameter") { v / 2.0 } else { v }))
+                            }
+                            _ => Ok(None),
+                        }
+                    };
+                    let seeds = [
+                        ("_r", size(["radius", "diameter"], true)?),
+                        ("_rt", size(["top_radius", "top_diameter"], true)?),
+                        ("_h", size(["height", "height"], false)?),
+                    ];
+                    for (k, v) in seeds {
+                        if let Some(v) = v {
+                            f.opts.push((k.to_string(), Val::Expr(v.to_string())));
+                        }
+                    }
+                }
                 for (key, val) in &mut f.opts {
                     if let Val::Tuples(tuples) = val {
                         let direction = matches!(key.as_str(), "dir" | "dir2" | "axis" | "normal");
@@ -208,6 +351,14 @@ pub fn lower(d: &Design) -> R<Lowered> {
                                 &mut sites,
                             )?;
                         }
+                    }
+                    // The engine takes a patch's crown as a number.
+                    if key == "crown"
+                        && let Val::Expr(e) = val
+                    {
+                        let n = env.number(e, Kind::Unitless, f.line, key)?;
+                        sites.push(json!({"line":f.line,"role":"seed","expression":e,"value":n,"persistent":false,"depends_on":references(e)}));
+                        *e = n.to_string();
                     }
                     if matches!(key.as_str(), "count" | "count2") {
                         if let Val::Expr(e) = val {
@@ -317,8 +468,39 @@ fn inline_helpers(d: &mut Design) -> R<()> {
                             expand(sides, &helpers)?;
                         }
                         SketchKind::Point { p, .. } => coords(p, &helpers)?,
+                        SketchKind::Text { at, height, angle, .. } => {
+                            coords(at, &helpers)?;
+                            for e in [height, angle].into_iter().flatten() {
+                                expand(e, &helpers)?;
+                            }
+                        }
+                        SketchKind::Ellipse { center, major, minor, .. } => {
+                            coords(center, &helpers)?;
+                            coords(major, &helpers)?;
+                            expand(minor, &helpers)?;
+                        }
                         SketchKind::Dim { value, .. } => expand(value, &helpers)?,
+                        SketchKind::Offset { distance, side, .. } => {
+                            expand(distance, &helpers)?;
+                            if let Some(side) = side {
+                                coords(side, &helpers)?;
+                            }
+                        }
+                        SketchKind::Pattern { center, dir, dir2, .. } => {
+                            if let Some(c) = center {
+                                point(c, &helpers)?;
+                            }
+                            for d in [dir, dir2].into_iter().flatten() {
+                                coords(d, &helpers)?;
+                            }
+                        }
                         SketchKind::Fillet { radius, .. } => expand(radius, &helpers)?,
+                        SketchKind::Chamfer { distance, distance2, angle, .. } => {
+                            expand(distance, &helpers)?;
+                            for e in [distance2, angle].into_iter().flatten() {
+                                expand(e, &helpers)?;
+                            }
+                        }
                         _ => {}
                     }
                 }

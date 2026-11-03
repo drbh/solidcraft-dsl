@@ -1,0 +1,238 @@
+{
+  "version": 1,
+  "defaults": false,
+  "requests": [
+    {
+      "id": "print-3mf",
+      "kind": "export",
+      "format": "3mf",
+      "layout": "plate"
+    },
+    {
+      "id": "preview-glb",
+      "kind": "export",
+      "format": "glb",
+      "layout": "plate"
+    },
+    {
+      "id": "print-stl",
+      "kind": "export",
+      "format": "stl",
+      "layout": "plate"
+    },
+    {
+      "id": "print-check",
+      "kind": "commands",
+      "layout": "plate",
+      "commands": [
+        {
+          "command": "inspect.measure",
+          "params": {}
+        }
+      ]
+    },
+    {
+      "id": "plate-view",
+      "kind": "snapshot",
+      "layout": "plate",
+      "options": {
+        "view": "iso"
+      }
+    }
+  ],
+  "layouts": {
+    "plate": {
+      "bed": [
+        256,
+        256
+      ],
+      "spacing": "6 mm",
+      "parts": [
+        {
+          "id": "Case",
+          "select": {
+            "bodies": [
+              "Case"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                1,
+                0,
+                0
+              ],
+              "angle": "180 deg"
+            }
+          ]
+        },
+        {
+          "id": "Bezel",
+          "select": {
+            "bodies": [
+              "Bezel"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                1,
+                0,
+                0
+              ],
+              "angle": "180 deg"
+            }
+          ]
+        },
+        {
+          "id": "BackPlate",
+          "select": {
+            "bodies": [
+              "BackPlate"
+            ]
+          }
+        },
+        {
+          "id": "Lens",
+          "select": {
+            "bodies": [
+              "Lens"
+            ]
+          }
+        },
+        {
+          "id": "Plunger00",
+          "select": {
+            "bodies": [
+              "Plunger00"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                0,
+                1,
+                0
+              ],
+              "angle": "90 deg"
+            }
+          ]
+        },
+        {
+          "id": "Plunger01",
+          "select": {
+            "bodies": [
+              "Plunger01"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                0,
+                1,
+                0
+              ],
+              "angle": "90 deg"
+            }
+          ]
+        },
+        {
+          "id": "Plunger10",
+          "select": {
+            "bodies": [
+              "Plunger10"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                0,
+                1,
+                0
+              ],
+              "angle": "-90 deg"
+            }
+          ]
+        },
+        {
+          "id": "Plunger11",
+          "select": {
+            "bodies": [
+              "Plunger11"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                0,
+                1,
+                0
+              ],
+              "angle": "-90 deg"
+            }
+          ]
+        },
+        {
+          "id": "Strap12",
+          "select": {
+            "bodies": [
+              "Strap12"
+            ]
+          }
+        },
+        {
+          "id": "Strap6",
+          "select": {
+            "bodies": [
+              "Strap6"
+            ]
+          }
+        },
+        {
+          "id": "Frame",
+          "select": {
+            "bodies": [
+              "Frame"
+            ]
+          }
+        },
+        {
+          "id": "Prong",
+          "select": {
+            "bodies": [
+              "Prong"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                0,
+                1,
+                0
+              ],
+              "angle": "90 deg"
+            }
+          ]
+        },
+        {
+          "id": "Keeper",
+          "select": {
+            "bodies": [
+              "Keeper"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                1,
+                0,
+                0
+              ],
+              "angle": "90 deg"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

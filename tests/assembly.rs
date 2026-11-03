@@ -89,6 +89,61 @@ fn missing_capabilities_are_explicit() {
     assert!(solidcraft_dsl::assembly::check_capabilities(&c, &json!([])).unwrap_err().contains("authored_occurrence_names"));
 }
 
+#[test]
+fn engines_without_authored_names_address_occurrences_by_their_own() {
+    let c = build(HINGE).unwrap();
+    let mut script = c.script.clone();
+    solidcraft_dsl::assembly::fit_script(&c, &mut script, &json!([])).unwrap();
+    let commands = script["commands"].as_array().unwrap();
+    assert!(commands.iter().all(|c| c["params"].get("occurrence_name").is_none()));
+    let moved: Vec<&str> =
+        commands.iter().filter(|c| c["command"] == "occurrence.move").map(|c| c["params"]["occurrence"].as_str().unwrap()).collect();
+    assert_eq!(moved, ["Leaf:1", "Leaf:2"]);
+    // A path flange becomes a chain of edge flanges, one per line, in the command's slots.
+    let src = "sheet_rule S thickness 1 mm bend_radius 1 mm k_factor 0.4\nsketch B on XY {\n rect r = (0,0) (10,10)\n}\nflange P from B rule S -> body Sheet\nsketch Z on YZ offset 5 mm {\n line a = (10,0) (10,5)\n line b = (10,5) (20,5)\n}\npath_flange F edge (5,10,0) path Z.a, Z.b body Sheet\n";
+    let flange = build(src).unwrap();
+    let mut script = flange.script.clone();
+    solidcraft_dsl::assembly::fit_script(&flange, &mut script, &json!([])).unwrap();
+    let chain: Vec<&Value> = script["commands"].as_array().unwrap().iter().filter(|c| c["params"]["type"] == "edge").collect();
+    assert_eq!(chain.len(), 2);
+    assert_eq!(chain[0]["params"]["edges"], json!([[5.0, 10.0, 0.0]]));
+    assert_eq!(chain[0]["params"]["flip"], json!(true));
+    assert_eq!(chain[1]["params"]["edges"], json!([[5.0, 10.0, 5.0]]));
+    assert!(chain[1]["params"].get("flip").is_none());
+    // One the compiler can't place still stops the build, saying why.
+    let flipped = build(&src.replace("offset 5 mm {", "offset 5 mm flip {")).unwrap();
+    let e = solidcraft_dsl::assembly::fit_script(&flipped, &mut flipped.script.clone(), &json!([])).unwrap_err();
+    assert!(e.contains("flipped") && e.contains("no path flanges"), "{e}");
+}
+
+#[test]
+fn assemblies_build_on_released_engines() {
+    let cli = std::env::var("SOLIDCRAFT_CLI").unwrap_or_else(|_| "solidcraft-cli".into());
+    if std::process::Command::new(&cli).arg("commands").output().is_err() {
+        eprintln!("no solidcraft-cli: skipped");
+        return;
+    }
+    let dir = std::env::temp_dir().join(format!("sc-assembly-released-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let source = dir.join("hinge.sc");
+    std::fs::write(&source, HINGE).unwrap();
+    let report = solidcraft_dsl::evaluate::evaluate(&solidcraft_dsl::evaluate::Options {
+        source,
+        output: dir.join("review"),
+        cli,
+        previews: false,
+        expectations: None,
+        requests: None,
+    })
+    .unwrap();
+    assert_eq!(report["ok"], true, "{report}");
+    assert_eq!(report["assembly"]["joints"][0]["values"][0]["value"], 35.0);
+    assert_eq!(report["assembly"]["joints"][0]["frame_a"]["origin"], json!([10.0, 20.0, 0.0]));
+    assert_eq!(report["assembly"]["joints"][0]["frame_b"]["origin"], json!([10.0, 20.0, 3.0]));
+    assert_eq!(report["measurements"]["body_count"], 2);
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
 fn engine() -> Option<String> {
     let cli = std::env::var("SOLIDCRAFT_CLI").unwrap_or_else(|_| "solidcraft-cli".into());
     let out = std::process::Command::new(&cli).arg("commands").output().ok()?;
@@ -198,4 +253,97 @@ fn engine_shared_instances_joint_parameter_edits_and_native_roundtrip() {
     let report = solidcraft_dsl::evaluate::evaluate(&options).unwrap();
     assert_eq!(report["ok"], false, "conflicting grounded hinge must fail: {report}");
     let _ = std::fs::remove_dir_all(dir);
+}
+
+const LINKED: &str = "design Pair units mm\ncomponent Pin from \"pin.sc\" {\n  connector top at (0,0,10)\n}\ninstance a = Pin\ninstance b = Pin at (20,0,0)\nground a\n";
+const PIN: &str = "design Pin units mm\nparam r = 5 mm\ncylinder Body radius r height 10 -> body Pin\n";
+
+#[test]
+fn linked_parts_insert_their_design_once_and_copy_it_after() {
+    let c = build(LINKED).unwrap();
+    let commands = c.script["commands"].as_array().unwrap();
+    let inserts: Vec<_> = commands.iter().filter(|c| c["command"] == "component.insert_design").collect();
+    assert_eq!(inserts.len(), 1);
+    assert_eq!(inserts[0]["params"], json!({"path":"pin.sc","name":"Pin","occurrence_name":"a","parent":"root"}));
+    assert!(commands.iter().any(|c| c["command"] == "occurrence.copy" && c["params"]["occurrence_name"] == "b"));
+    assert!(!commands.iter().any(|c| c["command"] == "component.create" || c["command"] == "solid.cylinder"));
+    assert_eq!(c.links.len(), 1);
+    assert_eq!(c.links[0].source, "pin.sc");
+    assert_eq!(commands[c.links[0].command]["command"], "component.insert_design");
+    let e = solidcraft_dsl::assembly::check_capabilities(
+        &c,
+        &json!([
+            {"id":"component.create","params":"occurrence_name"},
+            {"id":"occurrence.copy","params":"occurrence_name"},
+            {"id":"component.insert_design","params":"path, name?"}
+        ]),
+    )
+    .unwrap_err();
+    assert!(e.contains("linked_occurrence_names"), "{e}");
+    for (src, message) in [
+        ("component P from \"p.sc\" {\nbox B size 1 1 1\n}\ninstance p = P", "connectors only"),
+        ("component P from \"p.sc\" {\ninstance q = P\n}", "connectors only"),
+        ("component P from p {\n}", "quoted part file"),
+    ] {
+        let e = build(src).unwrap_err();
+        assert!(e.contains(message), "{src}: {e}");
+    }
+}
+
+#[test]
+fn engine_links_parts_and_reports_their_errors_and_cycles() {
+    let Some(cli) = engine() else { return };
+    let linked = build(LINKED).unwrap();
+    if solidcraft_dsl::assembly::fit_engine(&cli, &linked, &mut linked.script.clone()).is_err() {
+        eprintln!("installed engine lacks linked occurrence names: skipped engine test");
+        return;
+    }
+    let dir = std::env::temp_dir().join(format!("sc-linked-test-{}", std::process::id()));
+    std::fs::create_dir_all(&dir).unwrap();
+    let source = dir.join("pair.sc");
+    std::fs::write(&source, LINKED).unwrap();
+    std::fs::write(dir.join("pin.sc"), PIN).unwrap();
+    let evaluate = || {
+        solidcraft_dsl::evaluate::evaluate(&solidcraft_dsl::evaluate::Options {
+            source: source.clone(),
+            output: dir.join("review"),
+            cli: cli.clone(),
+            previews: false,
+            expectations: None,
+            requests: None,
+        })
+        .unwrap()
+    };
+    let report = evaluate();
+    assert_eq!(report["ok"], true, "{report}");
+    let bodies = report["measurements"]["bodies"].as_array().unwrap();
+    assert_eq!(bodies.len(), 2);
+    let max_x: Vec<f64> = bodies.iter().map(|b| b["bbox"]["max"][0].as_f64().unwrap()).collect();
+    assert!(max_x.iter().any(|x| (x - 5.0).abs() < 1e-6) && max_x.iter().any(|x| (x - 25.0).abs() < 1e-6), "{max_x:?}");
+    let first = report["parts"][0]["design"].as_str().unwrap().to_string();
+    // An unchanged part is reused; an edited one is rebuilt.
+    assert_eq!(evaluate()["parts"][0]["design"], first.as_str());
+    std::fs::write(dir.join("pin.sc"), PIN.replace("5 mm", "6 mm")).unwrap();
+    let report = evaluate();
+    assert_ne!(report["parts"][0]["design"], first.as_str());
+    assert!(report["measurements"]["bodies"][0]["bbox"]["max"][0].as_f64().unwrap() > 5.5);
+    // A part that fails names its own line; a cycle names the files.
+    std::fs::write(dir.join("pin.sc"), "design Pin units mm\nbox B size 2 2 2 -> body Pin\nfillet F edges (9,9,9) radius 1 body Pin\n").unwrap();
+    let report = evaluate();
+    let message = report["diagnostics"][0]["message"].as_str().unwrap();
+    assert!(message.contains("pin.sc: line 3"), "{message}");
+    std::fs::write(dir.join("pin.sc"), "design Pin\ncomponent Back from \"pair.sc\" {\n}\ninstance x = Back\n").unwrap();
+    let message = evaluate()["diagnostics"][0]["message"].as_str().unwrap().to_string();
+    assert!(message.contains("cycle: pair.sc -> pin.sc -> pair.sc"), "{message}");
+    let _ = std::fs::remove_dir_all(&dir);
+}
+
+#[test]
+fn engines_without_point_expressions_place_bound_points_at_their_values() {
+    let c = build("param a = 30 deg\nsketch S on XY {\n bind point p = (10 mm*cos(a), 10 mm*sin(a))\n}\n").unwrap();
+    let mut script = c.script.clone();
+    solidcraft_dsl::assembly::fit_script(&c, &mut script, &json!([])).unwrap();
+    let point = script["commands"].as_array().unwrap().iter().find(|c| c["command"] == "sketch.point").unwrap();
+    let xy: Vec<f64> = point["params"]["point"].as_array().unwrap().iter().map(|v| v.as_f64().unwrap()).collect();
+    assert!((xy[0] - 8.660254).abs() < 1e-6 && (xy[1] - 5.0).abs() < 1e-9, "{xy:?}");
 }

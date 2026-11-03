@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "defaults": false,
+  "requests": [
+    { "id": "print-3mf", "kind": "export", "format": "3mf", "layout": "plate" },
+    { "id": "print-stl", "kind": "export", "format": "stl", "layout": "plate" },
+    { "id": "preview-glb", "kind": "export", "format": "glb", "layout": "plate" },
+    { "id": "print-check", "kind": "commands", "layout": "plate",
+      "commands": [ { "command": "inspect.measure", "params": {} } ] },
+    { "id": "nest-check", "kind": "commands",
+      "commands": [ { "command": "inspect.interference", "params": { "bodies": ["S0Seg0", "S0Seg1", "S0Seg2", "S0Seg3", "S0Seg4", "S0Seg5", "S0Cap"] } } ] },
+    { "id": "extended-check", "kind": "commands",
+      "commands": [ { "command": "inspect.interference", "params": { "bodies": ["S1Seg0", "S1Seg1", "S1Seg2", "S1Seg3", "S1Seg4", "S1Seg5", "S1Cap"] } } ] },
+    { "id": "plate-view", "kind": "snapshot", "layout": "plate", "options": { "view": "iso" } }
+  ],
+  "layouts": {
+    "plate": {
+      "bed": [256, 256],
+      "spacing": "8 mm",
+      "parts": [
+        { "id": "nested", "select": { "bodies": ["S0Seg0", "S0Seg1", "S0Seg2", "S0Seg3", "S0Seg4", "S0Seg5"] } },
+        { "id": "cap", "select": { "bodies": ["S0Cap"] } }
+      ]
+    }
+  }
+}

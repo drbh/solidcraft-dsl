@@ -18,13 +18,13 @@ syn iskeyword @,48-57,_
 
 " option keys (from, distance, radius, at, edges, …)
 syn keyword scKey       between and rotate value values limits opposed
-syn keyword scStatement component instance connector ground joint
+syn keyword scStatement component instance connector ground joint check color material print use for if else suppress keep
 syn keyword scKey       from distance distance2 radius diameter at edges faces profiles targets body
 syn keyword scKey       plane axis count count2 spacing spacing2 dir dir2 offset units on about
 syn keyword scKey       taper angle clearance thread depth height width length major minor
 syn keyword scKey       thickness fit sides size corner center base normal to position
 syn keyword scKey       counterbore countersink features bodies tools points target type
-syn keyword scKey       direction alignment alignment2 face start through end
+syn keyword scKey       direction alignment alignment2 face start through end between fraction side curves neutral pull factor factors gap margin pitch top_radius top_diameter with join step left edge
 syn match   scKey       "\<origin\ze\s*("
 " modifiers (bare words that take no value)
 syn keyword scModifier  closed infer construction rounded periodic inscribed circumscribed
@@ -65,22 +65,22 @@ syn match   scDesignName  "\%(^\s*design\s\+\)\@<=\h\w*"
 syn match   scParamName   "\%(^\s*\%(param\|let\)\s\+\)\@<=\h\w*"
 syn match   scSketchName  '\%(^\s*sketch\s\+\)\@<=\%(\h\w*\|"[^"]*"\)'
 
-syn match   scFeature     "^\s*\%(extrude\|revolve\|hole\|box\|cylinder\|sphere\|torus\|fillet\|chamfer\|shell\|mirror\|pattern\|combine\|move\|remove\|sweep\|loft\)\>"
-syn match   scFeatureName '\%(^\s*\%(extrude\|revolve\|hole\|box\|cylinder\|sphere\|torus\|fillet\|chamfer\|shell\|mirror\|pattern\|combine\|move\|remove\|sweep\|loft\)\s\+\%(circular\s\+\)\?\)\@<=\%(\h\w*\|"[^"]*"\)'
+syn match   scFeature     "^\s*\%(extrude\|revolve\|hole\|box\|cylinder\|sphere\|torus\|fillet\|chamfer\|shell\|mirror\|pattern\|combine\|move\|remove\|sweep\|loft\|pipe\|thread\|coil\|emboss\|sheet_rule\|flange\|plane\|split\|rib\|web\|draft\|offset_faces\|scale\|hem\|perforate\|thicken\|convert\|patch\|stitch\|press_pull\|split_face\|offset_surface\|engine\|cone\|path_flange\)\>"
+syn match   scFeatureName '\%(^\s*\%(extrude\|revolve\|hole\|box\|cylinder\|sphere\|torus\|fillet\|chamfer\|shell\|mirror\|pattern\|combine\|move\|remove\|sweep\|loft\|pipe\|thread\|coil\|emboss\|sheet_rule\|flange\|plane\|split\|rib\|web\|draft\|offset_faces\|scale\|hem\|perforate\|thicken\|convert\|patch\|stitch\|press_pull\|split_face\|offset_surface\|engine\|cone\|path_flange\)\s\+\%(circular\s\+\)\?\)\@<=\%(\h\w*\|"[^"]*"\)'
 
 " ---- inside a sketch block ---------------------------------------------------------------
 
 " `[construction] line|polyline|rect|… [closed|infer|center|…] NAME =`
-syn match   scSketchStmt  "^\s*\%(construction\s\+\)\?\%(line\|polyline\|rect\|circle\|arc\|point\|polygon\|slot\|spline\)\>\%(\s\+\%(closed\|infer\|center\|rounded\|periodic\|inscribed\|circumscribed\|centers\|ends\)\>\)*" contained contains=scSketchWord,scStmtModifier
-syn keyword scSketchWord  line polyline rect circle arc point polygon slot spline contained
+syn match   scSketchStmt  "^\s*\%(construction\s\+\)\?\%(line\|polyline\|rect\|circle\|arc\|point\|polygon\|slot\|spline\|ellipse\|text\|curve\|svg\|dxf\|project\)\>\%(\s\+\%(closed\|infer\|center\|rounded\|periodic\|inscribed\|circumscribed\|centers\|ends\)\>\)*" contained contains=scSketchWord,scStmtModifier
+syn keyword scSketchWord  line polyline rect circle arc point polygon slot spline ellipse text curve svg dxf project contained
 syn keyword scStmtModifier construction closed infer center rounded periodic inscribed circumscribed centers ends contained
-syn match   scEntityName  "\%(^\s*\%(construction\s\+\)\?\%(line\|polyline\|rect\|circle\|arc\|point\|polygon\|slot\|spline\)\s\+\%(\%(closed\|infer\|center\|rounded\|periodic\|inscribed\|circumscribed\|centers\|ends\)\s\+\)*\)\@<=\h\w*\ze\s*=" contained
+syn match   scEntityName  "\%(^\s*\%(construction\s\+\)\?\%(line\|polyline\|rect\|circle\|arc\|point\|polygon\|slot\|spline\|ellipse\|text\)\s\+\%(\%(closed\|infer\|center\|rounded\|periodic\|inscribed\|circumscribed\|centers\|ends\)\s\+\)*\)\@<=\h\w*\ze\s*=" contained
 " `dim [auto|distance|horizontal|…] A [-> B] = expr`
 syn match   scDim         "^\s*dim\>\%(\s\+\%(auto\|distance\|horizontal\|vertical\|length\|radius\|diameter\|angle\)\>\)\?" contained contains=scDimWord,scDimKind
 syn keyword scDimWord     dim contained
 syn keyword scDimKind     auto distance horizontal vertical length radius diameter angle contained
 " constraints and the sketch fillet
-syn match   scConstraint  "^\s*\%(horizontal\|vertical\|coincident\|tangent\|equal\|parallel\|perpendicular\|concentric\|collinear\|curvature\|midpoint\|symmetric\|fix\|fillet\)\>" contained
+syn match   scConstraint  "^\s*\%(horizontal\|vertical\|coincident\|tangent\|equal\|parallel\|perpendicular\|concentric\|collinear\|curvature\|midpoint\|symmetric\|fix\|fillet\|offset\|mirror\|pattern\)\>" contained
 
 syn region  scSketchBlock matchgroup=scDelimiter start="{" end="}" fold
       \ contains=@scCommon,scSketchStmt,scEntityName,scDim,scConstraint

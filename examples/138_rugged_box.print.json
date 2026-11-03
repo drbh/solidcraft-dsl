@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "defaults": false,
+  "requests": [
+    { "id": "base-3mf", "kind": "export", "format": "3mf", "layout": "base" },
+    { "id": "lid-3mf", "kind": "export", "format": "3mf", "layout": "lid" },
+    { "id": "base-stl", "kind": "export", "format": "stl", "layout": "base" },
+    { "id": "lid-stl", "kind": "export", "format": "stl", "layout": "lid" },
+    { "id": "preview-glb", "kind": "export", "format": "glb", "layout": "base" },
+    { "id": "base-check", "kind": "commands", "layout": "base",
+      "commands": [ { "command": "inspect.measure", "params": {} } ] },
+    { "id": "lid-check", "kind": "commands", "layout": "lid",
+      "commands": [ { "command": "inspect.measure", "params": {} } ] },
+    { "id": "lid-view", "kind": "snapshot", "layout": "lid", "options": { "view": "iso" } }
+  ],
+  "layouts": {
+    "base": { "bed": [256, 256], "parts": [ { "id": "base", "select": { "bodies": ["Base"] } } ] },
+    "lid": { "bed": [256, 256], "parts": [
+      { "id": "lid", "select": { "bodies": ["Lid"] }, "rotate": [ { "axis": [1, 0, 0], "angle": "180 deg" } ] } ] }
+  }
+}
