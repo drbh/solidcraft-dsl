@@ -1,237 +1,269 @@
-// One WebGL context for the whole page. Every example's viewport is a transparent DOM element; a
-// single fixed canvas sits under the page content and each frame draws the visible examples into
-// their element's rectangle with the scissor test, so anything painted above (buttons, sticky
-// headers) covers the model as it should. Browsers cap live WebGL contexts at ~16, and
-// this page has more examples than that.
-//
-// Models are decoded only when their element comes near the screen and released again when it is
-// far away, so GPU memory tracks what is on screen rather than the whole page.
+// The model viewer. Only one example is open at a time, so there is one WebGL renderer for the
+// page; its canvas moves into whichever viewport element is showing. Models are embedded in the
+// page as gzipped, meshopt-compressed GLBs (see ci/examples-site.py) and are decoded only when an
+// example is opened: the gunzip runs in a worker, meshopt decoding in the decoder's own workers.
+// The GLBs carry positions only, so smooth normals are rebuilt here with a crease angle: curved
+// faces shade smoothly while CAD edges stay sharp.
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-
-const loader = new GLTFLoader();
-const views = new Set();
-let renderer = null;
-let dirty = true;
-const edgeColor = new THREE.Color();
-const modelColor = new THREE.Color();
-const backColor = new THREE.Color();
+import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
+import { toCreasedNormals } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import GunzipWorker from './gunzip.worker.js?worker&inline';
 
 // Front-biased three-quarter view (glTF is Y up, +Z is the design's front, -Y): 20 deg round from
 // the front and 28 deg up, so models built along 45 deg diagonals don't land edge-on.
 const VIEW_DIR = new THREE.Vector3(0.3, 0.47, 0.83).normalize();
+const CREASE = THREE.MathUtils.degToRad(30);
+const EDGE_ANGLE = 25;
 const EDGE_TRIANGLE_LIMIT = 600_000;
 
-function readColors() {
-  const style = getComputedStyle(document.documentElement);
-  modelColor.set(style.getPropertyValue('--model').trim() || '#9aa7b8');
-  edgeColor.set(style.getPropertyValue('--model-edge').trim() || '#1f2933');
-  backColor.set(style.getPropertyValue('--viewport').trim() || '#eef1f5');
-  for (const view of views) view.applyColors();
-  dirty = true;
-}
+MeshoptDecoder.useWorkers?.(2);
+const loader = new GLTFLoader().setMeshoptDecoder(MeshoptDecoder);
 
-function ensureRenderer() {
-  if (renderer) return;
-  const canvas = document.createElement('canvas');
-  canvas.className = 'gl-underlay';
-  document.body.appendChild(canvas);
-  renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-  renderer.setClearColor(0x000000, 0);
-  readColors();
-  matchMedia('(prefers-color-scheme: dark)').addEventListener('change', readColors);
-  new MutationObserver(readColors).observe(document.documentElement, {
-    attributes: true,
-    attributeFilter: ['data-theme'],
+// ---- Decoding: base64 gzip in a <script type="text/plain"> tag -> GLB bytes, off the main thread.
+let worker = null;
+let nextJob = 0;
+const jobs = new Map();
+
+function gunzip(text) {
+  if (!worker) {
+    worker = new GunzipWorker();
+    worker.onmessage = ({ data }) => {
+      const job = jobs.get(data.id);
+      jobs.delete(data.id);
+      if (data.error) job.reject(new Error(data.error));
+      else job.resolve(data.buffer);
+    };
+  }
+  return new Promise((resolve, reject) => {
+    const id = nextJob++;
+    jobs.set(id, { resolve, reject });
+    worker.postMessage({ id, text });
   });
-  const touch = () => (dirty = true);
-  window.addEventListener('scroll', touch, { passive: true, capture: true });
-  window.addEventListener('resize', touch);
-  requestAnimationFrame(frame);
 }
 
-function frame() {
-  requestAnimationFrame(frame);
-  if (!dirty) return;
-  dirty = false;
-  const canvas = renderer.domElement;
-  const width = window.innerWidth;
-  const height = window.innerHeight;
-  if (canvas.width !== Math.floor(width * renderer.getPixelRatio()) ||
-      canvas.height !== Math.floor(height * renderer.getPixelRatio())) {
-    renderer.setSize(width, height, false);
-  }
-  renderer.setScissorTest(false);
-  renderer.setClearColor(0x000000, 0);
-  renderer.clear();
-  renderer.setScissorTest(true);
-  for (const view of views) {
-    if (!view.model) continue;
-    const r = view.el.getBoundingClientRect();
-    if (r.bottom < 0 || r.top > height || r.right < 0 || r.left > width) continue;
-    const bottom = height - r.bottom;
-    renderer.setViewport(r.left, bottom, r.width, r.height);
-    renderer.setScissor(r.left, bottom, r.width, r.height);
-    renderer.setClearColor(backColor, 1);
-    renderer.clear();
-    if (view.camera.aspect !== r.width / r.height) {
-      view.camera.aspect = r.width / r.height;
-      view.camera.updateProjectionMatrix();
-    }
-    renderer.render(view.scene, view.camera);
-  }
-}
-
-async function decode(name) {
+export function glbBytes(name) {
   const tag = document.getElementById(`glb-${name}`);
-  if (!tag) throw new Error('model missing from page');
-  const response = await fetch(`data:application/gzip;base64,${tag.textContent.trim()}`);
-  const stream = response.body.pipeThrough(new DecompressionStream('gzip'));
-  return new Response(stream).arrayBuffer();
+  if (!tag) return Promise.reject(new Error('model missing from page'));
+  return gunzip(tag.textContent);
 }
 
 export async function glbBlob(name) {
-  return new Blob([await decode(name)], { type: 'model/gltf-binary' });
+  return new Blob([await glbBytes(name)], { type: 'model/gltf-binary' });
 }
 
-class View {
-  constructor(el, name, { onState }) {
-    this.el = el;
-    this.name = name;
-    this.onState = onState;
-    this.model = null;
-    this.loading = null;
-    this.showEdges = true;
-    this.scene = new THREE.Scene();
-    this.camera = new THREE.PerspectiveCamera(30, 1, 0.0001, 100);
-    // Lights ride on the camera so every side of the model is lit the same way while orbiting.
-    this.scene.add(new THREE.HemisphereLight(0xffffff, 0x9aa0aa, 1.9));
-    const key = new THREE.DirectionalLight(0xffffff, 2.2);
-    key.position.set(-0.5, 1, 0.8);
-    const fill = new THREE.DirectionalLight(0xffffff, 0.8);
-    fill.position.set(1, -0.3, 0.5);
-    this.camera.add(key, fill);
-    this.scene.add(this.camera);
-
-    this.controls = new OrbitControls(this.camera, el);
-    this.controls.enableZoom = false; // page scroll wins until the model is clicked
-    this.controls.addEventListener('change', () => (dirty = true));
-    el.addEventListener('pointerdown', () => (this.controls.enableZoom = true));
-    el.addEventListener('pointerleave', () => (this.controls.enableZoom = false));
-    el.addEventListener('dblclick', () => this.frame());
-
-    this.near = new IntersectionObserver(
-      ([entry]) => entry.isIntersecting && this.load(),
-      { rootMargin: '100% 0px' },
-    );
-    this.far = new IntersectionObserver(
-      ([entry]) => !entry.isIntersecting && this.unload(),
-      { rootMargin: '400% 0px' },
-    );
-    this.near.observe(el);
-    this.far.observe(el);
-  }
-
-  async load() {
-    if (this.model || this.loading) return;
-    this.onState('loading');
-    this.loading = (async () => {
-      const buffer = await decode(this.name);
-      const gltf = await loader.parseAsync(buffer, '');
-      const model = gltf.scene;
-      this.material = new THREE.MeshStandardMaterial({
-        color: modelColor, roughness: 0.55, metalness: 0.05,
-        polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1,
-      });
-      this.edgeMaterial = new THREE.LineBasicMaterial({
-        color: edgeColor, transparent: true, opacity: 0.65,
-      });
-      const meshes = [];
-      model.traverse((o) => o.isMesh && meshes.push(o));
-      for (const mesh of meshes) {
-        mesh.material = this.material;
-        const tris = (mesh.geometry.index?.count ?? mesh.geometry.attributes.position.count) / 3;
-        if (tris <= EDGE_TRIANGLE_LIMIT) {
-          const edges = new THREE.LineSegments(
-            new THREE.EdgesGeometry(mesh.geometry, 25), this.edgeMaterial);
-          edges.name = 'edges';
-          mesh.add(edges);
-        }
+async function loadModel(name) {
+  const gltf = await loader.parseAsync(await glbBytes(name), '');
+  const meshes = [];
+  gltf.scene.traverse((o) => o.isMesh && meshes.push(o));
+  for (const mesh of meshes) {
+    let geometry = mesh.geometry;
+    // Meshopt leaves positions quantized (integers plus a node scale); creasing needs floats.
+    if (geometry.attributes.position.normalized || !(geometry.attributes.position.array instanceof Float32Array)) {
+      const p = geometry.attributes.position;
+      const floats = new Float32Array(p.count * 3);
+      for (let i = 0; i < p.count; i++) {
+        floats[i * 3] = p.getX(i); floats[i * 3 + 1] = p.getY(i); floats[i * 3 + 2] = p.getZ(i);
       }
-      return model;
-    })();
-    try {
-      const model = await this.loading;
-      if (!views.has(this)) return dispose(model);
-      this.model = model;
-      this.scene.add(model);
-      this.setEdges(this.showEdges);
-      if (!this.framed) this.frame();
-      this.framed = true;
-      this.onState('ready');
-    } catch (error) {
-      console.error(this.name, error);
-      this.onState('error', String(error.message || error));
-    } finally {
-      this.loading = null;
-      dirty = true;
+      geometry.setAttribute('position', new THREE.BufferAttribute(floats, 3));
+    }
+    const tris = (geometry.index?.count ?? geometry.attributes.position.count) / 3;
+    const edges = tris <= EDGE_TRIANGLE_LIMIT ? new THREE.EdgesGeometry(geometry, EDGE_ANGLE) : null;
+    if (!geometry.attributes.normal) {
+      const creased = toCreasedNormals(geometry, CREASE);
+      geometry.dispose();
+      geometry = creased;
+    }
+    mesh.geometry = geometry;
+    if (edges) {
+      const lines = new THREE.LineSegments(edges);
+      lines.name = 'edges';
+      mesh.add(lines);
     }
   }
-
-  unload() {
-    if (!this.model) return;
-    this.scene.remove(this.model);
-    dispose(this.model);
-    this.material?.dispose();
-    this.edgeMaterial?.dispose();
-    this.model = null;
-    this.onState('idle');
-  }
-
-  frame() {
-    if (!this.model) return;
-    const box = new THREE.Box3().setFromObject(this.model);
-    const sphere = box.getBoundingSphere(new THREE.Sphere());
-    const fov = THREE.MathUtils.degToRad(this.camera.fov);
-    const distance = (sphere.radius / Math.sin(fov / 2)) * 1.05;
-    this.camera.position.copy(sphere.center).addScaledVector(VIEW_DIR, distance);
-    this.camera.near = distance / 100;
-    this.camera.far = distance * 100;
-    this.camera.updateProjectionMatrix();
-    this.controls.target.copy(sphere.center);
-    this.controls.update();
-    dirty = true;
-  }
-
-  setEdges(on) {
-    this.showEdges = on;
-    this.model?.traverse((o) => o.name === 'edges' && (o.visible = on));
-    dirty = true;
-  }
-
-  applyColors() {
-    this.material?.color.copy(modelColor);
-    this.edgeMaterial?.color.copy(edgeColor);
-  }
-
-  destroy() {
-    views.delete(this);
-    this.near.disconnect();
-    this.far.disconnect();
-    this.controls.dispose();
-    this.unload();
-  }
+  return gltf.scene;
 }
 
 function dispose(object) {
   object.traverse((o) => o.geometry?.dispose());
 }
 
-export function createView(el, name, options) {
-  ensureRenderer();
-  const view = new View(el, name, options);
-  views.add(view);
-  return view;
+// ---- Colours follow the page theme.
+function themeColors() {
+  const style = getComputedStyle(document.documentElement);
+  const read = (name, fallback) => new THREE.Color(style.getPropertyValue(name).trim() || fallback);
+  return {
+    model: read('--model', '#a9b6c8'),
+    edge: read('--model-edge', '#27303b'),
+    back: read('--viewport', '#eef1f5'),
+  };
+}
+
+function makeMaterials(colors) {
+  return {
+    surface: new THREE.MeshStandardMaterial({
+      color: colors.model, roughness: 0.55, metalness: 0.05,
+      polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1,
+    }),
+    edge: new THREE.LineBasicMaterial({ color: colors.edge, transparent: true, opacity: 0.65 }),
+  };
+}
+
+function applyMaterials(model, materials) {
+  model.traverse((o) => {
+    if (o.isMesh) o.material = materials.surface;
+    else if (o.isLineSegments) o.material = materials.edge;
+  });
+}
+
+function makeScene(camera) {
+  const scene = new THREE.Scene();
+  // Lights ride on the camera so every side of the model is lit the same way while orbiting.
+  scene.add(new THREE.HemisphereLight(0xffffff, 0x9aa0aa, 1.9));
+  const key = new THREE.DirectionalLight(0xffffff, 2.2);
+  key.position.set(-0.5, 1, 0.8);
+  const fill = new THREE.DirectionalLight(0xffffff, 0.8);
+  fill.position.set(1, -0.3, 0.5);
+  camera.add(key, fill);
+  scene.add(camera);
+  return scene;
+}
+
+function frameCamera(camera, model, controls) {
+  const box = new THREE.Box3().setFromObject(model);
+  const sphere = box.getBoundingSphere(new THREE.Sphere());
+  const fov = THREE.MathUtils.degToRad(camera.fov);
+  const distance = (sphere.radius / Math.sin(fov / 2)) * 1.05;
+  camera.position.copy(sphere.center).addScaledVector(VIEW_DIR, distance);
+  camera.near = distance / 100;
+  camera.far = distance * 100;
+  camera.updateProjectionMatrix();
+  if (controls) {
+    controls.target.copy(sphere.center);
+    controls.update();
+  } else {
+    camera.lookAt(sphere.center);
+  }
+}
+
+// ---- The interactive view.
+let renderer = null;
+
+function sharedRenderer() {
+  if (!renderer) {
+    renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.domElement.className = 'gl';
+  }
+  return renderer;
+}
+
+export function createView(el, name, { onState }) {
+  const gl = sharedRenderer();
+  el.prepend(gl.domElement);
+  const camera = new THREE.PerspectiveCamera(30, 1, 0.0001, 100);
+  const scene = makeScene(camera);
+  const controls = new OrbitControls(camera, gl.domElement);
+  let model = null;
+  let materials = makeMaterials(themeColors());
+  let showEdges = true;
+  let alive = true;
+  let queued = false;
+
+  const render = () => {
+    if (queued || !alive) return;
+    queued = true;
+    requestAnimationFrame(() => {
+      queued = false;
+      if (!alive) return;
+      const { width, height } = el.getBoundingClientRect();
+      if (!width || !height) return;
+      gl.setSize(width, height, false);
+      camera.aspect = width / height;
+      camera.updateProjectionMatrix();
+      gl.setClearColor(themeColors().back, 1);
+      gl.render(scene, camera);
+    });
+  };
+
+  const recolor = () => {
+    const colors = themeColors();
+    materials.surface.color.copy(colors.model);
+    materials.edge.color.copy(colors.edge);
+    render();
+  };
+  const scheme = matchMedia('(prefers-color-scheme: dark)');
+  scheme.addEventListener('change', recolor);
+  const themeWatch = new MutationObserver(recolor);
+  themeWatch.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+  const resize = new ResizeObserver(render);
+  resize.observe(el);
+  controls.addEventListener('change', render);
+  const reset = () => model && (frameCamera(camera, model, controls), render());
+  gl.domElement.addEventListener('dblclick', reset);
+
+  onState('loading');
+  loadModel(name).then(
+    (m) => {
+      if (!alive) return dispose(m);
+      model = m;
+      applyMaterials(model, materials);
+      scene.add(model);
+      frameCamera(camera, model, controls);
+      onState('ready');
+      render();
+    },
+    (error) => {
+      console.error(name, error);
+      if (alive) onState('error', String(error.message || error));
+    },
+  );
+
+  return {
+    frame: reset,
+    setEdges(on) {
+      showEdges = on;
+      model?.traverse((o) => o.name === 'edges' && (o.visible = on));
+      render();
+    },
+    destroy() {
+      alive = false;
+      resize.disconnect();
+      themeWatch.disconnect();
+      scheme.removeEventListener('change', recolor);
+      gl.domElement.removeEventListener('dblclick', reset);
+      controls.dispose();
+      if (model) dispose(model);
+      materials.surface.dispose();
+      materials.edge.dispose();
+      gl.domElement.remove();
+    },
+  };
+}
+
+// ---- Thumbnails, rendered by ci/examples-site.py through a headless browser at build time.
+// Transparent background and fixed mid-tone colours, so one image reads on light and dark pages.
+export async function renderThumb(name, width = 480, height = 360) {
+  const gl = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
+  gl.setPixelRatio(1);
+  gl.setSize(width, height, false);
+  gl.setClearColor(0x000000, 0);
+  const camera = new THREE.PerspectiveCamera(30, width / height, 0.0001, 100);
+  const scene = makeScene(camera);
+  const model = await loadModel(name);
+  const materials = makeMaterials({
+    model: new THREE.Color('#a3b0c2'), edge: new THREE.Color('#27303b'),
+  });
+  applyMaterials(model, materials);
+  scene.add(model);
+  frameCamera(camera, model);
+  gl.render(scene, camera);
+  const url = gl.domElement.toDataURL('image/webp', 0.82);
+  dispose(model);
+  materials.surface.dispose();
+  materials.edge.dispose();
+  gl.dispose();
+  gl.forceContextLoss();
+  return url;
 }

@@ -1,7 +1,7 @@
 <script>
   import { createView, glbBlob } from './lib/viewer.js';
 
-  let { example } = $props();
+  let { example, prev = null, next = null } = $props();
 
   let viewport = $state();
   let view;
@@ -20,6 +20,8 @@
     });
     return () => view.destroy();
   });
+
+  const short = (e) => `${e.number ? e.number + ' ' : ''}${e.title}`;
 
   async function copy() {
     await navigator.clipboard.writeText(example.source);
@@ -49,12 +51,18 @@
 </script>
 
 <section class="example" id={example.name}>
+  <div class="crumbs">
+    <a href="#/">All examples</a>
+    <span>/</span>
+    <span>{example.section}</span>
+    <span class="spacer"></span>
+    {#if prev}<a class="step" href="#{prev.name}" title="Previous (←)">← {short(prev)}</a>{/if}
+    {#if next}<a class="step" href="#{next.name}" title="Next (→)">{short(next)} →</a>{/if}
+  </div>
   <header>
     <h2>
-      <a href="#{example.name}">
-        {#if example.number}<span class="num">{example.number}</span>{/if}
-        {example.title}
-      </a>
+      {#if example.number}<span class="num">{example.number}</span>{/if}
+      {example.title}
     </h2>
     {#if example.summary}<p class="summary">{example.summary}</p>{/if}
   </header>
@@ -99,12 +107,35 @@
 </section>
 
 <style>
-  .example { margin: 0 0 56px; scroll-margin-top: 16px; }
+  .example { margin: 0; }
+
+  .crumbs {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin-bottom: 14px;
+    font-size: 13px;
+    color: var(--muted);
+    flex-wrap: wrap;
+  }
+  .crumbs a { color: var(--accent); text-decoration: none; }
+  .crumbs a:hover { text-decoration: underline; }
+  .crumbs .spacer { flex: 1; }
+  .crumbs .step {
+    padding: 3px 10px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--panel);
+    color: var(--text);
+    max-width: 260px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .crumbs .step:hover { border-color: var(--accent); text-decoration: none; }
 
   header { margin-bottom: 12px; }
-  h2 { margin: 0; font-size: 19px; letter-spacing: -0.01em; }
-  h2 a { color: inherit; text-decoration: none; }
-  h2 a:hover { color: var(--accent); }
+  h2 { margin: 0; font-size: 22px; letter-spacing: -0.01em; }
   h2 .num {
     display: inline-block;
     min-width: 2em;
@@ -124,7 +155,7 @@
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     gap: 16px;
     /* Short sources get a shorter row; long ones scroll inside the code pane. */
-    height: clamp(380px, min(68vh, var(--fit)), 760px);
+    height: clamp(420px, min(calc(100vh - 170px), var(--fit)), 1100px);
   }
 
   .code, .model {
@@ -175,7 +206,7 @@
 
   .scroll { flex: 1; overflow: auto; min-height: 0; }
 
-  /* Transparent once the model is drawn: the page's shared canvas shows through underneath. */
+  /* The page's one WebGL canvas is moved in here (see lib/viewer.js). */
   .viewport {
     position: relative;
     flex: 1;
@@ -184,8 +215,17 @@
     cursor: grab;
     touch-action: none;
   }
-  .viewport.ready { background: transparent; }
   .viewport:active { cursor: grabbing; }
+  .viewport :global(canvas.gl) {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+    opacity: 0;
+    transition: opacity 0.15s;
+  }
+  .viewport.ready :global(canvas.gl) { opacity: 1; }
 
   .note {
     position: absolute;
@@ -216,7 +256,7 @@
   @media (max-width: 1100px) {
     .panes { grid-template-columns: minmax(0, 1fr); height: auto; }
     .code { max-height: 60vh; }
-    .model { height: min(70vw, 460px); }
+    .model { height: min(80vw, 520px); order: -1; }
   }
   @media (max-width: 520px) {
     .code .muted { display: none; }
