@@ -14,6 +14,7 @@ import hashlib
 import json
 import math
 import os
+import re
 import struct
 import subprocess
 import sys
@@ -26,47 +27,94 @@ REQUEST = json.dumps({"version": 1, "defaults": False,
 
 
 @functools.cache
-def toolchain_hash():
-    """The compiler's sources and the engine version: a change to either rebuilds every example."""
-    digest = hashlib.sha256()
-    for path in sorted([*ROOT.glob("src/**/*.rs"), *ROOT.glob("crates/**/*.rs"), ROOT / "Cargo.lock"]):
-        digest.update(path.relative_to(ROOT).as_posix().encode() + b"\0" + path.read_bytes())
+def engine_version():
     cli = os.environ.get("SOLIDCRAFT_CLI", "solidcraft-cli")
     try:
-        version = subprocess.run([cli, "--version"], capture_output=True, text=True, timeout=30).stdout
+        return subprocess.run([cli, "--version"], capture_output=True, text=True, timeout=30).stdout.strip()
     except OSError:
-        version = ""
-    digest.update(version.encode())
-    return digest.hexdigest()
+        return ""
 
 
-def inputs_hash(source):
-    """What an example's GLB depends on: the toolchain, the example, and its <name>_* folders
-    (parts it `use`s, art it imports). Content, not mtimes, so a fresh checkout (CI) reuses a
-    restored cache."""
-    digest = hashlib.sha256(toolchain_hash().encode() + source.read_bytes())
+def folder_files(source):
+    """An example's <name>_* folders (parts it `use`s, art it imports), as (relative path, bytes)."""
     for folder in sorted(source.parent.glob(f"{source.stem}_*")):
         for f in sorted(folder.rglob("*")) if folder.is_dir() else []:
             if f.is_file():
-                digest.update(f.relative_to(source.parent).as_posix().encode() + b"\0" + f.read_bytes())
+                yield f.relative_to(source.parent).as_posix(), f.read_bytes()
+
+
+# Decimal numbers in a compiled script, rounded before hashing: computed values such as
+# sin() and sqrt() results can differ in the last bit between platforms' math libraries
+# (macOS and Linux disagree on a handful of examples), which must not change the key.
+NUMBER = re.compile(rb"-?\d+\.\d+(?:[eE][-+]?\d+)?")
+
+
+def canonical_script(text):
+    return NUMBER.sub(lambda m: format(float(m.group()), ".10g").encode(), text)
+
+
+def inputs_hash(source, binary, scheme="script-v2"):
+    """What an example's GLB depends on: the command script it compiles to (so compiler changes
+    and comment edits that don't change the script don't rebuild it), the files beside it, and
+    the engine version. Compiling takes milliseconds; evaluating can take minutes. Content, not
+    mtimes, so a fresh checkout (ci) can reuse outputs built elsewhere."""
+    digest = hashlib.sha256(f"{scheme}\0{engine_version()}\0".encode())
+    compiled = subprocess.run([str(binary), "compile", str(source)], capture_output=True, cwd=ROOT)
+    script = compiled.stdout
+    if scheme != "script-v1":
+        script = canonical_script(script)
+    # A file that doesn't compile still gets a key (its source), so its failure is cached too.
+    digest.update(script if compiled.returncode == 0 else b"source\0" + source.read_bytes())
+    for name, data in folder_files(source):
+        digest.update(name.encode() + b"\0" + data)
+    return "v2:" + digest.hexdigest()
+
+
+def legacy_inputs_hash(source):
+    """The previous key (compiler sources plus the example), to adopt caches stamped with it."""
+    digest = hashlib.sha256()
+    for path in sorted([*ROOT.glob("src/**/*.rs"), *ROOT.glob("crates/**/*.rs"), ROOT / "Cargo.lock"]):
+        digest.update(path.relative_to(ROOT).as_posix().encode() + b"\0" + path.read_bytes())
+    digest.update(f"solidcraft-cli {engine_version().split()[-1]}\n".encode() if engine_version() else b"")
+    toolchain = digest.hexdigest()
+    digest = hashlib.sha256(toolchain.encode() + source.read_bytes())
+    for name, data in folder_files(source):
+        digest.update(name.encode() + b"\0" + data)
     return digest.hexdigest()
 
 
-def build(source, out_dir, binary, force, timeout):
-    """Evaluate one example; return the path of its GLB or raise with the reason."""
+def cached(source, out_dir, binary, key=None):
+    """The GLB already built for these inputs, or None. Stamps the key on caches it adopts."""
     glb = next(out_dir.rglob("*.glb"), None) if out_dir.exists() else None
+    if glb is None:
+        return None
     stamp = out_dir / "inputs.sha256"
-    key = inputs_hash(source)
-    if glb and not force:
-        if stamp.exists() and stamp.read_text().strip() == key:
-            return glb, "cached"
-        if not stamp.exists():
-            # A cache from before the stamp: adopt it if it is newer than its sources.
-            parts = source.with_name(f"{source.stem}_parts")
-            inputs = [source, binary] + (sorted(parts.rglob("*.sc")) if parts.is_dir() else [])
-            if glb.stat().st_mtime > max(p.stat().st_mtime for p in inputs):
-                stamp.write_text(key)
-                return glb, "cached"
+    key = key or inputs_hash(source, binary)
+    have = stamp.read_text().strip() if stamp.exists() else None
+    if have == key:
+        return glb
+    # Caches from before the script key: adopt them if they match what they were stamped with,
+    # or (unstamped) if they are newer than their sources.
+    adopt = False
+    if have and have.startswith("v2:"):
+        adopt = have == inputs_hash(source, binary, "script-v1")  # before numbers were rounded
+    elif have:
+        adopt = have == legacy_inputs_hash(source)
+    elif have is None:
+        parts = source.with_name(f"{source.stem}_parts")
+        inputs = [source] + (sorted(parts.rglob("*.sc")) if parts.is_dir() else [])
+        adopt = glb.stat().st_mtime > max(p.stat().st_mtime for p in inputs)
+    if adopt:
+        stamp.write_text(key)
+        return glb
+    return None
+
+
+def build(source, out_dir, binary, force, timeout, key=None):
+    """Evaluate one example; return the path of its GLB or raise with the reason."""
+    key = key or inputs_hash(source, binary)
+    if not force and (glb := cached(source, out_dir, binary, key)):
+        return glb, "cached"
     for old in out_dir.rglob("*.glb") if out_dir.exists() else []:
         old.unlink()
     proc = subprocess.run(
@@ -81,7 +129,7 @@ def build(source, out_dir, binary, force, timeout):
         except (json.JSONDecodeError, AttributeError):
             reason = None
         raise RuntimeError(reason or (proc.stderr.strip().splitlines() or ["no GLB produced"])[-1])
-    stamp.write_text(key)
+    (out_dir / "inputs.sha256").write_text(key)
     return glb, "built"
 
 
