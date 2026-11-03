@@ -5,7 +5,7 @@
 // the sections of categories.js and handed to the app as `virtual:examples`. The GLBs never go
 // through the bundler: they are injected into the HTML as inert <script type="text/plain"> blocks
 // that the viewer decodes when an example is opened.
-import { readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vite';
 import { svelte } from '@sveltejs/vite-plugin-svelte';
@@ -54,7 +54,9 @@ function examples() {
         const [light, dark] = pair.split(' ');
         return `.t${i}{--l:${light};--d:${dark}}`;
       }).join('');
+      const { playground: hasPlayground = false } = load();
       return `export const commit = ${JSON.stringify(commit)};\n` +
+        `export const playground = ${JSON.stringify(hasPlayground)};\n` +
         `export const tokenCss = ${JSON.stringify(css)};\n` +
         `export const sections = ${JSON.stringify(sectionList)};\n` +
         `export const examples = ${JSON.stringify(list)};\n`;
@@ -110,7 +112,109 @@ function highlight(highlighter, source, palette) {
   return `<pre class="shiki"><code>${lines.join('\n')}</code></pre>`;
 }
 
+// ---- The playground page (playground.html): every example's files, the grammar's word lists for
+// the editor, and the engine module (built by ci/playground-engine.py) embedded like the GLBs.
+const examplesDir = here('../examples');
+const enginePath = process.env.PLAYGROUND_ENGINE || here('../build/playground/engine.wasm.gz');
+
+function walk(dir, prefix = '') {
+  const out = [];
+  for (const name of readdirSync(dir).sort()) {
+    const full = `${dir}/${name}`;
+    if (statSync(full).isDirectory()) out.push(...walk(full, `${prefix}${name}/`));
+    else if (name.endsWith('.sc')) out.push([`${prefix}${name}`, readFileSync(full, 'utf8')]);
+  }
+  return out;
+}
+
+// Alternations in the grammar's rules, e.g. (extrude|revolve|…), as word lists.
+function grammarWords() {
+  const grammar = JSON.parse(readFileSync(grammarPath, 'utf8'));
+  const words = (...rules) => {
+    const found = new Set();
+    for (const rule of rules) {
+      const node = grammar.repository[rule];
+      for (const p of node?.patterns ?? [node]) {
+        const text = p?.match ?? p?.begin ?? '';
+        for (const group of text.matchAll(/\(\??:?([A-Za-z_]+(?:\|[A-Za-z_]+)+)\)/g)) {
+          for (const w of group[1].split('|')) found.add(w);
+        }
+      }
+    }
+    return [...found];
+  };
+  return {
+    keyword: [...words('assembly'), 'design', 'param', 'let', 'sketch', 'dim', 'units', 'body', 'on', 'from', 'construction'],
+    feature: [...words('feature', 'sketch-entity', 'sketch-constraint')],
+    key: words('key'),
+    modifier: words('modifier'),
+    constant: [...words('plane', 'axis'), 'origin'],
+  };
+}
+
+// The gallery's titles (ci/examples-site.py `describe`): words from the file name.
+const ACRONYMS = new Set(['rc', 'pcb', 'esp32', 'led', 'usb', 'cd', 'tft']);
+const SPELLINGS = { ipod: 'iPod', macbook: 'MacBook' };
+function titleOf(name) {
+  const words = name.replace(/^\d+_/, '').split('_').map((w) =>
+    SPELLINGS[w] ?? (ACRONYMS.has(w) || /^[a-z]{2,}\d+$/.test(w) ? w.toUpperCase() : w));
+  const title = words.join(' ');
+  return title.charAt(0).toUpperCase() + title.slice(1);
+}
+
+function playground() {
+  const id = 'virtual:playground';
+  return {
+    name: 'solidcraft-playground',
+    resolveId: (source) => (source === id ? '\0' + id : null),
+    load(resolved) {
+      if (resolved !== '\0' + id) return null;
+      const files = Object.fromEntries(walk(examplesDir).map(([p, text]) => [`examples/${p}`, text]));
+      const byName = new Map();
+      for (const path of Object.keys(files)) {
+        const m = path.match(/^examples\/([^/]+)\.sc$/);
+        if (m) byName.set(m[1], path);
+      }
+      const order = categories.flatMap((c) => c.examples.map((n) => [c.title, n])).filter(([, n]) => byName.has(n));
+      const listed = new Set(order.map(([, n]) => n));
+      for (const n of byName.keys()) if (!listed.has(n)) order.push(['Other', n]);
+      const list = order.map(([section, name]) => {
+        const text = files[byName.get(name)];
+        const number = name.match(/^(\d+)_/)?.[1] ?? null;
+        const title = titleOf(name);
+        const parts = Object.keys(files).filter((p) => p.startsWith(`examples/${name}_parts/`));
+        return { name, number, section, title, main: byName.get(name), parts };
+      });
+      return `export const files = ${JSON.stringify(files)};\n` +
+        `export const examples = ${JSON.stringify(list)};\n` +
+        `export const words = ${JSON.stringify(grammarWords())};\n`;
+    },
+    transformIndexHtml: {
+      order: 'post',
+      handler() {
+        if (!existsSync(enginePath)) {
+          this?.warn?.(`no engine at ${enginePath}`);
+          return [];
+        }
+        return [{
+          tag: 'script',
+          attrs: { type: 'text/plain', id: 'engine-wasm' },
+          children: readFileSync(enginePath).toString('base64'),
+          injectTo: 'body',
+        }];
+      },
+    },
+  };
+}
+
+// PAGE=playground builds playground.html; the default is the gallery (index.html). Each is one
+// self-contained file, so they are separate builds.
+const page = process.env.PAGE === 'playground' ? 'playground' : 'gallery';
+
 export default defineConfig({
-  plugins: [svelte(), examples(), viteSingleFile()],
-  build: { chunkSizeWarningLimit: 4096 },
+  plugins: [svelte(), page === 'playground' ? playground() : examples(), viteSingleFile()],
+  build: {
+    chunkSizeWarningLimit: 4096,
+    rollupOptions: { input: here(page === 'playground' ? './playground.html' : './index.html') },
+  },
 });

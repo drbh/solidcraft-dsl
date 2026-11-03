@@ -1,0 +1,14 @@
+# Template: ci/playground-engine.py copies this crate into a checkout of the SolidCraft
+# repository at the pinned tag (as apps/sc-playground) and fills in the path below. It has to
+# build as a member of that workspace: on its own, cargo resolves different `truck` versions.
+[package]
+name = "sc-playground"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[dependencies]
+solidcraft-dsl = { path = "@DSL_PATH@" }
+solidcraft-engine = { path = "../../crates/engine" }
+solidcraft-io = { path = "../../crates/io" }
+serde_json = "1"

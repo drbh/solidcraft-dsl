@@ -1,5 +1,6 @@
 <script>
-  import { createView, glbBlob } from './lib/viewer.js';
+  import { createView, glbBlob, loadModel } from './lib/viewer.js';
+  import { playground } from 'virtual:examples';
 
   let { example, prev = null, next = null } = $props();
 
@@ -15,9 +16,10 @@
 
   $effect(() => {
     if (!example.hasModel) return;
-    view = createView(viewport, example.name, {
+    view = createView(viewport, {
       onState: (s, m = '') => { status = s; message = m; },
     });
+    view.show(loadModel(example.name));
     return () => view.destroy();
   });
 
@@ -75,6 +77,7 @@
         <span class="spacer"></span>
         <button onclick={copy}>{copied ? 'Copied' : 'Copy'}</button>
         <button onclick={downloadSource}>.sc</button>
+        {#if playground}<a class="open" href="playground.html#ex={example.name}" title="Edit and rebuild it in the browser">Playground</a>{/if}
       </div>
       <div class="scroll">{@html example.html}</div>
     </div>
@@ -199,6 +202,16 @@
     cursor: pointer;
   }
   .bar button:hover { color: var(--text); }
+  .bar .open {
+    flex: none;
+    padding: 3px 9px;
+    border: 1px solid var(--accent);
+    border-radius: 6px;
+    background: var(--accent);
+    color: #fff;
+    text-decoration: none;
+    font-weight: 600;
+  }
   .bar button[aria-pressed='true'] {
     color: var(--accent);
     border-color: color-mix(in srgb, var(--accent) 45%, var(--border));

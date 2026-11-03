@@ -13,6 +13,16 @@
   --danger: #b42318;
   --sidebar: 260px;
   --mono: ui-monospace, 'SF Mono', 'JetBrains Mono', Menlo, Consolas, monospace;
+  --hl-comment: #6e7781;
+  --hl-string: #0a3069;
+  --hl-number: #0550ae;
+  --hl-keyword: #cf222e;
+  --hl-feature: #8250df;
+  --hl-key: #953800;
+  --hl-modifier: #116329;
+  --hl-constant: #0550ae;
+  --hl-ref: #1f6feb;
+  --hl-operator: #57606a;
   color-scheme: light;
 }
 
@@ -30,6 +40,16 @@
     --model: #8d9bb0;
     --model-edge: #0a0d11;
     --danger: #ff8a7a;
+    --hl-comment: #8b949e;
+    --hl-string: #a5d6ff;
+    --hl-number: #79c0ff;
+    --hl-keyword: #ff7b72;
+    --hl-feature: #d2a8ff;
+    --hl-key: #ffa657;
+    --hl-modifier: #7ee787;
+    --hl-constant: #79c0ff;
+    --hl-ref: #58a6ff;
+    --hl-operator: #8b949e;
     color-scheme: dark;
   }
 }
@@ -47,6 +67,16 @@
   --model: #8d9bb0;
   --model-edge: #0a0d11;
   --danger: #ff8a7a;
+  --hl-comment: #8b949e;
+  --hl-string: #a5d6ff;
+  --hl-number: #79c0ff;
+  --hl-keyword: #ff7b72;
+  --hl-feature: #d2a8ff;
+  --hl-key: #ffa657;
+  --hl-modifier: #7ee787;
+  --hl-constant: #79c0ff;
+  --hl-ref: #58a6ff;
+  --hl-operator: #8b949e;
   color-scheme: dark;
 }
 

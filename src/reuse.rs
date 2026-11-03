@@ -7,6 +7,29 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
 use crate::ast::Use;
+
+/// `std::fs::canonicalize`, or where the platform has none (WASI, as in the playground) the path
+/// with `.` and `..` folded away, once the file is known to exist. Used to spot a part that uses
+/// itself, so lexical folding is enough there.
+pub(crate) fn canonical(path: &Path) -> std::io::Result<PathBuf> {
+    match std::fs::canonicalize(path) {
+        Err(e) if e.kind() == std::io::ErrorKind::Unsupported => {
+            std::fs::metadata(path)?;
+            let mut out = PathBuf::new();
+            for part in path.components() {
+                match part {
+                    std::path::Component::CurDir => {}
+                    std::path::Component::ParentDir => {
+                        out.pop();
+                    }
+                    other => out.push(other),
+                }
+            }
+            Ok(out)
+        }
+        result => result,
+    }
+}
 use crate::lex::{Tok, lex};
 use solidcraft_expr::{Value, eval_with};
 
@@ -107,8 +130,8 @@ fn expand_inner(src: &str, path: &Path, stack: &mut Vec<PathBuf>, fixed: &HashMa
         line.no = no;
         let u = crate::parse::parse_use(&line)?;
         let file = path.parent().unwrap_or(Path::new(".")).join(&u.file);
-        let canonical = std::fs::canonicalize(&file).map_err(|e| format!("line {no}: {}: {e}", file.display()))?;
-        if stack.contains(&canonical) || canonical == std::fs::canonicalize(path).unwrap_or_default() {
+        let canonical = canonical(&file).map_err(|e| format!("line {no}: {}: {e}", file.display()))?;
+        if stack.contains(&canonical) || canonical == self::canonical(path).unwrap_or_default() {
             return Err(format!("line {no}: `{}` uses itself (through {})", u.file, file.display()));
         }
         if stack.len() > 16 {

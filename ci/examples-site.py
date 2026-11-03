@@ -110,6 +110,8 @@ def main():
                         help="GLB cache directory (shared with ci/examples-glb.py)")
     parser.add_argument("--manifest-only", action="store_true",
                         help="write the manifest for `npm run dev` and stop")
+    parser.add_argument("--playground", action="store_true",
+                        help="also build the engine (ci/playground-engine.py) and playground.html")
     parser.add_argument("--no-thumbs", action="store_true",
                         help="don't render missing thumbnails (needs Chrome)")
     args = parser.parse_args()
@@ -174,7 +176,8 @@ def main():
                     entry["thumb"] = base64.b64encode(thumb.read_bytes()).decode()
             examples.append(entry)
         manifest.parent.mkdir(parents=True, exist_ok=True)
-        manifest.write_text(json.dumps({"commit": commit, "examples": examples}))
+        manifest.write_text(json.dumps({"commit": commit, "examples": examples,
+                                        "playground": playground}))
         print(f"wrote {manifest}", file=sys.stderr)
         return examples
 
@@ -182,6 +185,13 @@ def main():
         subprocess.run([npm, "run", "build", "--", "--outDir", str(out_dir), "--emptyOutDir"],
                        cwd=SITE, check=True, stdout=subprocess.DEVNULL,
                        env={**os.environ, "EXAMPLES_MANIFEST": str(manifest)})
+
+    engine = ROOT / "build/playground/engine.wasm.gz"
+    if args.playground:
+        subprocess.run([sys.executable, str(ROOT / "ci/playground-engine.py"),
+                        "-o", str(engine.with_suffix(""))], check=True)
+    # The gallery links to the playground when there is an engine to build it with.
+    playground = engine.exists()
 
     examples = write_manifest()
     if args.manifest_only:
@@ -198,6 +208,15 @@ def main():
 
     args.output.parent.mkdir(parents=True, exist_ok=True)
     shutil.copyfile(out_dir / "index.html", args.output)
+    if playground:
+        # playground.html sits next to the gallery, which links to it by that name.
+        pg_dir = SITE / ".data/playground"
+        subprocess.run([npm, "run", "build", "--", "--outDir", str(pg_dir), "--emptyOutDir"],
+                       cwd=SITE, check=True, stdout=subprocess.DEVNULL,
+                       env={**os.environ, "PAGE": "playground", "PLAYGROUND_ENGINE": str(engine)})
+        page = args.output.with_name("playground.html")
+        shutil.copyfile(pg_dir / "playground.html", page)
+        print(f"wrote {page} ({page.stat().st_size / 1e6:.1f} MB)", file=sys.stderr)
     failed = [(s.stem, e) for s, _, e in results if e]
     no_thumb = [e["name"] for e in examples if e.get("glb") and not e.get("thumb")]
     print(f"wrote {args.output} ({len(examples)} examples, "

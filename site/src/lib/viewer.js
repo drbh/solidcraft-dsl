@@ -8,7 +8,7 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { MeshoptDecoder } from 'three/examples/jsm/libs/meshopt_decoder.module.js';
-import { toCreasedNormals } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import { mergeVertices, toCreasedNormals } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import GunzipWorker from './gunzip.worker.js?worker&inline';
 
 // Front-biased three-quarter view (glTF is Y up, +Z is the design's front, -Y): 20 deg round from
@@ -53,36 +53,64 @@ export async function glbBlob(name) {
   return new Blob([await glbBytes(name)], { type: 'model/gltf-binary' });
 }
 
-async function loadModel(name) {
+export async function loadModel(name) {
   const gltf = await loader.parseAsync(await glbBytes(name), '');
   const meshes = [];
   gltf.scene.traverse((o) => o.isMesh && meshes.push(o));
-  for (const mesh of meshes) {
-    let geometry = mesh.geometry;
-    // Meshopt leaves positions quantized (integers plus a node scale); creasing needs floats.
-    if (geometry.attributes.position.normalized || !(geometry.attributes.position.array instanceof Float32Array)) {
-      const p = geometry.attributes.position;
-      const floats = new Float32Array(p.count * 3);
-      for (let i = 0; i < p.count; i++) {
-        floats[i * 3] = p.getX(i); floats[i * 3 + 1] = p.getY(i); floats[i * 3 + 2] = p.getZ(i);
-      }
-      geometry.setAttribute('position', new THREE.BufferAttribute(floats, 3));
-    }
-    const tris = (geometry.index?.count ?? geometry.attributes.position.count) / 3;
-    const edges = tris <= EDGE_TRIANGLE_LIMIT ? new THREE.EdgesGeometry(geometry, EDGE_ANGLE) : null;
-    if (!geometry.attributes.normal) {
-      const creased = toCreasedNormals(geometry, CREASE);
-      geometry.dispose();
-      geometry = creased;
-    }
-    mesh.geometry = geometry;
-    if (edges) {
-      const lines = new THREE.LineSegments(edges);
-      lines.name = 'edges';
-      mesh.add(lines);
+  for (const mesh of meshes) prepareMesh(mesh);
+  return gltf.scene;
+}
+
+/// A model from the engine's binary STL (millimetres, Z up), placed as the GLBs are: glTF's Y up,
+/// metres, (x, y, z) -> (x, z, -y) / 1000.
+export function modelFromStl(bytes) {
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  const count = view.getUint32(80, true);
+  if (bytes.byteLength < 84 + count * 50) throw new Error('truncated STL');
+  const positions = new Float32Array(count * 9);
+  for (let t = 0; t < count; t++) {
+    for (let v = 0; v < 3; v++) {
+      const at = 84 + t * 50 + 12 + v * 12;
+      const o = t * 9 + v * 3;
+      positions[o] = view.getFloat32(at, true) / 1000;
+      positions[o + 1] = view.getFloat32(at + 8, true) / 1000;
+      positions[o + 2] = -view.getFloat32(at + 4, true) / 1000;
     }
   }
-  return gltf.scene;
+  let geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+  geometry = mergeVertices(geometry, 1e-7);
+  const mesh = new THREE.Mesh(geometry);
+  prepareMesh(mesh);
+  const group = new THREE.Group();
+  group.add(mesh);
+  return group;
+}
+
+function prepareMesh(mesh) {
+  let geometry = mesh.geometry;
+  // Meshopt leaves positions quantized (integers plus a node scale); creasing needs floats.
+  if (geometry.attributes.position.normalized || !(geometry.attributes.position.array instanceof Float32Array)) {
+    const p = geometry.attributes.position;
+    const floats = new Float32Array(p.count * 3);
+    for (let i = 0; i < p.count; i++) {
+      floats[i * 3] = p.getX(i); floats[i * 3 + 1] = p.getY(i); floats[i * 3 + 2] = p.getZ(i);
+    }
+    geometry.setAttribute('position', new THREE.BufferAttribute(floats, 3));
+  }
+  const tris = (geometry.index?.count ?? geometry.attributes.position.count) / 3;
+  const edges = tris <= EDGE_TRIANGLE_LIMIT ? new THREE.EdgesGeometry(geometry, EDGE_ANGLE) : null;
+  if (!geometry.attributes.normal) {
+    const creased = toCreasedNormals(geometry, CREASE);
+    geometry.dispose();
+    geometry = creased;
+  }
+  mesh.geometry = geometry;
+  if (edges) {
+    const lines = new THREE.LineSegments(edges);
+    lines.name = 'edges';
+    mesh.add(lines);
+  }
 }
 
 function dispose(object) {
@@ -159,7 +187,9 @@ function sharedRenderer() {
   return renderer;
 }
 
-export function createView(el, name, { onState }) {
+/// A live view in `el`. `show(promise)` puts a model in it: the first is framed, later ones keep
+/// the camera (so a rebuilt model stays where you were looking) unless `{ frame: true }`.
+export function createView(el, { onState = () => {} } = {}) {
   const gl = sharedRenderer();
   el.prepend(gl.domElement);
   const camera = new THREE.PerspectiveCamera(30, 1, 0.0001, 100);
@@ -203,24 +233,36 @@ export function createView(el, name, { onState }) {
   const reset = () => model && (frameCamera(camera, model, controls), render());
   gl.domElement.addEventListener('dblclick', reset);
 
-  onState('loading');
-  loadModel(name).then(
-    (m) => {
-      if (!alive) return dispose(m);
-      model = m;
-      applyMaterials(model, materials);
-      scene.add(model);
-      frameCamera(camera, model, controls);
-      onState('ready');
-      render();
-    },
-    (error) => {
-      console.error(name, error);
-      if (alive) onState('error', String(error.message || error));
-    },
-  );
+  let shown = 0;
+  let framed = false;
+  function show(promise, { frame = false } = {}) {
+    const ticket = ++shown;
+    onState('loading');
+    return Promise.resolve(promise).then(
+      (m) => {
+        if (!alive || ticket !== shown) return dispose(m);
+        if (model) {
+          scene.remove(model);
+          dispose(model);
+        }
+        model = m;
+        applyMaterials(model, materials);
+        model.traverse((o) => o.name === 'edges' && (o.visible = showEdges));
+        scene.add(model);
+        if (frame || !framed) frameCamera(camera, model, controls);
+        framed = true;
+        onState('ready');
+        render();
+      },
+      (error) => {
+        console.error(error);
+        if (alive && ticket === shown) onState('error', String(error.message || error));
+      },
+    );
+  }
 
   return {
+    show,
     frame: reset,
     setEdges(on) {
       showEdges = on;
