@@ -44,6 +44,8 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - name: Install the latest solidcraft-cli
         run: ci/install-solidcraft-cli.sh latest "$RUNNER_TEMP/solidcraft"
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
       - run: cargo test --workspace --locked
         env:
           SOLIDCRAFT_CLI: ${{ runner.temp }}/solidcraft/solidcraft-cli
