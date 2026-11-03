@@ -147,8 +147,9 @@ names it; a part may itself link parts, and cycles are reported with the files i
   needs the parts built first, so use `run`, `pack` or `evaluate` for linked assemblies.
 - Errors in a part name the part and its line: `robot.sc:6: wheel.sc: line 12: …`.
 
-Linking needs `component.insert_design` to accept `occurrence_name` (the
-`linked_occurrence_names` capability), which the compatible engine build below adds.
+Linked occurrences take their authored names only on an engine whose `component.insert_design`
+accepts `occurrence_name` (the `linked_occurrence_names` capability); no release does yet, so they
+get the engine's own names (see below).
 
 ## Engine compatibility
 
@@ -157,32 +158,16 @@ assembly anyway, using the names the engine gives occurrences itself: `Component
 counts that component's occurrences in the order they are made. Placements, grounding, joints
 and checks work the same way. The difference is in naming: occurrence paths in body names read
 `(Pair:2/Block:1)` instead of `(second/left)`, and a layout must select bodies, not
-`instance` paths. The compatible build below keeps the authored names.
+`instance` paths.
 
+Authored names need engine additions that no release has yet (up to 0.30.1): an optional
+`occurrence_name` on `component.create`, `occurrence.copy` and `component.insert_design`, and
+`world_name` in occurrence properties. `run`, `pack`, `evaluate` and `watch` read the engine's
+capabilities before running and use authored names wherever the engine has them, so assemblies
+pick them up when a release adds them. `check` and `compile` work without the engine.
 
-This implementation adds optional `occurrence_name` arguments to engine `component.create`,
-`occurrence.copy` and `component.insert_design` in the compatible SolidCraft build. This addresses occurrences by authored
-names without guessing global IDs. The arguments use the existing saved name field; no file
-schema change is needed. Names must be unique, nonnumeric, and different from `root`.
-
-Assembly execution requires an engine/app containing this command addition. Stock releases, up to
-0.28.0, do not provide it; on them the DSL uses the engine's own occurrence names (see above). `check` and `compile` work without the engine; `run`, `pack`,
-`evaluate` and `watch` check capabilities before execution. For direct command-script replay,
-use the same compatible engine.
+To see what an engine is missing, run the opt-in capability test against it:
 
 ```sh
-# From the DSL repository, with Rust 1.95 or newer:
-git clone https://github.com/tangency-labs/solidcraft.git build/engine
-git -C build/engine checkout --detach 3d3dd27439995f37eaed1feaa1c53a0e42d2fe39
-git -C build/engine apply ../../ci/solidcraft-assembly.patch
-cargo build --manifest-path build/engine/Cargo.toml --locked -p solidcraft-cli --bin solidcraft-cli
-export SOLIDCRAFT_CLI="$PWD/build/engine/target/debug/solidcraft-cli"
-ci/check-compatibility.sh
-cargo run -- evaluate examples/assembly_hinge.sc --output-dir build/hinge --json
-cargo run -- explain examples/assembly_hinge.sc --json
+SOLIDCRAFT_REQUIRE_FULL_SUPPORT=1 SOLIDCRAFT_CLI=path/to/solidcraft-cli cargo test --test compatibility
 ```
-
-The patch also exposes `world_name` in occurrence properties so layouts can select repeated
-instances precisely. It changes no saved-document fields. This is upstream SolidCraft plus
-three local API additions, not an unmodified release. The `full-engine` CI job builds this exact
-revision and patch; the release jobs separately test the stock binary.

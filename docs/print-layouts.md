@@ -169,8 +169,8 @@ Failed transfer checks and layout errors fail required requests. Optional reques
 warnings, as with all other artifact requests.
 
 The request schema and `capabilities --json` describe these fields. Body layouts need engine
-`occurrence.properties`; instance selection additionally needs its `world_name` field, added
-by the [compatible engine patch](assemblies.md#engine-compatibility). That field resolves exact export selection without guessing
+`occurrence.properties`; instance selection additionally needs its `world_name` field, which no
+release has yet ([engine compatibility](assemblies.md#engine-compatibility)). That field resolves exact export selection without guessing
 display names for repeated instances. Unsupported engines produce explicit request errors.
 
 The four migrated print recipes preserve their part selections and rotations. Their plate

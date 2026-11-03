@@ -64,8 +64,8 @@ cargo run -- evaluate examples/10_rotating_link.sc --json
 ```
 
 All ten expression examples work with 0.19.0, 0.27.1 and 0.28.0. Persistent point tests print an explicit
-skip on older engines. For a strict test of every DSL capability, including assemblies, use
-`ci/check-compatibility.sh` with the [compatible engine](assemblies.md#engine-compatibility).
+skip on older engines. For a strict test of every DSL capability an engine provides, including
+authored assembly names, see [engine compatibility](assemblies.md#engine-compatibility).
 
 ## Inspect and iterate
 
