@@ -15,6 +15,8 @@ import argparse
 import base64
 import gzip
 import hashlib
+import urllib.error
+import urllib.request
 import importlib.util
 import json
 import os
@@ -121,8 +123,9 @@ HEADERS = """\
 """
 
 
-def write_site(site, write_manifest, npm, out_dir, manifest, engine):
-    """The hosted copy: the same two pages, with their large data as separate files."""
+def write_site(site, write_manifest, npm, out_dir, manifest, engine, build_index):
+    """The hosted copy: the same two pages, with their large data as separate files, and
+    build-index.json, which lets the next build (`--reuse`) download what didn't change."""
     if site.exists():
         shutil.rmtree(site)
     site.mkdir(parents=True)
@@ -131,6 +134,7 @@ def write_site(site, write_manifest, npm, out_dir, manifest, engine):
                    cwd=SITE, check=True, stdout=subprocess.DEVNULL,
                    env={**os.environ, "EXAMPLES_MANIFEST": str(manifest)})
     shutil.copyfile(out_dir / "index.html", site / "index.html")
+    engine_url = None
     if engine:
         engine_url = hashed(site, "e", "engine.wasm.gz", engine.read_bytes())
         pg_dir = SITE / ".data/playground"
@@ -141,6 +145,7 @@ def write_site(site, write_manifest, npm, out_dir, manifest, engine):
                             "PLAYGROUND_TIMINGS": str(engine.with_name("timings.json"))})
         shutil.copyfile(pg_dir / "playground.html", site / "playground.html")
     (site / "_headers").write_text(HEADERS)
+    (site / "build-index.json").write_text(json.dumps(build_index(engine_url), indent=1))
     files = [p for p in site.rglob("*") if p.is_file()]
     largest = max(files, key=lambda p: p.stat().st_size)
     print(f"wrote {site} ({len(files)} files, {sum(p.stat().st_size for p in files) / 1e6:.1f} MB; "
@@ -148,6 +153,81 @@ def write_site(site, write_manifest, npm, out_dir, manifest, engine):
           file=sys.stderr)
     if largest.stat().st_size > 25 * 1024 * 1024:
         sys.exit(f"{largest} is over Cloudflare Pages' 25 MiB file limit")
+
+
+def fetch(url, timeout=120):
+    with urllib.request.urlopen(urllib.request.Request(url, headers={"User-Agent": "examples-site"}),
+                                timeout=timeout) as response:
+        return response.read()
+
+
+def fetch_index(base):
+    """A published site's build-index.json, or {} (and a warning) when there is none."""
+    try:
+        index = json.loads(fetch(f"{base.rstrip('/')}/build-index.json", timeout=30))
+        print(f"reusing outputs from {base} ({len(index.get('examples', {}))} examples)", file=sys.stderr)
+        return index
+    except (urllib.error.URLError, OSError, ValueError) as error:
+        print(f"warning: no build index at {base} ({error}); building everything", file=sys.stderr)
+        return {}
+
+
+def ungzip(data):
+    return gzip.decompress(data) if data[:2] == b"\x1f\x8b" else data
+
+
+def download_example(base, entry, gallery, name):
+    """Fetch a published model (and thumbnail) into the gallery cache; return its stats."""
+    gallery.mkdir(parents=True, exist_ok=True)
+    root = base.rstrip("/")
+    (gallery / f"{name}.glb").write_bytes(ungzip(fetch(f"{root}/{entry['glb']}")))
+    if entry.get("thumb"):  # after the model, so the thumbnail isn't older than it
+        (gallery / f"{name}.webp").write_bytes(fetch(f"{root}/{entry['thumb']}"))
+    return {"triangles": entry["triangles"], "size": entry["size"]}
+
+
+def playground_engine_key():
+    """What the playground engine depends on: its crate, the compiler and the engine version."""
+    digest = hashlib.sha256(glb_tools.engine_version().encode())
+    paths = [*ROOT.glob("site/playground/engine/**/*"), *ROOT.glob("src/**/*.rs"),
+             *ROOT.glob("crates/**/*.rs"), ROOT / "Cargo.lock", ROOT / "flake.nix",
+             ROOT / "ci/playground-engine.py"]
+    for path in sorted(p for p in paths if p.is_file()):
+        digest.update(path.relative_to(ROOT).as_posix().encode() + b"\0" + path.read_bytes())
+    return digest.hexdigest()
+
+
+def prepare_engine(engine, key, published, base):
+    """build/playground/engine.wasm(.gz) for `key`: kept, downloaded, or built (slowest)."""
+    stamp = engine.with_name("engine.inputs")
+    if engine.exists() and stamp.exists() and stamp.read_text().strip() == key:
+        return
+    if published and published.get("inputs") == key:
+        print("reusing the published playground engine", file=sys.stderr)
+        packed = fetch(f"{base.rstrip('/')}/{published['url']}", timeout=600)
+        engine.parent.mkdir(parents=True, exist_ok=True)
+        engine.write_bytes(packed)
+        engine.with_suffix("").write_bytes(ungzip(packed))  # the timing pass runs the raw module
+    else:
+        subprocess.run([sys.executable, str(ROOT / "ci/playground-engine.py"),
+                        "-o", str(engine.with_suffix(""))], check=True)
+    stamp.write_text(key)
+
+
+def adopt_timings(path, published, sources):
+    """Take published timings whose example hash matches, so only changed examples are timed."""
+    if not published:
+        return
+    timings = load_timings(path)
+    hashes = {s.stem: example_hash(s) for s in sources}
+    taken = 0
+    for name, entry in published.items():
+        if hashes.get(name) and entry.get("hash") == hashes[name] and timings.get(name, {}).get("hash") != hashes[name]:
+            timings[name] = entry
+            taken += 1
+    if taken:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(timings, indent=1))
 
 
 ACRONYMS = {"rc", "pcb", "esp32", "led", "usb", "cd", "tft"}
@@ -208,6 +288,10 @@ def main():
                         help="also write a hosted copy here: index.html and playground.html that "
                              "fetch content-hashed models, thumbnails and the engine from beside "
                              "them (for Cloudflare Pages, whose files are capped at 25 MiB)")
+    parser.add_argument("--reuse", metavar="URL",
+                        help="a published site (e.g. https://solidcraft-dsl.dholtz.com): download the "
+                             "models, thumbnails, timings and engine its build-index.json already has for "
+                             "the same inputs instead of building them")
     parser.add_argument("--no-thumbs", action="store_true",
                         help="don't render missing thumbnails (needs Chrome)")
     args = parser.parse_args()
@@ -222,19 +306,40 @@ def main():
     sources = sorted((p for p in (ROOT / "examples").glob("*.sc")
                       if not args.only or any(p.stem.startswith(o) for o in args.only)), key=order)
 
+    # Each example's key: the hash of the command script it compiles to (see examples-glb.py).
+    with ThreadPoolExecutor(args.jobs) as pool:
+        keys = dict(zip((s.stem for s in sources),
+                        pool.map(lambda s: glb_tools.inputs_hash(s, args.bin), sources)))
+    index = fetch_index(args.reuse) if args.reuse else {}
+    published = index.get("examples", {})
+    reused = {}  # name -> stats of a model downloaded from the published site
+
     def job(source):
+        name = source.stem
         try:
-            glb, how = glb_tools.build(source, args.work / source.stem, args.bin, args.force,
-                                       args.timeout)
-            print(f"  {how:6} {source.stem}", file=sys.stderr)
+            out = args.work / name
+            if not args.force and (glb := glb_tools.cached(source, out, args.bin, keys[name])):
+                how = "cached"
+            elif not args.force and published.get(name, {}).get("inputs") == keys[name]:
+                reused[name] = download_example(args.reuse, published[name], args.work / GALLERY, name)
+                print(f"  reused {name}", file=sys.stderr)
+                return source, None, None
+            else:
+                glb, how = glb_tools.build(source, out, args.bin, args.force, args.timeout, keys[name])
+            print(f"  {how:6} {name}", file=sys.stderr)
             return source, glb, None
         except Exception as error:  # noqa: BLE001 - report and keep going
-            print(f"  FAILED {source.stem}: {error}", file=sys.stderr)
+            print(f"  FAILED {name}: {error}", file=sys.stderr)
             return source, None, str(error)
 
     print(f"building {len(sources)} examples with {args.jobs} jobs", file=sys.stderr)
     with ThreadPoolExecutor(args.jobs) as pool:
         results = list(pool.map(job, sources))
+    counts = {}
+    for source, glb, error in results:
+        kind = "failed" if error else "reused" if source.stem in reused else "local"
+        counts[kind] = counts.get(kind, 0) + 1
+    print(f"examples: {counts}", file=sys.stderr)
 
     npm = shutil.which("npm") or sys.exit("npm is required to build the page")
     if not (SITE / "node_modules").exists():
@@ -244,6 +349,8 @@ def main():
     for source, glb, error in results:
         if glb:
             views[source.stem] = view_glb(glb, args.work, source.stem)
+        elif source.stem in reused:
+            views[source.stem] = args.work / GALLERY / f"{source.stem}.glb"
     thumbs = args.work / GALLERY
 
     def stale_thumbs():
@@ -256,6 +363,8 @@ def main():
     manifest = SITE / ".data/manifest.json"
     out_dir = SITE / ".data/dist"
 
+    site_index = {}  # what the hosted copy publishes in build-index.json, for --reuse
+
     def write_manifest(site=None):
         """The page's data. With `site`, models and thumbnails go there as files the page
         fetches (named by content hash, so they can be cached forever) instead of inline."""
@@ -264,9 +373,10 @@ def main():
             number, title, summary, text = describe(source)
             entry = {"name": source.stem, "file": f"examples/{source.name}", "number": number,
                      "title": title, "summary": summary, "source": text, "error": error}
-            if glb:
+            if glb or source.stem in reused:
                 view = views[source.stem].read_bytes()
-                entry["triangles"], entry["size"] = stats(glb)
+                known = reused.get(source.stem)
+                entry["triangles"], entry["size"] = (known["triangles"], known["size"]) if known else stats(glb)
                 entry["glbBytes"] = len(view)
                 packed = gzip.compress(view, 9, mtime=0)
                 thumb = thumbs / f"{source.stem}.webp"
@@ -274,6 +384,9 @@ def main():
                     entry["glbUrl"] = hashed(site, "m", f"{source.stem}.glb.gz", packed)
                     if thumb.exists():
                         entry["thumbUrl"] = hashed(site, "t", f"{source.stem}.webp", thumb.read_bytes())
+                    site_index[source.stem] = {"inputs": keys[source.stem], "glb": entry["glbUrl"],
+                                               "thumb": entry.get("thumbUrl"),
+                                               "triangles": entry["triangles"], "size": entry["size"]}
                 else:
                     entry["glb"] = base64.b64encode(packed).decode()
                     if thumb.exists():
@@ -295,11 +408,13 @@ def main():
                        env={**os.environ, "EXAMPLES_MANIFEST": str(manifest)})
 
     engine = ROOT / "build/playground/engine.wasm.gz"
+    engine_key = playground_engine_key()
     if args.playground:
-        subprocess.run([sys.executable, str(ROOT / "ci/playground-engine.py"),
-                        "-o", str(engine.with_suffix(""))], check=True)
+        prepare_engine(engine, engine_key, index.get("engine"), args.reuse)
     # The gallery links to the playground when there is an engine to build it with.
     playground = engine.exists()
+    if args.playground:
+        adopt_timings(engine.with_name("timings.json"), index.get("timings", {}), sources)
     timings = playground_timings(engine.with_suffix(""), sources) if args.playground else \
         load_timings(engine.with_name("timings.json"))
 
@@ -330,7 +445,10 @@ def main():
         print(f"wrote {page} ({page.stat().st_size / 1e6:.1f} MB)", file=sys.stderr)
     if args.site:
         write_site(args.site.resolve(), write_manifest, npm, out_dir, manifest,
-                   engine if playground else None)
+                   engine if playground else None,
+                   lambda engine_url: {"version": 1, "examples": site_index, "timings": timings,
+                                       "engine": {"inputs": engine_key, "url": engine_url}
+                                       if engine_url else None})
     failed = [(s.stem, e) for s, _, e in results if e]
     no_thumb = [e["name"] for e in examples if e.get("glb") and not e.get("thumb")]
     print(f"wrote {args.output} ({len(examples)} examples, "
