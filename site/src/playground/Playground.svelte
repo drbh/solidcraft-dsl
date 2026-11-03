@@ -6,10 +6,18 @@
   import { createView, modelFromStl } from '../lib/viewer.js';
 
   // ---- State
+  // Examples measured (by ci/examples-site.py --playground) to build in more than FAST_MS are
+  // listed apart, and open without building until asked, so playing around stays responsive.
+  const FAST_MS = 5000;
+  const isSlow = (e) => e.timedOut || (e.ms ?? 0) > FAST_MS;
+  const secs = (ms) => (ms < 10_000 ? (ms / 1000).toFixed(1) : String(Math.round(ms / 1000)));
+  const estimate = (e) => (e.timedOut ? `over ${Math.round(e.ms / 1000)} s` : `about ${secs(e.ms)} s`);
   const byName = new Map(examples.map((e) => [e.name, e]));
-  const sections = [...new Set(examples.map((e) => e.section))].map((title) => ({
-    title, items: examples.filter((e) => e.section === title),
+  const fast = examples.filter((e) => !isSlow(e));
+  const sections = [...new Set(fast.map((e) => e.section))].map((title) => ({
+    title, items: fast.filter((e) => e.section === title),
   }));
+  const slowOnes = examples.filter(isSlow).sort((a, b) => a.ms - b.ms);
 
   let current = $state(null);         // the example open
   let active = $state('');            // the file in the editor (a path under examples/)
@@ -28,6 +36,7 @@
   let params = $state([]);
   let elapsed = $state(0);
   let lastStl = null;
+  let gated = $state(false);          // a slow example, opened but not built yet
 
   let editorEl, viewEl;
   let editor, view;
@@ -93,11 +102,18 @@
     readParams();
     result = null;
     lastStl = null;
-    slow = false;
+    view?.clear();
+    slow = isSlow(example);
+    gated = slow;
     document.title = `${example.number ? example.number + ' ' : ''}${example.title} · playground`;
     const wanted = `ex=${example.name}`;
     if (!location.hash.includes(wanted) || sharedText == null) history.replaceState(null, '', `#${wanted}`);
-    if (engine === 'ready') run({ frame: true });
+    if (engine === 'ready' && !gated) run({ frame: true });
+  }
+
+  function buildGated() {
+    gated = false;
+    run({ frame: true });
   }
 
   function choose(event) {
@@ -178,6 +194,7 @@
   async function run({ withChecks = false, frame = false } = {}) {
     clearTimeout(timer);
     if (engine !== 'ready' || !current) return;
+    gated = false;
     status = 'building';
     const started = performance.now();
     elapsed = 0;
@@ -253,7 +270,7 @@
     view = createView(viewEl, { onState: (s) => (viewState = s) });
     readHash();
     loadEngine().then(
-      () => { engine = 'ready'; run({ frame: true }); },
+      () => { engine = 'ready'; if (!gated) run({ frame: true }); },
       (e) => { engine = 'error'; engineError = String(e.message || e); },
     );
     const onHash = () => readHash();
@@ -283,6 +300,13 @@
           {/each}
         </optgroup>
       {/each}
+      {#if slowOnes.length}
+        <optgroup label="Slow to build (over {FAST_MS / 1000} s each)">
+          {#each slowOnes as e (e.name)}
+            <option value={e.name}>{e.number ? `${e.number}  ` : ''}{e.title} · {estimate(e)}</option>
+          {/each}
+        </optgroup>
+      {/if}
     </select>
     <div class="actions">
       {#if status === 'building'}
@@ -329,13 +353,15 @@
             Building… {seconds(elapsed)}
           {:else if status === 'cancelled'}
             Stopped
+          {:else if gated}
+            Not built yet: {estimate(current)} per build
           {:else if result?.ok}
             Built in {seconds(result.wall_ms ?? result.timings.total_ms)} · {count(result.triangles)} tris
           {:else if result}
             {result.stage === 'compile' ? 'Compile error' : 'Build failed'}
           {/if}
         </span>
-        {#if slow && auto && status !== 'building'}<span class="hint">slow: ⌘↵ to rebuild</span>{/if}
+        {#if slow && auto && !gated && status !== 'building'}<span class="hint">slow: ⌘↵ to rebuild</span>{/if}
         <span class="spacer"></span>
         <button onclick={() => { edges = !edges; view?.setEdges(edges); }} aria-pressed={edges}>Edges</button>
         <button onclick={() => view?.frame()}>Reset view</button>
@@ -343,6 +369,13 @@
       <div class="viewport" class:ready={viewState === 'ready'} bind:this={viewEl}>
         {#if engine === 'error'}
           <div class="note error"><strong>Engine unavailable</strong><span>{engineError}</span></div>
+        {:else if gated}
+          <div class="note gate">
+            <strong>This one is slow to build</strong>
+            <span>{current.title} takes {estimate(current)} to build in the browser, so it doesn't rebuild as you type. Edit freely and build when you're ready.</span>
+            <button class="primary" onclick={buildGated} disabled={engine !== 'ready'}>Build it ({estimate(current)})</button>
+            <span class="muted-note">or pick one of the fast examples from the list</span>
+          </div>
         {:else if !lastStl && (engine === 'loading' || status === 'building')}
           <div class="note"><span class="spinner"></span><span>{engine === 'loading' ? 'Loading the engine (about 15 MB)…' : 'Building…'}</span></div>
         {:else if !lastStl && result && !result.ok}
@@ -527,6 +560,21 @@
     padding: 24px;
   }
   .note.error strong { color: var(--danger); }
+  .note.gate {
+    inset: auto;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: min(420px, calc(100% - 32px));
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--panel);
+    box-shadow: 0 8px 30px rgb(0 0 0 / 0.08);
+  }
+  .note.gate strong { color: var(--text); font-size: 15px; }
+  .note.gate span { max-width: 46ch; line-height: 1.45; }
+  .note.gate .primary { margin-top: 6px; }
+  .muted-note { font-size: 12px; }
   .note.error span { font-family: var(--mono); font-size: 12px; max-width: 60ch; }
   .busy {
     position: absolute;

@@ -23,6 +23,14 @@
     return () => view.destroy();
   });
 
+  const playgroundTitle = $derived.by(() => {
+    const ms = example.playground_ms;
+    if (!ms) return 'Edit and rebuild it in the browser';
+    const time = example.playground_timed_out ? `over ${Math.round(ms / 1000)} s`
+      : `about ${ms < 10_000 ? (ms / 1000).toFixed(1) : Math.round(ms / 1000)} s`;
+    return `Edit and rebuild it in the browser: ${time} per build${example.playground_slow ? ", so it won't rebuild as you type" : ''}`;
+  });
+
   const short = (e) => `${e.number ? e.number + ' ' : ''}${e.title}`;
 
   async function copy() {
@@ -77,7 +85,12 @@
         <span class="spacer"></span>
         <button onclick={copy}>{copied ? 'Copied' : 'Copy'}</button>
         <button onclick={downloadSource}>.sc</button>
-        {#if playground}<a class="open" href="playground.html#ex={example.name}" title="Edit and rebuild it in the browser">Playground</a>{/if}
+        {#if playground}
+          <a class="open" class:slow={example.playground_slow} href="playground.html#ex={example.name}"
+            title={playgroundTitle}>
+            Playground{#if example.playground_slow}<span class="slow-tag">slow</span>{/if}
+          </a>
+        {/if}
       </div>
       <div class="scroll">{@html example.html}</div>
     </div>
@@ -211,6 +224,15 @@
     color: #fff;
     text-decoration: none;
     font-weight: 600;
+  }
+  .bar .open.slow {
+    background: transparent;
+    color: var(--accent);
+  }
+  .slow-tag {
+    margin-left: 6px;
+    font: 500 11px var(--mono);
+    color: var(--muted);
   }
   .bar button[aria-pressed='true'] {
     color: var(--accent);

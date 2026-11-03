@@ -14,6 +14,7 @@ Examples that fail to build still appear, with the error in place of the model.
 import argparse
 import base64
 import gzip
+import hashlib
 import importlib.util
 import json
 import os
@@ -56,6 +57,46 @@ def view_glb(glb, work, name):
         shutil.copyfile(glb, out)
     bare.unlink(missing_ok=True)
     return out
+
+
+# Playground builds slower than this are listed apart and not rebuilt on every edit.
+SLOW_MS = 5000
+TIMING_LIMIT_S = 20  # past this a build only counts as slow
+
+
+def example_hash(source):
+    """What a build's time depends on: the example and its <name>_parts / <name>_art folders."""
+    digest = hashlib.sha256(source.read_bytes())
+    for folder in sorted(source.parent.glob(f"{source.stem}_*")):
+        for f in sorted(folder.rglob("*")) if folder.is_dir() else []:
+            if f.is_file():
+                digest.update(f.relative_to(source.parent).as_posix().encode() + b"\0" + f.read_bytes())
+    return digest.hexdigest()[:16]
+
+
+def load_timings(path):
+    try:
+        return json.loads(path.read_text())
+    except (OSError, ValueError):
+        return {}
+
+
+def playground_timings(wasm, sources):
+    """Each example's build time in the playground engine, re-measured when it changes."""
+    path = wasm.with_name("timings.json")
+    timings = load_timings(path)
+    hashes = {s.stem: example_hash(s) for s in sources}
+    stale = [n for n, h in hashes.items() if timings.get(n, {}).get("hash") != h]
+    if stale:
+        print(f"timing {len(stale)} examples in the playground engine", file=sys.stderr)
+        subprocess.run(["node", "scripts/timings.mjs", str(wasm), str(ROOT / "examples"), str(path),
+                        "--limit", str(TIMING_LIMIT_S), *stale], cwd=SITE, check=True)
+        timings = load_timings(path)
+        for name in stale:
+            if name in timings:
+                timings[name]["hash"] = hashes[name]
+        path.write_text(json.dumps(timings, indent=1))
+    return timings
 
 
 ACRONYMS = {"rc", "pcb", "esp32", "led", "usb", "cd", "tft"}
@@ -174,6 +215,10 @@ def main():
                 thumb = thumbs / f"{source.stem}.webp"
                 if thumb.exists():
                     entry["thumb"] = base64.b64encode(thumb.read_bytes()).decode()
+            if source.stem in timings:
+                entry["playground_ms"] = timings[source.stem]["ms"]
+                entry["playground_slow"] = timings[source.stem]["ms"] > SLOW_MS
+                entry["playground_timed_out"] = bool(timings[source.stem].get("timedOut"))
             examples.append(entry)
         manifest.parent.mkdir(parents=True, exist_ok=True)
         manifest.write_text(json.dumps({"commit": commit, "examples": examples,
@@ -192,6 +237,8 @@ def main():
                         "-o", str(engine.with_suffix(""))], check=True)
     # The gallery links to the playground when there is an engine to build it with.
     playground = engine.exists()
+    timings = playground_timings(engine.with_suffix(""), sources) if args.playground else \
+        load_timings(engine.with_name("timings.json"))
 
     examples = write_manifest()
     if args.manifest_only:
@@ -213,7 +260,8 @@ def main():
         pg_dir = SITE / ".data/playground"
         subprocess.run([npm, "run", "build", "--", "--outDir", str(pg_dir), "--emptyOutDir"],
                        cwd=SITE, check=True, stdout=subprocess.DEVNULL,
-                       env={**os.environ, "PAGE": "playground", "PLAYGROUND_ENGINE": str(engine)})
+                       env={**os.environ, "PAGE": "playground", "PLAYGROUND_ENGINE": str(engine),
+                            "PLAYGROUND_TIMINGS": str(engine.with_name("timings.json"))})
         page = args.output.with_name("playground.html")
         shutil.copyfile(pg_dir / "playground.html", page)
         print(f"wrote {page} ({page.stat().st_size / 1e6:.1f} MB)", file=sys.stderr)

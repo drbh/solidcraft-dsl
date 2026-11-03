@@ -116,13 +116,17 @@ function highlight(highlighter, source, palette) {
 // the editor, and the engine module (built by ci/playground-engine.py) embedded like the GLBs.
 const examplesDir = here('../examples');
 const enginePath = process.env.PLAYGROUND_ENGINE || here('../build/playground/engine.wasm.gz');
+const timingsPath = process.env.PLAYGROUND_TIMINGS || here('../build/playground/timings.json');
+const readTimings = () => {
+  try { return JSON.parse(readFileSync(timingsPath, 'utf8')); } catch { return {}; }
+};
 
 function walk(dir, prefix = '') {
   const out = [];
   for (const name of readdirSync(dir).sort()) {
     const full = `${dir}/${name}`;
     if (statSync(full).isDirectory()) out.push(...walk(full, `${prefix}${name}/`));
-    else if (name.endsWith('.sc')) out.push([`${prefix}${name}`, readFileSync(full, 'utf8')]);
+    else if (/\.(sc|svg|dxf)$/.test(name)) out.push([`${prefix}${name}`, readFileSync(full, 'utf8')]);
   }
   return out;
 }
@@ -178,12 +182,15 @@ function playground() {
       const order = categories.flatMap((c) => c.examples.map((n) => [c.title, n])).filter(([, n]) => byName.has(n));
       const listed = new Set(order.map(([, n]) => n));
       for (const n of byName.keys()) if (!listed.has(n)) order.push(['Other', n]);
+      const timings = readTimings();
       const list = order.map(([section, name]) => {
         const text = files[byName.get(name)];
         const number = name.match(/^(\d+)_/)?.[1] ?? null;
         const title = titleOf(name);
         const parts = Object.keys(files).filter((p) => p.startsWith(`examples/${name}_parts/`));
-        return { name, number, section, title, main: byName.get(name), parts };
+        const t = timings[name];
+        // ms: the measured build time (a lower bound when timedOut); null when not measured.
+        return { name, number, section, title, main: byName.get(name), parts, ms: t?.ms ?? null, timedOut: Boolean(t?.timedOut) };
       });
       return `export const files = ${JSON.stringify(files)};\n` +
         `export const examples = ${JSON.stringify(list)};\n` +

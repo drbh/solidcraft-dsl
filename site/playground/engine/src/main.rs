@@ -68,11 +68,17 @@ fn run(path: &str, with_checks: bool) -> Value {
     if let Err(e) = solidcraft_dsl::link::inline_files(&mut script, Path::new(path)) {
         return fail("compile", vec![diag("compile", e.clone(), message_line(&e))], json!({}));
     }
+    // Fit the script to this engine's capabilities, as the CLI path does (occurrence names,
+    // thread handedness and the like fall back where the engine lacks them).
+    let mut session = solidcraft_engine::Session::default();
+    let capabilities = session.execute("engine.commands", &json!({})).unwrap_or(Value::Null);
+    if let Err(e) = solidcraft_dsl::assembly::fit_script(&compiled, &mut script, &capabilities) {
+        return fail("compile", vec![diag("compile", e.clone(), message_line(&e))], json!({}));
+    }
     let compile_ms = ms(started);
 
     // Run the commands one at a time, so a failing one points at its source line.
     let engine_started = Instant::now();
-    let mut session = solidcraft_engine::Session::default();
     let commands = script["commands"].as_array().cloned().unwrap_or_default();
     for (i, cmd) in commands.iter().enumerate() {
         let id = cmd["command"].as_str().unwrap_or_default();

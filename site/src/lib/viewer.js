@@ -261,8 +261,22 @@ export function createView(el, { onState = () => {} } = {}) {
     );
   }
 
+  /** Empty the view (switching designs); the next model shown is framed afresh. */
+  function clear() {
+    shown++;
+    if (model) {
+      scene.remove(model);
+      dispose(model);
+      model = null;
+    }
+    framed = false;
+    onState('idle');
+    render();
+  }
+
   return {
     show,
+    clear,
     frame: reset,
     setEdges(on) {
       showEdges = on;
