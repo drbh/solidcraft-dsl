@@ -85,8 +85,12 @@ def main():
 
     if not args.bin.exists():
         subprocess.run(["cargo", "build", "--quiet"], cwd=ROOT, check=True)
-    sources = sorted(p for p in (ROOT / "examples").glob("*.sc")
-                     if not args.only or any(p.stem.startswith(o) for o in args.only))
+    def order(p):  # numbered examples by number (so 11 comes before 100), then the rest by name
+        match = re.match(r"(\d+)_", p.stem)
+        return (0, int(match.group(1)), p.stem) if match else (1, 0, p.stem)
+
+    sources = sorted((p for p in (ROOT / "examples").glob("*.sc")
+                      if not args.only or any(p.stem.startswith(o) for o in args.only)), key=order)
 
     def job(source):
         try:

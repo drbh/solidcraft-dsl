@@ -1,0 +1,272 @@
+{
+  "version": 1,
+  "defaults": false,
+  "requests": [
+    {
+      "id": "shells-3mf",
+      "kind": "export",
+      "format": "3mf",
+      "layout": "shells"
+    },
+    {
+      "id": "shells-stl",
+      "kind": "export",
+      "format": "stl",
+      "layout": "shells"
+    },
+    {
+      "id": "shells-glb",
+      "kind": "export",
+      "format": "glb",
+      "layout": "shells"
+    },
+    {
+      "id": "shells-check",
+      "kind": "commands",
+      "layout": "shells",
+      "commands": [
+        {
+          "command": "inspect.measure",
+          "params": {}
+        }
+      ]
+    },
+    {
+      "id": "shells-view",
+      "kind": "snapshot",
+      "layout": "shells",
+      "options": {
+        "view": "iso"
+      }
+    },
+    {
+      "id": "cover-3mf",
+      "kind": "export",
+      "format": "3mf",
+      "layout": "cover"
+    },
+    {
+      "id": "cover-stl",
+      "kind": "export",
+      "format": "stl",
+      "layout": "cover"
+    },
+    {
+      "id": "cover-glb",
+      "kind": "export",
+      "format": "glb",
+      "layout": "cover"
+    },
+    {
+      "id": "cover-check",
+      "kind": "commands",
+      "layout": "cover",
+      "commands": [
+        {
+          "command": "inspect.measure",
+          "params": {}
+        }
+      ]
+    },
+    {
+      "id": "cover-view",
+      "kind": "snapshot",
+      "layout": "cover",
+      "options": {
+        "view": "iso"
+      }
+    },
+    {
+      "id": "parts-3mf",
+      "kind": "export",
+      "format": "3mf",
+      "layout": "parts"
+    },
+    {
+      "id": "parts-stl",
+      "kind": "export",
+      "format": "stl",
+      "layout": "parts"
+    },
+    {
+      "id": "parts-glb",
+      "kind": "export",
+      "format": "glb",
+      "layout": "parts"
+    },
+    {
+      "id": "parts-check",
+      "kind": "commands",
+      "layout": "parts",
+      "commands": [
+        {
+          "command": "inspect.measure",
+          "params": {}
+        }
+      ]
+    },
+    {
+      "id": "parts-view",
+      "kind": "snapshot",
+      "layout": "parts",
+      "options": {
+        "view": "iso"
+      }
+    },
+    {
+      "id": "fit-check",
+      "kind": "commands",
+      "commands": [
+        {
+          "command": "inspect.interference",
+          "params": {}
+        }
+      ]
+    }
+  ],
+  "layouts": {
+    "shells": {
+      "bed": [
+        256,
+        256
+      ],
+      "spacing": "6 mm",
+      "parts": [
+        {
+          "id": "back",
+          "select": {
+            "bodies": [
+              "Back"
+            ]
+          }
+        },
+        {
+          "id": "front",
+          "select": {
+            "bodies": [
+              "Front"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                1,
+                0,
+                0
+              ],
+              "angle": "180 deg"
+            }
+          ]
+        }
+      ]
+    },
+    "cover": {
+      "bed": [
+        256,
+        256
+      ],
+      "spacing": "6 mm",
+      "parts": [
+        {
+          "id": "cover",
+          "select": {
+            "bodies": [
+              "Cover"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                1,
+                0,
+                0
+              ],
+              "angle": "180 deg"
+            }
+          ]
+        }
+      ]
+    },
+    "parts": {
+      "bed": [
+        256,
+        256
+      ],
+      "spacing": "4 mm",
+      "parts": [
+        {
+          "id": "keys",
+          "select": {
+            "bodies": [
+              "Key00",
+              "Key01",
+              "Key02",
+              "Key03",
+              "Key04",
+              "Key10",
+              "Key11",
+              "Key12",
+              "Key13",
+              "Key14",
+              "Key20",
+              "Key21",
+              "Key22",
+              "Key23",
+              "Key24",
+              "Key30",
+              "Key31",
+              "Key32",
+              "Key33",
+              "Key34",
+              "Key40",
+              "Key41",
+              "Key42",
+              "Key43",
+              "Key44",
+              "Key50",
+              "Key51",
+              "Key52",
+              "Key53",
+              "Key54",
+              "Key60",
+              "Key61",
+              "Key62",
+              "Key63",
+              "Key64",
+              "Key70",
+              "Key71",
+              "Key72",
+              "Key80",
+              "Key81",
+              "Key82",
+              "Fn0",
+              "Fn1",
+              "Fn2",
+              "Fn3",
+              "Fn4",
+              "DPad"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                1,
+                0,
+                0
+              ],
+              "angle": "180 deg"
+            }
+          ]
+        },
+        {
+          "id": "door",
+          "select": {
+            "bodies": [
+              "Door"
+            ]
+          }
+        }
+      ]
+    }
+  }
+}
