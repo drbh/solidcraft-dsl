@@ -14,6 +14,7 @@ import hashlib
 import json
 import math
 import os
+import re
 import struct
 import subprocess
 import sys
@@ -42,15 +43,28 @@ def folder_files(source):
                 yield f.relative_to(source.parent).as_posix(), f.read_bytes()
 
 
-def inputs_hash(source, binary):
+# Decimal numbers in a compiled script, rounded before hashing: computed values such as
+# sin() and sqrt() results can differ in the last bit between platforms' math libraries
+# (macOS and Linux disagree on a handful of examples), which must not change the key.
+NUMBER = re.compile(rb"-?\d+\.\d+(?:[eE][-+]?\d+)?")
+
+
+def canonical_script(text):
+    return NUMBER.sub(lambda m: format(float(m.group()), ".10g").encode(), text)
+
+
+def inputs_hash(source, binary, scheme="script-v2"):
     """What an example's GLB depends on: the command script it compiles to (so compiler changes
     and comment edits that don't change the script don't rebuild it), the files beside it, and
     the engine version. Compiling takes milliseconds; evaluating can take minutes. Content, not
     mtimes, so a fresh checkout (ci) can reuse outputs built elsewhere."""
-    digest = hashlib.sha256(f"script-v1\0{engine_version()}\0".encode())
+    digest = hashlib.sha256(f"{scheme}\0{engine_version()}\0".encode())
     compiled = subprocess.run([str(binary), "compile", str(source)], capture_output=True, cwd=ROOT)
+    script = compiled.stdout
+    if scheme != "script-v1":
+        script = canonical_script(script)
     # A file that doesn't compile still gets a key (its source), so its failure is cached too.
-    digest.update(compiled.stdout if compiled.returncode == 0 else b"source\0" + source.read_bytes())
+    digest.update(script if compiled.returncode == 0 else b"source\0" + source.read_bytes())
     for name, data in folder_files(source):
         digest.update(name.encode() + b"\0" + data)
     return "v2:" + digest.hexdigest()
@@ -82,7 +96,9 @@ def cached(source, out_dir, binary, key=None):
     # Caches from before the script key: adopt them if they match what they were stamped with,
     # or (unstamped) if they are newer than their sources.
     adopt = False
-    if have and not have.startswith("v2:"):
+    if have and have.startswith("v2:"):
+        adopt = have == inputs_hash(source, binary, "script-v1")  # before numbers were rounded
+    elif have:
         adopt = have == legacy_inputs_hash(source)
     elif have is None:
         parts = source.with_name(f"{source.stem}_parts")
