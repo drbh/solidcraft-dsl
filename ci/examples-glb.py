@@ -26,7 +26,10 @@ REQUEST = json.dumps({"version": 1, "defaults": False,
 def build(source, out_dir, binary, force, timeout):
     """Evaluate one example; return the path of its GLB or raise with the reason."""
     glb = next(out_dir.rglob("*.glb"), None) if out_dir.exists() else None
-    newest_input = max(source.stat().st_mtime, binary.stat().st_mtime)
+    # A design's parts (`use` files) live beside it in <name>_parts/; editing one must rebuild it too.
+    parts = source.with_name(f"{source.stem}_parts")
+    inputs = [source, binary] + (sorted(parts.rglob("*.sc")) if parts.is_dir() else [])
+    newest_input = max(p.stat().st_mtime for p in inputs)
     if glb and not force and glb.stat().st_mtime > newest_input:
         return glb, "cached"
     for old in out_dir.rglob("*.glb") if out_dir.exists() else []:

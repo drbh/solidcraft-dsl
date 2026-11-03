@@ -1,0 +1,238 @@
+{
+  "version": 1,
+  "defaults": false,
+  "requests": [
+    {
+      "id": "preview-glb",
+      "kind": "export",
+      "format": "glb"
+    },
+    {
+      "id": "fit-check",
+      "kind": "commands",
+      "commands": [
+        {
+          "command": "inspect.interference",
+          "params": {}
+        }
+      ]
+    },
+    {
+      "id": "tube_a-3mf",
+      "kind": "export",
+      "format": "3mf",
+      "layout": "tube_a"
+    },
+    {
+      "id": "tube_a-stl",
+      "kind": "export",
+      "format": "stl",
+      "layout": "tube_a"
+    },
+    {
+      "id": "tube_a-measure",
+      "kind": "commands",
+      "layout": "tube_a",
+      "commands": [
+        {
+          "command": "inspect.measure",
+          "params": {}
+        }
+      ]
+    },
+    {
+      "id": "tube_a-view",
+      "kind": "snapshot",
+      "layout": "tube_a",
+      "options": {
+        "view": "iso"
+      }
+    },
+    {
+      "id": "tube_b-3mf",
+      "kind": "export",
+      "format": "3mf",
+      "layout": "tube_b"
+    },
+    {
+      "id": "tube_b-stl",
+      "kind": "export",
+      "format": "stl",
+      "layout": "tube_b"
+    },
+    {
+      "id": "tube_b-measure",
+      "kind": "commands",
+      "layout": "tube_b",
+      "commands": [
+        {
+          "command": "inspect.measure",
+          "params": {}
+        }
+      ]
+    },
+    {
+      "id": "tube_b-view",
+      "kind": "snapshot",
+      "layout": "tube_b",
+      "options": {
+        "view": "iso"
+      }
+    },
+    {
+      "id": "parts-3mf",
+      "kind": "export",
+      "format": "3mf",
+      "layout": "parts"
+    },
+    {
+      "id": "parts-stl",
+      "kind": "export",
+      "format": "stl",
+      "layout": "parts"
+    },
+    {
+      "id": "parts-measure",
+      "kind": "commands",
+      "layout": "parts",
+      "commands": [
+        {
+          "command": "inspect.measure",
+          "params": {}
+        }
+      ]
+    },
+    {
+      "id": "parts-view",
+      "kind": "snapshot",
+      "layout": "parts",
+      "options": {
+        "view": "iso"
+      }
+    }
+  ],
+  "layouts": {
+    "tube_a": {
+      "bed": [
+        256,
+        256
+      ],
+      "parts": [
+        {
+          "id": "LiftA",
+          "select": {
+            "bodies": [
+              "LiftA"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                1,
+                0,
+                0
+              ],
+              "angle": "90 deg"
+            }
+          ]
+        }
+      ]
+    },
+    "tube_b": {
+      "bed": [
+        256,
+        256
+      ],
+      "parts": [
+        {
+          "id": "LiftA2",
+          "select": {
+            "bodies": [
+              "LiftA (2)"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                1,
+                0,
+                0
+              ],
+              "angle": "-90 deg"
+            }
+          ]
+        }
+      ]
+    },
+    "parts": {
+      "bed": [
+        256,
+        256
+      ],
+      "parts": [
+        {
+          "id": "Stand",
+          "select": {
+            "bodies": [
+              "Stand"
+            ]
+          }
+        },
+        {
+          "id": "Auger",
+          "select": {
+            "bodies": [
+              "Auger"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                0,
+                1,
+                0
+              ],
+              "angle": "130 deg"
+            }
+          ]
+        },
+        {
+          "id": "Shaft",
+          "select": {
+            "bodies": [
+              "Shaft"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                0,
+                1,
+                0
+              ],
+              "angle": "40 deg"
+            }
+          ]
+        },
+        {
+          "id": "Knob",
+          "select": {
+            "bodies": [
+              "Knob"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                0,
+                1,
+                0
+              ],
+              "angle": "-50 deg"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

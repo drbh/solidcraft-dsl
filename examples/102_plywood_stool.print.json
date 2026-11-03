@@ -1,0 +1,217 @@
+{
+  "version": 1,
+  "defaults": false,
+  "requests": [
+    {
+      "id": "dxf-LegAOutline",
+      "kind": "commands",
+      "extension": "dxf",
+      "commands": [
+        {
+          "command": "sketch.export_dxf",
+          "params": {
+            "sketch": "LegAOutline",
+            "path": "$output"
+          }
+        }
+      ]
+    },
+    {
+      "id": "dxf-LegAReliefs",
+      "kind": "commands",
+      "extension": "dxf",
+      "commands": [
+        {
+          "command": "sketch.export_dxf",
+          "params": {
+            "sketch": "LegAReliefs",
+            "path": "$output"
+          }
+        }
+      ]
+    },
+    {
+      "id": "dxf-LegBOutline",
+      "kind": "commands",
+      "extension": "dxf",
+      "commands": [
+        {
+          "command": "sketch.export_dxf",
+          "params": {
+            "sketch": "LegBOutline",
+            "path": "$output"
+          }
+        }
+      ]
+    },
+    {
+      "id": "dxf-LegBReliefs",
+      "kind": "commands",
+      "extension": "dxf",
+      "commands": [
+        {
+          "command": "sketch.export_dxf",
+          "params": {
+            "sketch": "LegBReliefs",
+            "path": "$output"
+          }
+        }
+      ]
+    },
+    {
+      "id": "dxf-SeatOutline",
+      "kind": "commands",
+      "extension": "dxf",
+      "commands": [
+        {
+          "command": "sketch.export_dxf",
+          "params": {
+            "sketch": "SeatOutline",
+            "path": "$output"
+          }
+        }
+      ]
+    },
+    {
+      "id": "dxf-SeatSlots",
+      "kind": "commands",
+      "extension": "dxf",
+      "commands": [
+        {
+          "command": "sketch.export_dxf",
+          "params": {
+            "sketch": "SeatSlots",
+            "path": "$output"
+          }
+        }
+      ]
+    },
+    {
+      "id": "dxf-SeatReliefs",
+      "kind": "commands",
+      "extension": "dxf",
+      "commands": [
+        {
+          "command": "sketch.export_dxf",
+          "params": {
+            "sketch": "SeatReliefs",
+            "path": "$output"
+          }
+        }
+      ]
+    },
+    {
+      "id": "stool-step",
+      "kind": "export",
+      "format": "step"
+    },
+    {
+      "id": "sheet-3mf",
+      "kind": "export",
+      "format": "3mf",
+      "layout": "sheet"
+    },
+    {
+      "id": "preview-glb",
+      "kind": "export",
+      "format": "glb",
+      "layout": "assembled"
+    },
+    {
+      "id": "sheet-check",
+      "kind": "commands",
+      "layout": "sheet",
+      "commands": [
+        {
+          "command": "inspect.measure",
+          "params": {}
+        }
+      ]
+    },
+    {
+      "id": "sheet-view",
+      "kind": "snapshot",
+      "layout": "sheet",
+      "options": {
+        "view": "top"
+      }
+    },
+    {
+      "id": "assembled-view",
+      "kind": "snapshot",
+      "layout": "assembled",
+      "options": {
+        "view": "iso"
+      }
+    }
+  ],
+  "layouts": {
+    "sheet": {
+      "bed": [
+        1220,
+        1220
+      ],
+      "spacing": "2*bit_d",
+      "parts": [
+        {
+          "id": "LegA",
+          "select": {
+            "bodies": [
+              "LegA"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                1,
+                0,
+                0
+              ],
+              "angle": "90 deg"
+            }
+          ]
+        },
+        {
+          "id": "LegB",
+          "select": {
+            "bodies": [
+              "LegB"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                0,
+                1,
+                0
+              ],
+              "angle": "90 deg"
+            }
+          ]
+        },
+        {
+          "id": "Seat",
+          "select": {
+            "bodies": [
+              "Seat"
+            ]
+          }
+        }
+      ]
+    },
+    "assembled": {
+      "parts": [
+        {
+          "id": "Stool",
+          "select": {
+            "bodies": [
+              "LegA",
+              "LegB",
+              "Seat"
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

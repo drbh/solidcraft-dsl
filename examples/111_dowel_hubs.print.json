@@ -1,0 +1,32 @@
+{
+  "version": 1,
+  "defaults": false,
+  "requests": [
+    { "id": "print-3mf", "kind": "export", "format": "3mf", "layout": "plate" },
+    { "id": "print-stl", "kind": "export", "format": "stl", "layout": "plate" },
+    { "id": "preview-glb", "kind": "export", "format": "glb", "layout": "plate" },
+    { "id": "print-check", "kind": "commands", "layout": "plate",
+      "commands": [ { "command": "inspect.measure", "params": {} } ] },
+    { "id": "plate-view", "kind": "snapshot", "layout": "plate", "options": { "view": "iso" } },
+    { "id": "frame-check", "kind": "commands",
+      "commands": [ { "command": "inspect.interference", "params": {} } ] }
+  ],
+  "layouts": {
+    "plate": {
+      "spacing": "6 mm",
+      "bed": [256, 256],
+      "parts": [
+        { "id": "low-fl", "select": { "bodies": ["LowFL"] } },
+        { "id": "low-fr", "select": { "bodies": ["LowFR"] } },
+        { "id": "low-br", "select": { "bodies": ["LowBR"] } },
+        { "id": "low-bl", "select": { "bodies": ["LowBL"] } },
+        { "id": "top-fl", "select": { "bodies": ["TopFL"] }, "rotate": [{ "axis": [1, 0, 0], "angle": "180 deg" }] },
+        { "id": "top-fr", "select": { "bodies": ["TopFR"] }, "rotate": [{ "axis": [1, 0, 0], "angle": "180 deg" }] },
+        { "id": "top-br", "select": { "bodies": ["TopBR"] }, "rotate": [{ "axis": [1, 0, 0], "angle": "180 deg" }] },
+        { "id": "top-bl", "select": { "bodies": ["TopBL"] }, "rotate": [{ "axis": [1, 0, 0], "angle": "180 deg" }] },
+        { "id": "tee", "select": { "bodies": ["Tee"] } },
+        { "id": "cross", "select": { "bodies": ["Cross"] } }
+      ]
+    }
+  }
+}

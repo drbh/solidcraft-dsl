@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "defaults": false,
+  "requests": [
+    { "id": "cell-3mf", "kind": "export", "format": "3mf", "layout": "cell" },
+    { "id": "cell-stl", "kind": "export", "format": "stl", "layout": "cell" },
+    { "id": "clips-3mf", "kind": "export", "format": "3mf", "layout": "clips" },
+    { "id": "clips-stl", "kind": "export", "format": "stl", "layout": "clips" },
+    { "id": "preview-glb", "kind": "export", "format": "glb", "layout": "wall" },
+    { "id": "cell-check", "kind": "commands", "layout": "cell",
+      "commands": [ { "command": "inspect.measure", "params": {} } ] },
+    { "id": "wall-view", "kind": "snapshot", "layout": "wall", "options": { "view": "iso" } }
+  ],
+  "layouts": {
+    "cell": {
+      "bed": [256, 256],
+      "parts": [ { "id": "Cell", "select": { "bodies": ["Cell0"] },
+        "rotate": [ { "axis": [1, 0, 0], "angle": "-90 deg" } ] } ]
+    },
+    "clips": {
+      "bed": [256, 256],
+      "parts": [
+        { "id": "Clip0", "select": { "bodies": ["Clip0"] },
+          "rotate": [ { "axis": [0, 1, 0], "angle": "90 deg" } ] },
+        { "id": "Clip1", "select": { "bodies": ["Clip0"] },
+          "rotate": [ { "axis": [0, 1, 0], "angle": "90 deg" } ] },
+        { "id": "Clip2", "select": { "bodies": ["Clip0"] },
+          "rotate": [ { "axis": [0, 1, 0], "angle": "90 deg" } ] }
+      ]
+    },
+    "wall": {
+      "parts": [ { "id": "Cluster", "select": { "bodies": ["Cell0", "Cell1", "Cell2", "Clip0", "Clip1", "Clip2"] }, "on_bed": false } ]
+    }
+  }
+}

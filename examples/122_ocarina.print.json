@@ -1,0 +1,26 @@
+{
+  "version": 1,
+  "defaults": false,
+  "requests": [
+    { "id": "print-3mf", "kind": "export", "format": "3mf", "layout": "halves" },
+    { "id": "print-stl", "kind": "export", "format": "stl", "layout": "halves" },
+    { "id": "preview-glb", "kind": "export", "format": "glb", "layout": "assembled" },
+    { "id": "print-check", "kind": "commands", "layout": "halves",
+      "commands": [ { "command": "inspect.measure", "params": {} } ] },
+    { "id": "assembled-view", "kind": "snapshot", "layout": "assembled", "options": { "view": "iso" } },
+    { "id": "halves-view", "kind": "snapshot", "layout": "halves", "options": { "view": "iso" } }
+  ],
+  "layouts": {
+    "halves": {
+      "bed": [256, 256],
+      "parts": [
+        { "id": "Top", "select": { "bodies": ["Top"] } },
+        { "id": "Bottom", "select": { "bodies": ["Bottom"] },
+          "rotate": [ { "axis": [1, 0, 0], "angle": "180 deg" } ] }
+      ]
+    },
+    "assembled": {
+      "parts": [ { "id": "Ocarina", "select": { "bodies": ["Top", "Bottom"] } } ]
+    }
+  }
+}

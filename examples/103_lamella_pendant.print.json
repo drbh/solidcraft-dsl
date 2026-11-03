@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "defaults": false,
+  "requests": [
+    { "id": "shade-3mf", "kind": "export", "format": "3mf", "layout": "shade" },
+    { "id": "shade-stl", "kind": "export", "format": "stl", "layout": "shade" },
+    { "id": "parts-3mf", "kind": "export", "format": "3mf", "layout": "parts" },
+    { "id": "parts-stl", "kind": "export", "format": "stl", "layout": "parts" },
+    { "id": "preview-glb", "kind": "export", "format": "glb", "layout": "assembled" },
+    { "id": "shade-check", "kind": "commands", "layout": "shade",
+      "commands": [ { "command": "inspect.measure", "params": {} } ] },
+    { "id": "assembled-view", "kind": "snapshot", "layout": "assembled", "options": { "view": "iso" } }
+  ],
+  "layouts": {
+    "shade": {
+      "bed": [256, 256],
+      "parts": [ { "id": "Shade", "select": { "bodies": ["Shade"] },
+        "rotate": [ { "axis": [1, 0, 0], "angle": "180 deg" } ] } ]
+    },
+    "parts": {
+      "bed": [256, 256],
+      "parts": [
+        { "id": "Canopy", "select": { "bodies": ["Canopy"] },
+          "rotate": [ { "axis": [1, 0, 0], "angle": "180 deg" } ] },
+        { "id": "CordGrip", "select": { "bodies": ["CordGrip"] },
+          "rotate": [ { "axis": [1, 0, 0], "angle": "180 deg" } ] }
+      ]
+    },
+    "assembled": {
+      "parts": [ { "id": "Lamp", "select": { "bodies": ["Shade", "RefHolder", "RefBulb", "Canopy", "CordGrip"] } } ]
+    }
+  }
+}

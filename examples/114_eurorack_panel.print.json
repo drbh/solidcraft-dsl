@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "defaults": false,
+  "requests": [
+    { "id": "panel-3mf", "kind": "export", "format": "3mf", "layout": "panel" },
+    { "id": "panel-stl", "kind": "export", "format": "stl", "layout": "panel" },
+    { "id": "rail-3mf", "kind": "export", "format": "3mf", "layout": "rail" },
+    { "id": "rail-stl", "kind": "export", "format": "stl", "layout": "rail" },
+    { "id": "preview-glb", "kind": "export", "format": "glb", "layout": "panel" },
+    { "id": "panel-check", "kind": "commands", "layout": "panel",
+      "commands": [ { "command": "inspect.measure", "params": {} } ] },
+    { "id": "panel-view", "kind": "snapshot", "layout": "panel", "options": { "view": "iso" } }
+  ],
+  "layouts": {
+    "panel": {
+      "bed": [256, 256],
+      "parts": [
+        { "id": "Panel", "select": { "bodies": ["Panel"] },
+          "rotate": [ { "axis": [0, 1, 0], "angle": "180 deg" } ] },
+        { "id": "Knob0", "select": { "bodies": ["Knob0"] } },
+        { "id": "Knob1", "select": { "bodies": ["Knob1"] } }
+      ]
+    },
+    "rail": {
+      "bed": [256, 256],
+      "parts": [ { "id": "CaseRail", "select": { "bodies": ["CaseRail"] } } ]
+    }
+  }
+}

@@ -1,0 +1,133 @@
+{
+  "version": 1,
+  "defaults": false,
+  "requests": [
+    {
+      "id": "anchors-3mf",
+      "kind": "export",
+      "format": "3mf",
+      "layout": "anchors"
+    },
+    {
+      "id": "anchors-stl",
+      "kind": "export",
+      "format": "stl",
+      "layout": "anchors"
+    },
+    {
+      "id": "anchors-glb",
+      "kind": "export",
+      "format": "glb",
+      "layout": "anchors"
+    },
+    {
+      "id": "anchors-check",
+      "kind": "commands",
+      "layout": "anchors",
+      "commands": [
+        {
+          "command": "inspect.measure",
+          "params": {}
+        }
+      ]
+    },
+    {
+      "id": "anchors-view",
+      "kind": "snapshot",
+      "layout": "anchors",
+      "options": {
+        "view": "iso"
+      }
+    }
+  ],
+  "layouts": {
+    "anchors": {
+      "bed": [
+        256,
+        256
+      ],
+      "parts": [
+        {
+          "id": "Anchor0",
+          "select": {
+            "bodies": [
+              "Anchor0"
+            ]
+          }
+        },
+        {
+          "id": "Anchor1",
+          "select": {
+            "bodies": [
+              "Anchor1"
+            ]
+          }
+        },
+        {
+          "id": "Anchor2",
+          "select": {
+            "bodies": [
+              "Anchor2"
+            ]
+          }
+        },
+        {
+          "id": "Anchor3",
+          "select": {
+            "bodies": [
+              "Anchor3"
+            ]
+          }
+        },
+        {
+          "id": "Anchor4",
+          "select": {
+            "bodies": [
+              "Anchor4"
+            ]
+          }
+        },
+        {
+          "id": "Anchor5",
+          "select": {
+            "bodies": [
+              "Anchor5"
+            ]
+          }
+        },
+        {
+          "id": "Anchor6",
+          "select": {
+            "bodies": [
+              "Anchor6"
+            ]
+          }
+        },
+        {
+          "id": "Anchor7",
+          "select": {
+            "bodies": [
+              "Anchor7"
+            ]
+          }
+        },
+        {
+          "id": "Anchor8",
+          "select": {
+            "bodies": [
+              "Anchor8"
+            ]
+          }
+        },
+        {
+          "id": "Anchor9",
+          "select": {
+            "bodies": [
+              "Anchor9"
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

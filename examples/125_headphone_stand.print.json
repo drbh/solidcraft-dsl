@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "defaults": false,
+  "requests": [
+    { "id": "print-base-3mf", "kind": "export", "format": "3mf", "layout": "base" },
+    { "id": "print-base-stl", "kind": "export", "format": "stl", "layout": "base" },
+    { "id": "print-post-3mf", "kind": "export", "format": "3mf", "layout": "post" },
+    { "id": "print-post-stl", "kind": "export", "format": "stl", "layout": "post" },
+    { "id": "print-hanger-3mf", "kind": "export", "format": "3mf", "layout": "hanger" },
+    { "id": "print-hanger-stl", "kind": "export", "format": "stl", "layout": "hanger" },
+    { "id": "preview-glb", "kind": "export", "format": "glb", "layout": "assembled" },
+    { "id": "base-check", "kind": "commands", "layout": "base",
+      "commands": [ { "command": "inspect.measure", "params": {} } ] },
+    { "id": "post-check", "kind": "commands", "layout": "post",
+      "commands": [ { "command": "inspect.measure", "params": {} } ] },
+    { "id": "hanger-check", "kind": "commands", "layout": "hanger",
+      "commands": [ { "command": "inspect.measure", "params": {} } ] },
+    { "id": "assembled-view", "kind": "snapshot", "layout": "assembled", "options": { "view": "iso" } }
+  ],
+  "layouts": {
+    "base": {
+      "bed": [256, 256],
+      "parts": [ { "id": "Base", "select": { "bodies": ["Base"] },
+                   "rotate": [ { "axis": [1, 0, 0], "angle": "180 deg" } ] } ]
+    },
+    "post": {
+      "bed": [256, 256],
+      "parts": [
+        { "id": "Cover", "select": { "bodies": ["Cover"] } },
+        { "id": "Post", "select": { "bodies": ["Post"] } }
+      ]
+    },
+    "hanger": {
+      "bed": [256, 256],
+      "parts": [ { "id": "Hanger", "select": { "bodies": ["Hanger"] },
+                   "rotate": [ { "axis": [1, 0, 0], "angle": "90 deg" } ] } ]
+    },
+    "assembled": {
+      "parts": [ { "id": "Stand", "select": { "bodies": ["Base", "Cover", "Post", "Hanger"] } } ]
+    }
+  }
+}

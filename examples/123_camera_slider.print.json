@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "defaults": false,
+  "requests": [
+    { "id": "print-carriage-3mf", "kind": "export", "format": "3mf", "layout": "carriage" },
+    { "id": "print-carriage-stl", "kind": "export", "format": "stl", "layout": "carriage" },
+    { "id": "print-ends-3mf", "kind": "export", "format": "3mf", "layout": "ends" },
+    { "id": "print-ends-stl", "kind": "export", "format": "stl", "layout": "ends" },
+    { "id": "preview-glb", "kind": "export", "format": "glb", "layout": "assembled" },
+    { "id": "carriage-check", "kind": "commands", "layout": "carriage",
+      "commands": [ { "command": "inspect.measure", "params": {} } ] },
+    { "id": "ends-check", "kind": "commands", "layout": "ends",
+      "commands": [ { "command": "inspect.measure", "params": {} } ] },
+    { "id": "assembled-view", "kind": "snapshot", "layout": "assembled", "options": { "view": "iso" } },
+    { "id": "carriage-view", "kind": "snapshot", "layout": "carriage", "options": { "view": "iso" } }
+  ],
+  "layouts": {
+    "carriage": {
+      "bed": [256, 256],
+      "parts": [
+        { "id": "Carriage", "select": { "bodies": ["Carriage"] } },
+        { "id": "BeltArm", "select": { "bodies": ["BeltArm"] },
+          "rotate": [ { "axis": [0, 1, 0], "angle": "-90 deg" } ] },
+        { "id": "Clamp", "select": { "bodies": ["Clamp"] } }
+      ]
+    },
+    "ends": {
+      "bed": [256, 256],
+      "parts": [
+        { "id": "MotorEnd", "select": { "bodies": ["MotorEnd"] },
+          "rotate": [ { "axis": [0, 1, 0], "angle": "90 deg" } ] },
+        { "id": "IdlerEnd", "select": { "bodies": ["IdlerEnd"] },
+          "rotate": [ { "axis": [0, 1, 0], "angle": "-90 deg" } ] }
+      ]
+    },
+    "assembled": {
+      "parts": [ { "id": "Slider", "select": { "bodies": ["Carriage", "BeltArm", "Clamp", "MotorEnd", "IdlerEnd",
+        "RefRail", "RefWheelFixed0", "RefWheelFixed1", "RefWheelEcc0", "RefWheelEcc1", "RefMotor", "RefPulley", "RefIdler", "RefBeltBottom"] },
+        "on_bed": false } ]
+    }
+  }
+}

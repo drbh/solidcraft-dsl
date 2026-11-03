@@ -1,0 +1,190 @@
+{
+  "version": 1,
+  "defaults": false,
+  "requests": [
+    {
+      "id": "preview-glb",
+      "kind": "export",
+      "format": "glb"
+    },
+    {
+      "id": "fit-check",
+      "kind": "commands",
+      "commands": [
+        {
+          "command": "inspect.interference",
+          "params": {}
+        }
+      ]
+    },
+    {
+      "id": "base-3mf",
+      "kind": "export",
+      "format": "3mf",
+      "layout": "base"
+    },
+    {
+      "id": "base-stl",
+      "kind": "export",
+      "format": "stl",
+      "layout": "base"
+    },
+    {
+      "id": "base-measure",
+      "kind": "commands",
+      "layout": "base",
+      "commands": [
+        {
+          "command": "inspect.measure",
+          "params": {}
+        }
+      ]
+    },
+    {
+      "id": "base-view",
+      "kind": "snapshot",
+      "layout": "base",
+      "options": {
+        "view": "iso"
+      }
+    },
+    {
+      "id": "cover-3mf",
+      "kind": "export",
+      "format": "3mf",
+      "layout": "cover"
+    },
+    {
+      "id": "cover-stl",
+      "kind": "export",
+      "format": "stl",
+      "layout": "cover"
+    },
+    {
+      "id": "cover-measure",
+      "kind": "commands",
+      "layout": "cover",
+      "commands": [
+        {
+          "command": "inspect.measure",
+          "params": {}
+        }
+      ]
+    },
+    {
+      "id": "cover-view",
+      "kind": "snapshot",
+      "layout": "cover",
+      "options": {
+        "view": "iso"
+      }
+    },
+    {
+      "id": "parts-3mf",
+      "kind": "export",
+      "format": "3mf",
+      "layout": "parts"
+    },
+    {
+      "id": "parts-stl",
+      "kind": "export",
+      "format": "stl",
+      "layout": "parts"
+    },
+    {
+      "id": "parts-measure",
+      "kind": "commands",
+      "layout": "parts",
+      "commands": [
+        {
+          "command": "inspect.measure",
+          "params": {}
+        }
+      ]
+    },
+    {
+      "id": "parts-view",
+      "kind": "snapshot",
+      "layout": "parts",
+      "options": {
+        "view": "iso"
+      }
+    }
+  ],
+  "layouts": {
+    "base": {
+      "bed": [
+        256,
+        256
+      ],
+      "parts": [
+        {
+          "id": "Base",
+          "select": {
+            "bodies": [
+              "Base"
+            ]
+          }
+        }
+      ]
+    },
+    "cover": {
+      "bed": [
+        256,
+        256
+      ],
+      "parts": [
+        {
+          "id": "Cover",
+          "select": {
+            "bodies": [
+              "Cover"
+            ]
+          }
+        }
+      ]
+    },
+    "parts": {
+      "bed": [
+        256,
+        256
+      ],
+      "parts": [
+        {
+          "id": "Wheel",
+          "select": {
+            "bodies": [
+              "Wheel",
+              "Digit0",
+              "Digit1",
+              "Digit2",
+              "Digit3",
+              "Digit4",
+              "Digit5",
+              "Digit6",
+              "Digit7",
+              "Digit8",
+              "Digit9"
+            ]
+          }
+        },
+        {
+          "id": "Driver",
+          "select": {
+            "bodies": [
+              "Driver"
+            ]
+          }
+        },
+        {
+          "id": "Knob",
+          "select": {
+            "bodies": [
+              "Knob"
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,149 @@
+{
+  "version": 1,
+  "defaults": false,
+  "requests": [
+    {
+      "id": "cleats-3mf",
+      "kind": "export",
+      "format": "3mf",
+      "layout": "cleats"
+    },
+    {
+      "id": "cleats-stl",
+      "kind": "export",
+      "format": "stl",
+      "layout": "cleats"
+    },
+    {
+      "id": "holders-3mf",
+      "kind": "export",
+      "format": "3mf",
+      "layout": "holders"
+    },
+    {
+      "id": "holders-stl",
+      "kind": "export",
+      "format": "stl",
+      "layout": "holders"
+    },
+    {
+      "id": "preview-glb",
+      "kind": "export",
+      "format": "glb",
+      "layout": "holders"
+    },
+    {
+      "id": "holders-check",
+      "kind": "commands",
+      "layout": "holders",
+      "commands": [
+        {
+          "command": "inspect.measure",
+          "params": {}
+        }
+      ]
+    },
+    {
+      "id": "holders-view",
+      "kind": "snapshot",
+      "layout": "holders",
+      "options": {
+        "view": "iso"
+      }
+    }
+  ],
+  "layouts": {
+    "cleats": {
+      "bed": [
+        256,
+        256
+      ],
+      "parts": [
+        {
+          "id": "WallCleat0",
+          "select": {
+            "bodies": [
+              "WallCleat0"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                1,
+                0,
+                0
+              ],
+              "angle": "90 deg"
+            }
+          ]
+        },
+        {
+          "id": "WallCleat1",
+          "select": {
+            "bodies": [
+              "WallCleat1"
+            ]
+          },
+          "rotate": [
+            {
+              "axis": [
+                1,
+                0,
+                0
+              ],
+              "angle": "90 deg"
+            }
+          ]
+        }
+      ]
+    },
+    "holders": {
+      "bed": [
+        256,
+        256
+      ],
+      "parts": [
+        {
+          "id": "Shelf",
+          "select": {
+            "bodies": [
+              "Shelf"
+            ]
+          }
+        },
+        {
+          "id": "Hook",
+          "select": {
+            "bodies": [
+              "Hook"
+            ]
+          }
+        },
+        {
+          "id": "Bin",
+          "select": {
+            "bodies": [
+              "Bin"
+            ]
+          }
+        },
+        {
+          "id": "Pliers",
+          "select": {
+            "bodies": [
+              "Pliers"
+            ]
+          }
+        },
+        {
+          "id": "Drivers",
+          "select": {
+            "bodies": [
+              "Drivers"
+            ]
+          }
+        }
+      ]
+    }
+  }
+}

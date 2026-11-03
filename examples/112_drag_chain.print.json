@@ -1,0 +1,192 @@
+{
+  "version": 1,
+  "defaults": false,
+  "requests": [
+    {
+      "id": "chain-overlap",
+      "kind": "commands",
+      "commands": [
+        {
+          "command": "inspect.interference",
+          "params": {
+            "bodies": [
+              "L0_Link",
+              "L1_Link",
+              "L2_Link",
+              "L3_Link",
+              "B0_Link",
+              "B1_Link",
+              "B2_Link",
+              "B3_Link",
+              "B4_Link",
+              "U0_Link",
+              "U1_Link",
+              "U2_Link",
+              "U3_Link",
+              "U4_Link"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "print-3mf",
+      "kind": "export",
+      "format": "3mf",
+      "layout": "links"
+    },
+    {
+      "id": "preview-glb",
+      "kind": "export",
+      "format": "glb",
+      "layout": "links"
+    },
+    {
+      "id": "print-stl",
+      "kind": "export",
+      "format": "stl",
+      "layout": "links"
+    },
+    {
+      "id": "print-check",
+      "kind": "commands",
+      "layout": "links",
+      "commands": [
+        {
+          "command": "inspect.measure",
+          "params": {}
+        }
+      ]
+    },
+    {
+      "id": "plate-view",
+      "kind": "snapshot",
+      "layout": "links",
+      "options": {
+        "view": "iso"
+      }
+    }
+  ],
+  "layouts": {
+    "links": {
+      "bed": [
+        256,
+        256
+      ],
+      "parts": [
+        {
+          "id": "Link0",
+          "select": {
+            "bodies": [
+              "L0_Link"
+            ]
+          }
+        },
+        {
+          "id": "Link1",
+          "select": {
+            "bodies": [
+              "L0_Link"
+            ]
+          }
+        },
+        {
+          "id": "Link2",
+          "select": {
+            "bodies": [
+              "L0_Link"
+            ]
+          }
+        },
+        {
+          "id": "Link3",
+          "select": {
+            "bodies": [
+              "L0_Link"
+            ]
+          }
+        },
+        {
+          "id": "Link4",
+          "select": {
+            "bodies": [
+              "L0_Link"
+            ]
+          }
+        },
+        {
+          "id": "Link5",
+          "select": {
+            "bodies": [
+              "L0_Link"
+            ]
+          }
+        },
+        {
+          "id": "Link6",
+          "select": {
+            "bodies": [
+              "L0_Link"
+            ]
+          }
+        },
+        {
+          "id": "Link7",
+          "select": {
+            "bodies": [
+              "L0_Link"
+            ]
+          }
+        },
+        {
+          "id": "Link8",
+          "select": {
+            "bodies": [
+              "L0_Link"
+            ]
+          }
+        },
+        {
+          "id": "Link9",
+          "select": {
+            "bodies": [
+              "L0_Link"
+            ]
+          }
+        },
+        {
+          "id": "Link10",
+          "select": {
+            "bodies": [
+              "L0_Link"
+            ]
+          }
+        },
+        {
+          "id": "Link11",
+          "select": {
+            "bodies": [
+              "L0_Link"
+            ]
+          }
+        },
+        {
+          "id": "Link12",
+          "select": {
+            "bodies": [
+              "L0_Link"
+            ]
+          }
+        },
+        {
+          "id": "Link13",
+          "select": {
+            "bodies": [
+              "L0_Link"
+            ]
+          }
+        }
+      ]
+    }
+  }
+}
